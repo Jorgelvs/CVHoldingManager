@@ -9,6 +9,10 @@ import FinanceiroDashboardPage from './modules/financeiro/pages/FinanceiroDashbo
 import LancamentoListPage from './modules/financeiro/pages/LancamentoListPage.jsx'
 import LancamentoFormPage from './modules/financeiro/pages/LancamentoFormPage.jsx'
 import LancamentoViewPage from './modules/financeiro/pages/LancamentoViewPage.jsx'
+import RateioListPage from './modules/financeiro/pages/RateioListPage.jsx'
+import RateioFormPage from './modules/financeiro/pages/RateioFormPage.jsx'
+import RateioViewPage from './modules/financeiro/pages/RateioViewPage.jsx'
+import CondominioPage from './modules/financeiro/pages/CondominioPage.jsx'
 import Relatorios from './pages/Relatorios.jsx'
 import Configuracoes from './pages/Configuracoes.jsx'
 import PatrimonioListPage from './modules/patrimonios/pages/PatrimonioListPage.jsx'
@@ -64,6 +68,11 @@ export default function App() {
             <Route path="/contratos/:id/editar" element={<ContratoFormPage />} />
             <Route path="/financeiro" element={<FinanceiroDashboardPage />} />
             <Route path="/financeiro/lancamentos" element={<LancamentoListPage />} />
+            <Route path="/financeiro/rateios" element={<RateioListPage />} />
+            <Route path="/financeiro/rateios/novo" element={<RateioFormPage />} />
+            <Route path="/financeiro/rateios/:id" element={<RateioViewPage />} />
+            <Route path="/financeiro/rateios/:id/editar" element={<RateioFormPage />} />
+            <Route path="/financeiro/condominio" element={<CondominioPage />} />
             <Route path="/financeiro/novo" element={<LancamentoFormPage />} />
             <Route path="/financeiro/:tipo/nova" element={<LancamentoFormPage />} />
             <Route path="/financeiro/:id" element={<LancamentoViewPage />} />

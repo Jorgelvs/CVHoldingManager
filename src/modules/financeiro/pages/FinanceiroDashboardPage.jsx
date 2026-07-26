@@ -66,6 +66,8 @@ export default function FinanceiroDashboardPage() {
           <Link to="/financeiro/receita/nova" className="button button-primary">Nova receita</Link>
           <Link to="/financeiro/despesa/nova" className="button button-secondary">Nova despesa</Link>
           <Link to="/financeiro/lancamentos" className="button button-secondary">Ver todos os lançamentos</Link>
+          <Link to="/financeiro/rateios" className="button button-secondary">Rateios</Link>
+          <Link to="/financeiro/condominio" className="button button-secondary">Condomínio</Link>
         </div>
       </div>
 

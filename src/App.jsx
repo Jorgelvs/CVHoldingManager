@@ -5,7 +5,10 @@ import Sidebar from './components/Sidebar.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Locatarios from './pages/Locatarios.jsx'
 import Contratos from './pages/Contratos.jsx'
-import Financeiro from './pages/Financeiro.jsx'
+import FinanceiroDashboardPage from './modules/financeiro/pages/FinanceiroDashboardPage.jsx'
+import LancamentoListPage from './modules/financeiro/pages/LancamentoListPage.jsx'
+import LancamentoFormPage from './modules/financeiro/pages/LancamentoFormPage.jsx'
+import LancamentoViewPage from './modules/financeiro/pages/LancamentoViewPage.jsx'
 import Relatorios from './pages/Relatorios.jsx'
 import Configuracoes from './pages/Configuracoes.jsx'
 import PatrimonioListPage from './modules/patrimonios/pages/PatrimonioListPage.jsx'
@@ -59,7 +62,12 @@ export default function App() {
             <Route path="/contratos/novo" element={<ContratoFormPage />} />
             <Route path="/contratos/:id" element={<ContratoViewPage />} />
             <Route path="/contratos/:id/editar" element={<ContratoFormPage />} />
-            <Route path="/financeiro" element={<Financeiro />} />
+            <Route path="/financeiro" element={<FinanceiroDashboardPage />} />
+            <Route path="/financeiro/lancamentos" element={<LancamentoListPage />} />
+            <Route path="/financeiro/novo" element={<LancamentoFormPage />} />
+            <Route path="/financeiro/:tipo/nova" element={<LancamentoFormPage />} />
+            <Route path="/financeiro/:id" element={<LancamentoViewPage />} />
+            <Route path="/financeiro/:id/editar" element={<LancamentoFormPage />} />
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="*" element={<Navigate to="/" replace />} />

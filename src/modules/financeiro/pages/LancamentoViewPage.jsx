@@ -4,6 +4,8 @@ import { buscarLancamentoPorId } from '../services/financeiroService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { formatarMoeda, getStatusEfetivo } from '../utils/financeiroUtils.js'
+import { listarBaixas, estornarBaixa } from '../services/baixaService.js'
+import Modal from '../../../components/Modal.jsx'
 
 export default function LancamentoViewPage() {
   const { id } = useParams()
@@ -25,6 +27,32 @@ export default function LancamentoViewPage() {
 
   const patrimonio = buscarPatrimonioPorId(lancamento.patrimonioId)
   const unidade = buscarUnidadePorId(lancamento.unidadeId)
+  const [baixas, setBaixas] = useState([])
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [toEstornar, setToEstornar] = useState(null)
+
+  useEffect(() => {
+    const b = listarBaixas().filter(x => x.lancamentoId === id)
+    setBaixas(b)
+  }, [id])
+
+  function refreshBaixas() {
+    setBaixas(listarBaixas().filter(x => x.lancamentoId === id))
+  }
+
+  function handleConfirmEstorno() {
+    if (!toEstornar) return
+    const res = estornarBaixa(toEstornar.id, 'Estorno via interface')
+    if (res && res.error) {
+      alert(res.error)
+    } else {
+      refreshBaixas()
+      // refresh lancamento data
+      const updated = buscarLancamentoPorId(id)
+      setLancamento(updated)
+      setConfirmOpen(false)
+    }
+  }
 
   return (
     <div className="page-content">
@@ -72,6 +100,43 @@ export default function LancamentoViewPage() {
           <dd>{lancamento.atualizadoEm}</dd>
         </dl>
       </div>
+
+        <div className="summary-card">
+          <h2>Histórico de baixas</h2>
+          {baixas.length === 0 ? <p>Nenhuma baixa registrada.</p> : (
+            <table className="data-table">
+              <thead>
+                <tr><th>Data</th><th>Valor</th><th>Juros</th><th>Desconto</th><th>Movimentado</th><th>Conta</th><th>Situação</th><th>Ações</th></tr>
+              </thead>
+              <tbody>
+                {baixas.map(b => (
+                  <tr key={b.id} style={{ opacity: b.estornado ? 0.6 : 1 }}>
+                    <td>{b.data}</td>
+                    <td>{formatarMoeda(b.valorPrincipal)}</td>
+                    <td>{formatarMoeda(b.juros)}</td>
+                    <td>{formatarMoeda(b.desconto)}</td>
+                    <td>{formatarMoeda(b.valorMovimentado)}</td>
+                    <td>{b.contaFinanceiraId}</td>
+                    <td>{b.estornado ? 'Estornada' : 'Ativa'}</td>
+                    <td>
+                      {!b.estornado && <button className="button button-danger" onClick={() => { setToEstornar(b); setConfirmOpen(true) }}>Estornar</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <Modal open={confirmOpen} title="Confirmar estorno" onClose={() => setConfirmOpen(false)}>
+          <div>
+            <p>Confirma o estorno desta baixa? Isso gerará um movimento inverso no Livro Caixa e marcará a baixa como estornada.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="button button-danger" onClick={() => handleConfirmEstorno()}>Confirmar estorno</button>
+              <button className="button" onClick={() => setConfirmOpen(false)}>Cancelar</button>
+            </div>
+          </div>
+        </Modal>
     </div>
   )
 }

@@ -48,6 +48,16 @@ export default function Sidebar() {
                 </NavLink>
               </li>
               <li>
+                <NavLink to="/financeiro/contas" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  <span className="label">Contas</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/financeiro/livro-caixa" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  <span className="label">Livro Caixa</span>
+                </NavLink>
+              </li>
+              <li>
                 <NavLink to="/financeiro/condominio" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                   <span className="label">Controle do Condomínio</span>
                 </NavLink>

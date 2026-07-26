@@ -44,7 +44,7 @@ function carregarRateios() {
     return parsed.map(garantirRateio)
   } catch {
     const empty = []
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(empty))
+    localStorage.setItem(STORAGE_KEY_RATEIOS, JSON.stringify(empty))
     return empty
   }
 }

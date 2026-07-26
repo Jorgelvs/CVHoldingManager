@@ -13,6 +13,14 @@ import RateioListPage from './modules/financeiro/pages/RateioListPage.jsx'
 import RateioFormPage from './modules/financeiro/pages/RateioFormPage.jsx'
 import RateioViewPage from './modules/financeiro/pages/RateioViewPage.jsx'
 import CondominioPage from './modules/financeiro/pages/CondominioPage.jsx'
+import ContaListPage from './modules/financeiro/pages/ContaListPage.jsx'
+import LivroCaixaPage from './modules/financeiro/pages/LivroCaixaPage.jsx'
+import BaixaFormPage from './modules/financeiro/pages/BaixaFormPage.jsx'
+import TransferenciaFormPage from './modules/financeiro/pages/TransferenciaFormPage.jsx'
+import AporteListPage from './modules/financeiro/pages/AporteListPage.jsx'
+import AporteFormPage from './modules/financeiro/pages/AporteFormPage.jsx'
+import CaucaoListPage from './modules/financeiro/pages/CaucaoListPage.jsx'
+import CaucaoFormPage from './modules/financeiro/pages/CaucaoFormPage.jsx'
 import Relatorios from './pages/Relatorios.jsx'
 import Configuracoes from './pages/Configuracoes.jsx'
 import PatrimonioListPage from './modules/patrimonios/pages/PatrimonioListPage.jsx'
@@ -73,6 +81,14 @@ export default function App() {
             <Route path="/financeiro/rateios/:id" element={<RateioViewPage />} />
             <Route path="/financeiro/rateios/:id/editar" element={<RateioFormPage />} />
             <Route path="/financeiro/condominio" element={<CondominioPage />} />
+            <Route path="/financeiro/contas" element={<ContaListPage />} />
+            <Route path="/financeiro/livro-caixa" element={<LivroCaixaPage />} />
+            <Route path="/financeiro/baixas/novo" element={<BaixaFormPage />} />
+            <Route path="/financeiro/transferencias/novo" element={<TransferenciaFormPage />} />
+            <Route path="/financeiro/aportes" element={<AporteListPage />} />
+            <Route path="/financeiro/aportes/novo" element={<AporteFormPage />} />
+            <Route path="/financeiro/caucoes" element={<CaucaoListPage />} />
+            <Route path="/financeiro/caucoes/novo" element={<CaucaoFormPage />} />
             <Route path="/financeiro/novo" element={<LancamentoFormPage />} />
             <Route path="/financeiro/:tipo/nova" element={<LancamentoFormPage />} />
             <Route path="/financeiro/:id" element={<LancamentoViewPage />} />

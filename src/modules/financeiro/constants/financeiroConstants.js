@@ -1,6 +1,11 @@
 export const STORAGE_KEY = 'cvholding_financeiro_lancamentos'
 export const STORAGE_KEY_RATEIOS = 'cvholding_rateios'
 export const STORAGE_KEY_SUBCATEGORIES = 'cvholding_financeiro_subcategorias_personalizadas'
+export const STORAGE_KEY_CONTAS = 'cvholding_financeiro_contas'
+export const STORAGE_KEY_LIVRO_CAIXA = 'cvholding_livro_caixa'
+export const STORAGE_KEY_BAIXAS = 'cvholding_financeiro_baixas'
+export const STORAGE_KEY_APORTES = 'cvholding_financeiro_aportes'
+export const STORAGE_KEY_CAUCOES = 'cvholding_financeiro_caucoes'
 
 export const TIPOS_FINANCEIROS = ['receita', 'despesa']
 export const STATUS_FINANCEIRO = ['pendente', 'pago', 'atrasado', 'cancelado']

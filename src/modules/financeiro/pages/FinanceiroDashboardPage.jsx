@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { listarLancamentos } from '../services/financeiroService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
+import { listarContas, calcularSaldo } from '../services/contaService.js'
+import { listarAportes } from '../services/aporteService.js'
+import { listarCaucoes } from '../services/caucaoService.js'
 import { calcularTotalReceitas, calcularTotalDespesas, calcularResultado, calcularPendencias, calcularAtrasados, filtrarLancamentos, ordenarLancamentos, formatarMoeda, getStatusEfetivo, agruparPorPatrimonio } from '../utils/financeiroUtils.js'
 
 export default function FinanceiroDashboardPage() {
@@ -54,6 +57,10 @@ export default function FinanceiroDashboardPage() {
   }, [lancamentosMes, unidades])
 
   const ultimos = ordenarLancamentos(lancamentosMes).slice(0, 5)
+  const contas = listarContas()
+  const contasResumo = contas.map(c => ({ id: c.id, nome: c.nome, saldo: calcularSaldo(c.id) }))
+  const aportes = listarAportes()
+  const caucoes = listarCaucoes()
 
   return (
     <div className="page-content">
@@ -92,6 +99,26 @@ export default function FinanceiroDashboardPage() {
           <strong>{formatarMoeda(atrasados)}</strong>
           <span>Atrasos</span>
         </div>
+      </div>
+
+      <div className="summary-card">
+        <h2>Saldos por conta</h2>
+        {contasResumo.length === 0 ? <p>Nenhuma conta cadastrada.</p> : (
+          <table className="data-table">
+            <thead><tr><th>Conta</th><th>Saldo</th></tr></thead>
+            <tbody>
+              {contasResumo.map(c => (
+                <tr key={c.id}><td>{c.nome}</td><td>{formatarMoeda(c.saldo)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="summary-card">
+        <h2>Aportes &amp; Cauções</h2>
+        <p>Aportes cadastrados: <strong>{aportes.length}</strong></p>
+        <p>Cauções cadastradas: <strong>{caucoes.length}</strong></p>
       </div>
 
       <div className="summary-card">

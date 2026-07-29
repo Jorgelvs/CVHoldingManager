@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { listarContas } from '../services/contaService.js'
 import { criarTransferencia } from '../services/transferenciaService.js'
 
 export default function TransferenciaFormPage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const [contas, setContas] = useState([])
   const [origem, setOrigem] = useState('')
@@ -13,8 +14,28 @@ export default function TransferenciaFormPage() {
   const [descricao, setDescricao] = useState('')
   const [mensagem, setMensagem] = useState(null)
 
+  const universalState = location.state?.universalEntry
+
   useEffect(() => { setContas(listarContas()) }, [])
-  useEffect(() => { if (!origem && contas.length>0) setOrigem(contas[0].id); if (!destino && contas.length>1) setDestino(contas[1].id) }, [contas])
+  useEffect(() => {
+    if (universalState?.contaId) {
+      setOrigem(universalState.contaId)
+    } else if (!origem && contas.length > 0) {
+      setOrigem(contas[0].id)
+    }
+    if (!destino && contas.length > 1) {
+      setDestino(contas[1].id)
+    }
+    if (universalState?.valor) {
+      setValor(universalState.valor)
+    }
+    if (universalState?.descricao) {
+      setDescricao(universalState.descricao)
+    }
+    if (universalState?.date) {
+      setData(`${universalState.date.getFullYear()}-${String(universalState.date.getMonth()+1).padStart(2,'0')}-${String(universalState.date.getDate()).padStart(2,'0')}`)
+    }
+  }, [contas, destino, origem, universalState])
 
   const handleSubmit = (e) => {
     e.preventDefault()

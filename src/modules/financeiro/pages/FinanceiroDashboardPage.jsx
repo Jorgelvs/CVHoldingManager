@@ -58,7 +58,7 @@ export default function FinanceiroDashboardPage() {
 
   const ultimos = ordenarLancamentos(lancamentosMes).slice(0, 5)
   const contas = listarContas()
-  const contasResumo = contas.map(c => ({ id: c.id, nome: c.nome, saldo: calcularSaldo(c.id) }))
+  const contasResumo = contas.map((c) => ({ id: c.id, nome: c.nome, saldo: calcularSaldo(c.id) }))
   const aportes = listarAportes()
   const caucoes = listarCaucoes()
 
@@ -95,7 +95,7 @@ export default function FinanceiroDashboardPage() {
           <strong>{formatarMoeda(pendencias)}</strong>
           <span>Pendências</span>
         </div>
-        <div className="summary-card">
+        <div className={`summary-card ${atrasados > 0 ? 'critical-indicator' : ''}`}>
           <strong>{formatarMoeda(atrasados)}</strong>
           <span>Atrasos</span>
         </div>
@@ -180,7 +180,7 @@ export default function FinanceiroDashboardPage() {
         {ultimos.length === 0 ? (
           <p>Nenhum lançamento financeiro cadastrado no período atual.</p>
         ) : (
-          <ul>
+          <ul className="list-clean">
             {ultimos.map((item) => (
               <li key={item.id}>
                 {item.descricao} - {item.tipo === 'receita' ? 'Receita' : 'Despesa'} - {formatarMoeda(item.valor)} - {getStatusEfetivo(item)}

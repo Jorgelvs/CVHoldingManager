@@ -1,22 +1,15 @@
 import { STORAGE_KEY_SUBCATEGORIES, CATEGORIAS_FINANCEIRAS } from '../constants/financeiroConstants.js'
+import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
+import { listarLancamentos } from './financeiroService.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 
 function carregarSubcategoriasPersonalizadas() {
-  const raw = localStorage.getItem(STORAGE_KEY_SUBCATEGORIES)
-  if (!raw) return []
-
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY_SUBCATEGORIES, JSON.stringify(empty))
-    return empty
-  }
+  const parsed = localGet(STORAGE_KEY_SUBCATEGORIES, [])
+  return Array.isArray(parsed) ? parsed : []
 }
 
 function salvarSubcategoriasPersonalizadas(items) {
-  localStorage.setItem(STORAGE_KEY_SUBCATEGORIES, JSON.stringify(items))
+  localSet(STORAGE_KEY_SUBCATEGORIES, items)
 }
 
 export function listarSubcategoriasPersonalizadas() {
@@ -53,22 +46,13 @@ export function adicionarSubcategoriaPersonalizada(tipo, categoria, nome) {
 export function subcategoriaEstaEmUso(tipo, categoria, nome) {
   const valor = nome.trim().toLowerCase().replace(/\s+/g, ' ')
   if (!tipo || !categoria || !valor) return false
-  const rawLancamentos = localStorage.getItem('cvholding_financeiro_lancamentos')
-  if (!rawLancamentos) return false
-
-  try {
-    const parsed = JSON.parse(rawLancamentos)
-    if (!Array.isArray(parsed)) return false
-    return parsed.some(
-      (item) =>
-        item.tipo === tipo &&
-        item.categoria === categoria &&
-        item.subcategoria &&
-        item.subcategoria.trim().toLowerCase().replace(/\s+/g, ' ') === valor,
-    )
-  } catch {
-    return false
-  }
+  return listarLancamentos().some(
+    (item) =>
+      item.tipo === tipo &&
+      item.categoria === categoria &&
+      item.subcategoria &&
+      item.subcategoria.trim().toLowerCase().replace(/\s+/g, ' ') === valor,
+  )
 }
 
 export function listarSubcategorias(tipo, categoria) {
@@ -83,6 +67,13 @@ export function listarSubcategorias(tipo, categoria) {
 }
 
 export function listarCategorias(tipo) {
+  const parametros = obterParametrosFinanceiros()
+  if (tipo === 'receita' && Array.isArray(parametros?.categoriasReceitas) && parametros.categoriasReceitas.length > 0) {
+    return parametros.categoriasReceitas
+  }
+  if (tipo === 'despesa' && Array.isArray(parametros?.categoriasDespesas) && parametros.categoriasDespesas.length > 0) {
+    return parametros.categoriasDespesas
+  }
   return CATEGORIAS_FINANCEIRAS[tipo] ? CATEGORIAS_FINANCEIRAS[tipo].map((item) => item.nome) : []
 }
 

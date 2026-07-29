@@ -1,52 +1,50 @@
 import { STORAGE_KEY } from '../constants/locatarioConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
+import { identificarCamposAlterados, registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
+import { locatarioTemContratos as contratoVinculadoAoLocatario } from '../../contratos/services/contratoService.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
+import { applyCreationTimestamps, applyDomainSchema, touchUpdatedAt } from '../../../utils/schemaUtils.js'
 
 function garantirEstrutura(item) {
+  const source = applyCreationTimestamps(applyDomainSchema('locatario', item), {
+    legacyCreatedFields: ['criadoEm', 'dataCriacao'],
+    legacyUpdatedFields: ['atualizadoEm', 'dataAtualizacao'],
+  })
+
   return {
-    id: item.id || gerarId(),
-    nomeCompleto: item.nomeCompleto || '',
-    cpf: item.cpf || '',
-    rg: item.rg || '',
-    dataNascimento: item.dataNascimento || '',
-    telefone: item.telefone || '',
-    whatsapp: item.whatsapp || '',
-    email: item.email || '',
-    endereco: item.endereco || '',
-    numero: item.numero || '',
-    complemento: item.complemento || '',
-    bairro: item.bairro || '',
-    cidade: item.cidade || '',
-    estado: item.estado || '',
-    cep: item.cep || '',
-    nomePagador: item.nomePagador || '',
-    cpfPagador: item.cpfPagador || '',
-    telefonePagador: item.telefonePagador || '',
-    observacoes: item.observacoes || '',
-    situacao: item.situacao || 'Ativo',
-    createdAt: item.createdAt || new Date().toISOString(),
-    updatedAt: item.updatedAt || new Date().toISOString(),
+    id: source.id || gerarId(),
+    nomeCompleto: source.nomeCompleto || '',
+    cpf: source.cpf || '',
+    rg: source.rg || '',
+    dataNascimento: source.dataNascimento || '',
+    telefone: source.telefone || '',
+    whatsapp: source.whatsapp || '',
+    email: source.email || '',
+    endereco: source.endereco || '',
+    numero: source.numero || '',
+    complemento: source.complemento || '',
+    bairro: source.bairro || '',
+    cidade: source.cidade || '',
+    estado: source.estado || '',
+    cep: source.cep || '',
+    nomePagador: source.nomePagador || '',
+    cpfPagador: source.cpfPagador || '',
+    telefonePagador: source.telefonePagador || '',
+    observacoes: source.observacoes || '',
+    situacao: source.situacao || 'Ativo',
+    createdAt: source.createdAt,
+    updatedAt: source.updatedAt,
   }
 }
 
 function carregarLocatarios() {
-  const raw = localStorage.getItem(STORAGE_KEY)
-  if (!raw) {
-    return []
-  }
-
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed.map(garantirEstrutura)
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(empty))
-    return empty
-  }
+  const dados = localGet(STORAGE_KEY, [])
+  const parsed = Array.isArray(dados) ? dados : []
+  return parsed.map(garantirEstrutura)
 }
 
 function salvarLocatarios(locatarios) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(locatarios))
+  localSet(STORAGE_KEY, locatarios)
 }
 
 export function inicializarLocatarios() {
@@ -72,6 +70,18 @@ export function criarLocatario(dados) {
   const locatarios = listarLocatarios()
   locatarios.push(locatario)
   salvarLocatarios(locatarios)
+
+  registrarEventoAuditoria({
+    modulo: 'Locatários',
+    acao: 'INCLUSAO',
+    registroId: locatario.id,
+    registro: locatario.nomeCompleto || locatario.id,
+    descricao: `Inclusão do locatário ${locatario.nomeCompleto || locatario.id}`,
+    valorAnterior: null,
+    novoValor: locatario,
+    camposAlterados: Object.keys(locatario),
+  })
+
   return locatario
 }
 
@@ -79,40 +89,56 @@ export function atualizarLocatario(id, dados) {
   const locatarios = listarLocatarios()
   const index = locatarios.findIndex((item) => item.id === id)
   if (index === -1) return null
+  const anterior = locatarios[index]
 
   locatarios[index] = garantirEstrutura({
-    ...locatarios[index],
-    ...dados,
-    updatedAt: new Date().toISOString(),
+    ...touchUpdatedAt({ ...anterior, ...dados }),
   })
 
   salvarLocatarios(locatarios)
+
+  const atualizado = locatarios[index]
+  const camposAlterados = identificarCamposAlterados(anterior, atualizado, ['updatedAt'])
+  if (camposAlterados.length > 0) {
+    registrarEventoAuditoria({
+      modulo: 'Locatários',
+      acao: 'ALTERACAO',
+      registroId: atualizado.id,
+      registro: atualizado.nomeCompleto || atualizado.id,
+      descricao: `Alteração do locatário ${atualizado.nomeCompleto || atualizado.id}`,
+      valorAnterior: anterior,
+      novoValor: atualizado,
+      camposAlterados,
+    })
+  }
+
   return locatarios[index]
 }
 
-function locatarioTemContratos(id) {
-  const raw = localStorage.getItem('cvholding_contratos')
-  if (!raw) return false
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return false
-    return parsed.some((item) => item.locatarioId === id)
-  } catch {
-    return false
-  }
-}
-
 export function excluirLocatario(id) {
-  if (locatarioTemContratos(id)) {
+  if (contratoVinculadoAoLocatario(id)) {
     return false
   }
 
   const locatarios = listarLocatarios()
   const index = locatarios.findIndex((item) => item.id === id)
   if (index === -1) return false
+  const removido = locatarios[index]
 
   locatarios.splice(index, 1)
   salvarLocatarios(locatarios)
+
+  registrarEventoAuditoria({
+    modulo: 'Locatários',
+    acao: 'EXCLUSAO',
+    registroId: removido.id,
+    registro: removido.nomeCompleto || removido.id,
+    descricao: `Exclusão do locatário ${removido.nomeCompleto || removido.id}`,
+    valorAnterior: removido,
+    novoValor: null,
+    camposAlterados: ['id'],
+  })
+
   return true
 }
 

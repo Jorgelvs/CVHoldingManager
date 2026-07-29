@@ -1,9 +1,6 @@
 import React from 'react'
+import ConfiguracoesPage from '../modules/configuracoes/pages/ConfiguracoesPage.jsx'
 
 export default function Configuracoes() {
-  return (
-    <div className="page-center">
-      <h1>Configurações</h1>
-    </div>
-  )
+  return <ConfiguracoesPage />
 }

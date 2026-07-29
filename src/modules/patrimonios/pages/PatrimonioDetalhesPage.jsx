@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { formatarData, formatarMoeda, calcularTaxaOcupacao, enderecoResumo } from '../utils/patrimonioUtils.js'
 import {
   buscarPatrimonioPorId,
@@ -83,6 +83,9 @@ export default function PatrimonioDetalhesPage() {
           <p className="details-meta">Situação registral: {patrimonio.situacaoRegistral || 'Não informado'}</p>
         </div>
         <div className="details-actions">
+          <Link className="button button-secondary" to={`/auditoria?modulo=Patrimônios&registroId=${patrimonio.id}`}>
+            Ver histórico
+          </Link>
           <button className="button button-secondary" type="button" onClick={() => navigate(`/patrimonios/${patrimonio.id}/editar`)}>
             Editar
           </button>

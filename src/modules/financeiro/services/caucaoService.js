@@ -1,23 +1,15 @@
 import { STORAGE_KEY_CAUCOES } from '../constants/financeiroConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
 import { registrarMovimento } from './livroCaixaService.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 
 function carregarCaucoes() {
-  const raw = localStorage.getItem(STORAGE_KEY_CAUCOES)
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY_CAUCOES, JSON.stringify(empty))
-    return empty
-  }
+  const parsed = localGet(STORAGE_KEY_CAUCOES, [])
+  return Array.isArray(parsed) ? parsed : []
 }
 
 function salvarCaucoes(items) {
-  localStorage.setItem(STORAGE_KEY_CAUCOES, JSON.stringify(items))
+  localSet(STORAGE_KEY_CAUCOES, items)
 }
 
 export function listarCaucoes() { return carregarCaucoes() }

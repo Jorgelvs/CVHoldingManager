@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listarPatrimonios, buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
-import { listarUnidadesPorPatrimonio, buscarUnidadePorId, listarUnidades } from '../../unidades/services/unidadeService.js'
+import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
+import { listarUnidadesPorPatrimonio, buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
-import { listarCategorias, listarSubcategorias, categoriaTemSubcategorias, adicionarSubcategoriaPersonalizada, subcategoriaJaExiste } from '../services/categoriaFinanceiraService.js'
+import { listarCategorias, listarSubcategorias, categoriaTemSubcategorias, adicionarSubcategoriaPersonalizada } from '../services/categoriaFinanceiraService.js'
+import { listarContas } from '../services/contaService.js'
 import AdicionarSubcategoriaDialog from './AdicionarSubcategoriaDialog.jsx'
+import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
 
 const initialState = {
   tipo: 'receita',
@@ -20,6 +22,7 @@ const initialState = {
   unidadeId: '',
   contratoId: null,
   locatarioId: null,
+  contaFinanceiraId: '',
   observacoes: '',
 }
 
@@ -28,23 +31,55 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
   const [data, setData] = useState(initialState)
   const [alert, setAlert] = useState(null)
   const [showSubcategoriaDialog, setShowSubcategoriaDialog] = useState(false)
-  const [subcategoriaNova, setSubcategoriaNova] = useState('')
   const [subcategories, setSubcategories] = useState([])
+  const [defaultsAplicados, setDefaultsAplicados] = useState(false)
+
+  const parametrosFinanceiros = useMemo(() => obterParametrosFinanceiros(), [])
 
   const patrimonios = useMemo(() => listarPatrimonios(), [])
+  const contas = useMemo(() => listarContas(), [])
   const unidades = useMemo(() => {
     if (!data.patrimonioId) return []
     return listarUnidadesPorPatrimonio(data.patrimonioId)
   }, [data.patrimonioId])
 
+  const aplicarDefaultsFinanceiros = (current) => {
+    const hoje = new Date()
+    const ano = hoje.getFullYear()
+    const mes = hoje.getMonth()
+    const diaPadrao = Number(parametrosFinanceiros?.diaPadraoVencimento || 5)
+    const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate()
+    const diaFinal = Math.min(Math.max(diaPadrao, 1), ultimoDiaMes)
+    const dataVencimentoPadrao = new Date(ano, mes, diaFinal).toISOString().slice(0, 10)
+    const dataCompetenciaPadrao = `${ano}-${String(mes + 1).padStart(2, '0')}`
+
+    return {
+      ...current,
+      contaFinanceiraId: current.contaFinanceiraId || parametrosFinanceiros?.contaFinanceiraPadraoId || '',
+      dataCompetencia: current.dataCompetencia || dataCompetenciaPadrao,
+      dataVencimento: current.dataVencimento || dataVencimentoPadrao,
+      categoria: current.categoria || (listarCategorias(current.tipo)[0] || ''),
+      status: current.status || (parametrosFinanceiros?.statusFinanceiros?.[0] || 'pendente'),
+    }
+  }
+
   useEffect(() => {
     if (initialData) {
-      setData({
+      const base = {
         ...initialData,
         valor: initialData.valor ?? '',
-      })
+      }
+      setData(initialData.id ? base : aplicarDefaultsFinanceiros(base))
+      setDefaultsAplicados(true)
     }
   }, [initialData])
+
+  useEffect(() => {
+    if (initialData || defaultsAplicados) return
+
+    setData((current) => aplicarDefaultsFinanceiros(current))
+    setDefaultsAplicados(true)
+  }, [initialData, defaultsAplicados, parametrosFinanceiros])
 
   useEffect(() => {
     if (data.categoria) {
@@ -65,7 +100,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
     setData((current) => ({
       ...current,
       tipo: value,
-      categoria: '',
+      categoria: listarCategorias(value)[0] || '',
       subcategoria: null,
     }))
   }
@@ -184,14 +219,14 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       <div className="form-section">
         <div className="form-grid">
           <div className="form-field">
-            <label>Natureza</label>
+            <label className="required-label">Natureza</label>
             <select value={data.tipo} onChange={(event) => handleTipoChange(event.target.value)}>
               <option value="receita">Receita</option>
               <option value="despesa">Despesa</option>
             </select>
           </div>
           <div className="form-field">
-            <label>Patrimônio</label>
+            <label className="required-label">Patrimônio</label>
             <select value={data.patrimonioId || ''} onChange={(event) => handlePatrimonioChange(event.target.value)}>
               <option value="">Selecione um patrimônio</option>
               {patrimonios.map((item) => (
@@ -213,7 +248,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             </select>
           </div>
           <div className="form-field">
-            <label>Categoria</label>
+            <label className="required-label">Categoria</label>
             <select value={data.categoria || ''} onChange={(event) => handleCategoriaChange(event.target.value)}>
               <option value="">Selecione a categoria</option>
               {listarCategorias(data.tipo).map((item) => (
@@ -225,8 +260,8 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
           </div>
           {subcategories.length > 0 ? (
             <div className="form-field">
-              <label>Subcategoria</label>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <label className={categoriaTemSubcategorias(data.tipo, data.categoria) ? 'required-label' : ''}>Subcategoria</label>
+              <div className="inline-form-row">
                 <select
                   value={data.subcategoria || ''}
                   onChange={(event) => handleFieldChange('subcategoria', event.target.value)}
@@ -251,8 +286,19 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             onSave={handleAdicionarSubcategoria}
             onCancel={() => setShowSubcategoriaDialog(false)}
           />
+          <div className="form-field">
+            <label>Conta financeira</label>
+            <select value={data.contaFinanceiraId || ''} onChange={(event) => handleFieldChange('contaFinanceiraId', event.target.value)}>
+              <option value="">Sem conta</option>
+              {contas.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nome}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="form-field form-field-full">
-            <label>Descrição</label>
+            <label className="required-label">Descrição</label>
             <input
               type="text"
               value={data.descricao}
@@ -260,18 +306,18 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             />
           </div>
           <div className="form-field">
-            <label>Valor</label>
+            <label className="required-label">Valor</label>
             <input
               type="number"
               min="0"
               step="0.01"
               value={data.valor}
               onChange={(event) => handleFieldChange('valor', event.target.value)}
-              placeholder="1500"
+              placeholder={`1500 (${parametrosFinanceiros?.moedaPadrao || 'BRL'})`}
             />
           </div>
           <div className="form-field">
-            <label>Data de competência</label>
+            <label className="required-label">Data de competência</label>
             <input
               type="month"
               value={data.dataCompetencia}
@@ -295,12 +341,11 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             />
           </div>
           <div className="form-field">
-            <label>Status</label>
+            <label className="required-label">Status</label>
             <select value={data.status} onChange={(event) => handleFieldChange('status', event.target.value)}>
-              <option value="pendente">Pendente</option>
-              <option value="pago">Pago</option>
-              <option value="atrasado">Atrasado</option>
-              <option value="cancelado">Cancelado</option>
+              {(parametrosFinanceiros?.statusFinanceiros || ['pendente', 'pago', 'atrasado', 'cancelado']).map((status) => (
+                <option key={status} value={status}>{String(status).charAt(0).toUpperCase() + String(status).slice(1)}</option>
+              ))}
             </select>
           </div>
           <div className="form-field form-field-full">

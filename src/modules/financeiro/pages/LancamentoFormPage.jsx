@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import React, { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LancamentoForm from '../components/LancamentoForm.jsx'
 import { buscarLancamentoPorId, criarLancamento, atualizarLancamento } from '../services/financeiroService.js'
 
 export default function LancamentoFormPage() {
   const { id, tipo } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const [lancamento, setLancamento] = useState(null)
 
@@ -30,7 +31,31 @@ export default function LancamentoFormPage() {
     navigate(`/financeiro/${created.id}`)
   }
 
-  const initialData = lancamento || (tipo ? { ...dadosBase(tipo) } : null)
+  const universalState = location.state?.universalEntry
+
+  const initialData = useMemo(() => {
+    if (lancamento) return lancamento
+    if (universalState) {
+      return {
+        tipo: universalState.tipo || 'receita',
+        categoria: universalState.categoria || '',
+        subcategoria: universalState.subcategoria || null,
+        descricao: universalState.descricao || '',
+        valor: universalState.valor || '',
+        dataCompetencia: universalState.dataCompetencia || '',
+        dataVencimento: '',
+        dataPagamento: universalState.dataPagamento || '',
+        status: universalState.status || 'pendente',
+        patrimonioId: universalState.patrimonioId || '',
+        unidadeId: universalState.unidadeId || '',
+        contratoId: null,
+        locatarioId: null,
+        contaFinanceiraId: universalState.contaId || '',
+        observacoes: universalState.observacoes || '',
+      }
+    }
+    return tipo ? { ...dadosBase(tipo) } : null
+  }, [lancamento, universalState, tipo])
 
   function dadosBase(tipo) {
     return {
@@ -48,6 +73,7 @@ export default function LancamentoFormPage() {
         unidadeId: '',
         contratoId: null,
         locatarioId: null,
+        contaFinanceiraId: '',
         observacoes: '',
       },
     }

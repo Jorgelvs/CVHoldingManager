@@ -58,6 +58,39 @@ function normalizarCompetencia(dataCompetencia) {
   return dataCompetencia
 }
 
+function normalizarDataParaFiltro(valor) {
+  if (!valor) return ''
+  if (typeof valor !== 'string') return ''
+
+  const trimmed = valor.trim()
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.slice(0, 10)
+  }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+    const [dia, mes, ano] = trimmed.split('/')
+    return `${ano}-${mes}-${dia}`
+  }
+
+  const data = new Date(trimmed)
+  if (!Number.isNaN(data.getTime())) {
+    return data.toISOString().slice(0, 10)
+  }
+
+  return ''
+}
+
+export function getDataConsiderada(item) {
+  if (!item) return ''
+  if (item.status === 'pago' && item.dataPagamento) {
+    return normalizarDataParaFiltro(item.dataPagamento)
+  }
+  const dataVencimento = normalizarDataParaFiltro(item.dataVencimento)
+  if (dataVencimento) {
+    return dataVencimento
+  }
+  return normalizarDataParaFiltro(item.dataCompetencia)
+}
+
 export function filtrarLancamentos(lancamentos, filtros) {
   return lancamentos.filter((item) => {
     if (!item || item.status === 'cancelado') return false
@@ -70,18 +103,22 @@ export function filtrarLancamentos(lancamentos, filtros) {
       subcategoria,
       patrimonioId,
       unidadeId,
+      contaFinanceiraId,
       termo,
     } = filtros || {}
 
     const efetivo = getStatusEfetivo(item)
-    const competencia = normalizarCompetencia(item.dataCompetencia || '')
+    const dataReferencia = getDataConsiderada(item)
+    const inicio = normalizarDataParaFiltro(periodoInicio)
+    const fim = normalizarDataParaFiltro(periodoFim)
 
-    if (periodoInicio && competencia < periodoInicio) return false
-    if (periodoFim && competencia > periodoFim) return false
+    if (inicio && dataReferencia && dataReferencia < inicio) return false
+    if (fim && dataReferencia && dataReferencia > fim) return false
     if (tipo && item.tipo !== tipo) return false
     if (status && efetivo !== status) return false
     if (categoria && item.categoria !== categoria) return false
     if (subcategoria && item.subcategoria !== subcategoria) return false
+    if (contaFinanceiraId && item.contaFinanceiraId !== contaFinanceiraId) return false
     if (patrimonioId && item.patrimonioId !== patrimonioId) return false
     if (unidadeId && item.unidadeId !== unidadeId) return false
     if (termo) {
@@ -99,9 +136,12 @@ export function filtrarLancamentos(lancamentos, filtros) {
 
 export function ordenarLancamentos(lancamentos) {
   return [...lancamentos].sort((a, b) => {
-    const dataA = a.dataCompetencia || ''
-    const dataB = b.dataCompetencia || ''
+    const dataA = getDataConsiderada(a) || ''
+    const dataB = getDataConsiderada(b) || ''
     if (dataA !== dataB) return dataB.localeCompare(dataA)
+    const competenciaA = a.dataCompetencia || ''
+    const competenciaB = b.dataCompetencia || ''
+    if (competenciaA !== competenciaB) return competenciaB.localeCompare(competenciaA)
     const vencA = a.dataVencimento || ''
     const vencB = b.dataVencimento || ''
     if (vencA !== vencB) return vencA.localeCompare(vencB)

@@ -13,6 +13,7 @@ import {
   tiposPatrimonio,
   situacoesPatrimonio,
 } from '../constants/patrimonioConstants.js'
+import ExportButtons from '../../reports/components/ExportButtons.jsx'
 
 export default function PatrimonioListPage() {
   const [patrimonios, setPatrimonios] = useState([])
@@ -69,9 +70,23 @@ export default function PatrimonioListPage() {
           <p className="page-subtitle">Gestão dos empreendimentos e ativos imobiliários da C&V Holding.</p>
           <h1>Patrimônio</h1>
         </div>
-        <Link to="/patrimonios/novo" className="button button-primary">
-          Novo patrimônio
-        </Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <ExportButtons
+            title="Patrimônios"
+            filename="patrimonios"
+            columns={[
+              { key: 'nome', label: 'Nome' },
+              { key: 'codigo', label: 'Código' },
+              { key: 'grupoPatrimonial', label: 'Grupo' },
+              { key: 'tipo', label: 'Tipo' },
+              { key: 'situacao', label: 'Situação' },
+            ]}
+            rows={filtrados.map((item) => ({ ...item }))}
+          />
+          <Link to="/patrimonios/novo" className="button button-primary">
+            Novo patrimônio
+          </Link>
+        </div>
       </div>
 
       <div className="filters-panel">

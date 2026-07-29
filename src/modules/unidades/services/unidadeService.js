@@ -1,44 +1,48 @@
 import { STORAGE_KEY } from '../constants/unidadeConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
+import { identificarCamposAlterados, registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
+import { exists as localExists, get as localGet, set as localSet } from '../../../utils/localRepository.js'
+import { applyCreationTimestamps, applyDomainSchema, touchUpdatedAt } from '../../../utils/schemaUtils.js'
 
 const defaultUnidades = []
 
 function garantirEstrutura(item) {
+  const source = applyCreationTimestamps(applyDomainSchema('unidade', item), {
+    legacyCreatedFields: ['criadoEm', 'dataCriacao'],
+    legacyUpdatedFields: ['atualizadoEm', 'dataAtualizacao'],
+  })
+
   return {
-    id: item.id || gerarId(),
-    patrimonioId: item.patrimonioId || '',
-    codigoInterno: item.codigoInterno || '',
-    nome: item.nome || '',
-    tipo: item.tipo || '',
-    finalidade: item.finalidade || '',
-    situacao: item.situacao || '',
-    areaUtil: item.areaUtil ?? '',
-    areaTotal: item.areaTotal ?? '',
-    observacoes: item.observacoes || '',
-    createdAt: item.createdAt || new Date().toISOString(),
-    updatedAt: item.updatedAt || new Date().toISOString(),
+    id: source.id || gerarId(),
+    patrimonioId: source.patrimonioId || '',
+    codigoInterno: source.codigoInterno || '',
+    nome: source.nome || '',
+    tipo: source.tipo || '',
+    finalidade: source.finalidade || '',
+    situacao: source.situacao || '',
+    areaUtil: source.areaUtil ?? '',
+    areaTotal: source.areaTotal ?? '',
+    observacoes: source.observacoes || '',
+    createdAt: source.createdAt,
+    updatedAt: source.updatedAt,
   }
 }
 
 function carregarUnidades() {
-  const raw = localStorage.getItem(STORAGE_KEY)
-  if (!raw) {
-    salvarUnidades(defaultUnidades)
-    return defaultUnidades.map(garantirEstrutura)
+  const chaveExiste = localExists(STORAGE_KEY)
+  const dados = localGet(STORAGE_KEY, defaultUnidades)
+  const parsed = Array.isArray(dados) ? dados : defaultUnidades
+  const normalizados = parsed.map(garantirEstrutura)
+
+  if (!chaveExiste) {
+    salvarUnidades(normalizados)
   }
 
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed.map(garantirEstrutura)
-  } catch {
-    salvarUnidades(defaultUnidades)
-    return defaultUnidades.map(garantirEstrutura)
-  }
+  return normalizados
 }
 
 function salvarUnidades(unidades) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(unidades))
+  localSet(STORAGE_KEY, unidades)
 }
 
 export function inicializarUnidades() {
@@ -83,6 +87,18 @@ export function criarUnidade(dados) {
   const unidades = listarUnidades()
   unidades.push(unidade)
   salvarUnidades(unidades)
+
+  registrarEventoAuditoria({
+    modulo: 'Unidades',
+    acao: 'INCLUSAO',
+    registroId: unidade.id,
+    registro: unidade.nome || unidade.codigoInterno || unidade.id,
+    descricao: `Inclusão da unidade ${unidade.nome || unidade.codigoInterno || unidade.id}`,
+    valorAnterior: null,
+    novoValor: unidade,
+    camposAlterados: Object.keys(unidade),
+  })
+
   return unidade
 }
 
@@ -90,12 +106,27 @@ export function atualizarUnidade(id, dados) {
   const unidades = listarUnidades()
   const index = unidades.findIndex((item) => item.id === id)
   if (index === -1) return null
+  const anterior = unidades[index]
   unidades[index] = garantirEstrutura({
-    ...unidades[index],
-    ...dados,
-    updatedAt: new Date().toISOString(),
+    ...touchUpdatedAt({ ...anterior, ...dados }),
   })
   salvarUnidades(unidades)
+
+  const atualizado = unidades[index]
+  const camposAlterados = identificarCamposAlterados(anterior, atualizado, ['updatedAt'])
+  if (camposAlterados.length > 0) {
+    registrarEventoAuditoria({
+      modulo: 'Unidades',
+      acao: 'ALTERACAO',
+      registroId: atualizado.id,
+      registro: atualizado.nome || atualizado.codigoInterno || atualizado.id,
+      descricao: `Alteração da unidade ${atualizado.nome || atualizado.codigoInterno || atualizado.id}`,
+      valorAnterior: anterior,
+      novoValor: atualizado,
+      camposAlterados,
+    })
+  }
+
   return unidades[index]
 }
 
@@ -103,12 +134,26 @@ export function alterarSituacaoUnidade(id, situacao) {
   const unidades = listarUnidades()
   const index = unidades.findIndex((item) => item.id === id)
   if (index === -1) return null
+  const anterior = unidades[index]
   unidades[index] = {
-    ...unidades[index],
+    ...touchUpdatedAt(anterior),
     situacao,
-    updatedAt: new Date().toISOString(),
   }
   salvarUnidades(unidades)
+
+  const atualizado = unidades[index]
+  const acao = situacao === 'Inativo' ? 'EXCLUSAO_LOGICA' : 'ALTERACAO'
+  registrarEventoAuditoria({
+    modulo: 'Unidades',
+    acao,
+    registroId: atualizado.id,
+    registro: atualizado.nome || atualizado.codigoInterno || atualizado.id,
+    descricao: `Alteração de situação da unidade para ${situacao}`,
+    valorAnterior: anterior,
+    novoValor: atualizado,
+    camposAlterados: ['situacao'],
+  })
+
   return unidades[index]
 }
 

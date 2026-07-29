@@ -1,53 +1,33 @@
 import React, { useEffect, useState } from 'react'
-import Modal from '../../../components/Modal.jsx'
-import { listarContas, criarConta, atualizarConta, excluirConta, inicializarContas, calcularSaldo } from '../services/contaService.js'
+import { Link, useNavigate } from 'react-router-dom'
+import { listarContas, atualizarConta, excluirConta, inicializarContas, calcularSaldo, formatarTipoConta } from '../services/contaService.js'
+import { formatarMoeda } from '../utils/financeiroUtils.js'
+import ExportButtons from '../../reports/components/ExportButtons.jsx'
+import { obterPreferenciasInterface } from '../../configuracoes/services/configuracaoService.js'
 
 export default function ContaListPage() {
+  const navigate = useNavigate()
   const [contas, setContas] = useState([])
-  const [nome, setNome] = useState('')
-  const [tipo, setTipo] = useState('conta_corrente')
+  const itensPorPagina = Number(obterPreferenciasInterface()?.itensPorPagina || 20)
 
   useEffect(() => {
     inicializarContas()
     setContas(listarContas())
   }, [])
 
-  const handleCriar = () => {
-    if (!nome.trim()) return
-    criarConta({ nome, tipo })
-    setContas(listarContas())
-    setNome('')
-  }
+  const refresh = () => setContas(listarContas())
+  const contasPaginadas = contas.slice(0, itensPorPagina)
 
   const handleToggle = (conta) => {
     atualizarConta(conta.id, { ativa: !conta.ativa })
-    setContas(listarContas())
-  }
-
-  const handleEditar = (conta) => {
-    setEditAccount(conta)
-    setEditName(conta.nome)
-    setEditOpen(true)
-  }
-
-  const [editOpen, setEditOpen] = useState(false)
-  const [editAccount, setEditAccount] = useState(null)
-  const [editName, setEditName] = useState('')
-
-  function handleSaveEdit() {
-    if (!editName || !editAccount) return
-    atualizarConta(editAccount.id, { nome: editName })
-    setContas(listarContas())
-    setEditOpen(false)
-    setEditAccount(null)
-    setEditName('')
+    refresh()
   }
 
   const handleExcluir = (conta) => {
     if (!confirm(`Confirma excluir a conta "${conta.nome}"? Isso não é reversível.`)) return
     const ok = excluirConta(conta.id)
     if (!ok) return alert('Não é possível excluir conta que possui movimentos no Livro Caixa.')
-    setContas(listarContas())
+    refresh()
   }
 
   return (
@@ -57,70 +37,67 @@ export default function ContaListPage() {
           <p className="page-subtitle">Gerencie as contas financeiras.</p>
           <h1>Contas Financeiras</h1>
         </div>
-      </div>
-
-      <div className="form-section">
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome da conta" />
-          <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-            <option value="conta_corrente">Conta Corrente</option>
-            <option value="investimento">Investimento</option>
-            <option value="caucao">Caução</option>
-            <option value="caixa">Caixa</option>
-          </select>
-          <button className="button button-primary" type="button" onClick={handleCriar}>Criar conta</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <ExportButtons
+            title="Contas Financeiras"
+            filename="contas-financeiras"
+            columns={[
+              { key: 'nome', label: 'Nome' },
+              { key: 'tipo', label: 'Tipo' },
+              { key: 'banco', label: 'Banco' },
+              { key: 'saldo', label: 'Saldo', type: 'currency' },
+              { key: 'situacao', label: 'Situação' },
+            ]}
+            rows={contas.map((conta) => ({
+              ...conta,
+              tipo: formatarTipoConta(conta.tipo),
+              saldo: calcularSaldo(conta.id),
+              situacao: conta.ativa ? 'Ativa' : 'Inativa',
+            }))}
+          />
+          <button className="button button-primary" type="button" onClick={() => navigate('/financeiro/contas/novo')}>Nova conta</button>
         </div>
       </div>
 
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Tipo</th>
-              <th>Ativa</th>
-              <th>Saldo</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contas.map((c) => (
-              <tr key={c.id}>
-                <td>{c.nome}</td>
-                <td>{c.tipo}</td>
-                <td>{c.ativa ? 'Sim' : 'Não'}</td>
-                <td>{formatarSaldo(c.id)}</td>
-                <td className="table-actions">
-                  <button className="button button-secondary" onClick={() => handleEditar(c)}>Editar</button>
-                  <button className="button button-secondary" onClick={() => handleToggle(c)}>{c.ativa ? 'Desativar' : 'Ativar'}</button>
-                  <button className="button button-danger" onClick={() => handleExcluir(c)}>Excluir</button>
-                </td>
+      {contas.length === 0 ? (
+        <div className="empty-state">
+          <h2>Nenhuma conta financeira cadastrada.</h2>
+          <p>Cadastre a primeira conta para iniciar o controle de saldo e fluxo de caixa.</p>
+          <button className="button button-primary" type="button" onClick={() => navigate('/financeiro/contas/novo')}>Cadastrar conta</button>
+        </div>
+      ) : (
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Tipo</th>
+                <th>Banco</th>
+                <th>Saldo</th>
+                <th>Situação</th>
+                <th>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {editOpen && (
-        <Modal open={editOpen} title={`Editar conta ${editAccount?.nome || ''}`} onClose={() => setEditOpen(false)}>
-          <div>
-            <label>Novo nome</label>
-            <input value={editName} onChange={(e) => setEditName(e.target.value)} />
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="button button-primary" onClick={() => handleSaveEdit()}>Salvar</button>
-              <button className="button" onClick={() => setEditOpen(false)}>Cancelar</button>
-            </div>
-          </div>
-        </Modal>
+            </thead>
+            <tbody>
+              {contasPaginadas.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.nome}</td>
+                  <td>{formatarTipoConta(c.tipo)}</td>
+                  <td>{c.banco || '-'}</td>
+                  <td>{formatarMoeda(calcularSaldo(c.id))}</td>
+                  <td>{c.ativa ? 'Ativa' : 'Inativa'}</td>
+                  <td className="table-actions">
+                    <Link className="button button-secondary" to={`/financeiro/contas/${c.id}`}>Visualizar</Link>
+                    <Link className="button button-secondary" to={`/financeiro/contas/${c.id}/editar`}>Editar</Link>
+                    <button className="button button-secondary" type="button" onClick={() => handleToggle(c)}>{c.ativa ? 'Desativar' : 'Ativar'}</button>
+                    <button className="button button-danger" type="button" onClick={() => handleExcluir(c)}>Excluir</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
-
-  function formatarSaldo(id) {
-    try {
-      const s = calcularSaldo(id)
-      return s.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    } catch {
-      return 'R$ 0,00'
-    }
-  }
 }

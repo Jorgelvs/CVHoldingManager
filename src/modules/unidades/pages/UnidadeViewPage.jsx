@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { buscarUnidadePorId } from '../services/unidadeService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { formatarMoeda, formatarData } from '../../patrimonios/utils/patrimonioUtils.js'
@@ -29,9 +29,14 @@ export default function UnidadeViewPage() {
           <p className="page-subtitle">Detalhes da unidade cadastrada</p>
           <h1>{unidade.nome}</h1>
         </div>
-        <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
-          Voltar
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link className="button button-secondary" to={`/auditoria?modulo=Unidades&registroId=${unidade.id}`}>
+            Ver histórico
+          </Link>
+          <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
+            Voltar
+          </button>
+        </div>
       </div>
 
       <div className="summary-details">

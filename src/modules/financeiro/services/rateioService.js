@@ -2,10 +2,13 @@ import { STORAGE_KEY, STORAGE_KEY_RATEIOS } from '../constants/financeiroConstan
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
 import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
 import { listarContratosPorUnidade } from '../../contratos/services/contratoService.js'
-import { criarLancamento, listarLancamentos } from './financeiroService.js'
+import { criarLancamento, listarLancamentos, atualizarLancamento } from './financeiroService.js'
+import { registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
+import { exists as localExists, get as localGet, set as localSet } from '../../../utils/localRepository.js'
 
 const METODOS_RATEIO = ['igualitario']
 const CRITERIOS_ELEGIBILIDADE = ['ocupadas_mes_inteiro']
+let migracaoChaveRateioExecutada = false
 
 function garantirRateio(item) {
   return {
@@ -33,24 +36,87 @@ function garantirRateio(item) {
 }
 
 function carregarRateios() {
-  const raw = localStorage.getItem(STORAGE_KEY_RATEIOS)
-  if (!raw) {
-    return []
-  }
+  executarMigracaoRateiosChaveIncorreta()
 
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed.map(garantirRateio)
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY_RATEIOS, JSON.stringify(empty))
-    return empty
-  }
+  const parsed = localGet(STORAGE_KEY_RATEIOS, [])
+  return Array.isArray(parsed) ? parsed.map(garantirRateio) : []
 }
 
 function salvarRateios(rateios) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(rateios))
+  localSet(STORAGE_KEY_RATEIOS, rateios)
+}
+
+function isRateioLike(item) {
+  if (!item || typeof item !== 'object') return false
+  const hasCoreFields = Boolean(item.patrimonioId || item.competencia || item.metodoRateio || item.criterioElegibilidade)
+  const hasRateioStatus = ['rascunho', 'processado', 'cancelado'].includes(item.status)
+  return hasCoreFields || hasRateioStatus || Array.isArray(item.lancamentosGeradosIds)
+}
+
+function isLancamentoLike(item) {
+  if (!item || typeof item !== 'object') return false
+  const tipoValido = item.tipo === 'receita' || item.tipo === 'despesa'
+  const possuiCamposFinanceiros = 'valor' in item || 'dataCompetencia' in item || 'dataVencimento' in item
+  return tipoValido && possuiCamposFinanceiros
+}
+
+function mergeRateiosById(existentes, migrados) {
+  const mapa = new Map()
+  ;(Array.isArray(existentes) ? existentes : []).forEach((item) => {
+    const key = item?.id || `legacy-${JSON.stringify(item)}`
+    mapa.set(key, item)
+  })
+  ;(Array.isArray(migrados) ? migrados : []).forEach((item) => {
+    const key = item?.id || `legacy-${JSON.stringify(item)}`
+    if (!mapa.has(key)) {
+      mapa.set(key, item)
+    }
+  })
+  return Array.from(mapa.values())
+}
+
+function executarMigracaoRateiosChaveIncorreta() {
+  if (migracaoChaveRateioExecutada) return
+  migracaoChaveRateioExecutada = true
+
+  if (!localExists(STORAGE_KEY)) return
+  const parsedLancamentos = localGet(STORAGE_KEY, [])
+
+  if (!Array.isArray(parsedLancamentos) || parsedLancamentos.length === 0) return
+
+  const candidatosRateio = parsedLancamentos.filter(isRateioLike)
+  if (candidatosRateio.length === 0) return
+
+  const candidatosLancamento = parsedLancamentos.filter(isLancamentoLike)
+  const rateiosMigrados = candidatosRateio.map(garantirRateio)
+
+  const parsedRateios = localGet(STORAGE_KEY_RATEIOS, [])
+  const rateiosAtuais = Array.isArray(parsedRateios) ? parsedRateios.map(garantirRateio) : []
+
+  const rateiosComMigracao = mergeRateiosById(rateiosAtuais, rateiosMigrados)
+  localSet(STORAGE_KEY_RATEIOS, rateiosComMigracao)
+
+  const haviaContaminacao = candidatosRateio.length !== parsedLancamentos.length
+  if (haviaContaminacao || candidatosLancamento.length === 0) {
+    localSet(STORAGE_KEY, candidatosLancamento)
+  }
+
+  registrarEventoAuditoria({
+    modulo: 'Financeiro',
+    acao: 'MIGRACAO_RATEIOS_CHAVE',
+    registroId: 'migracao-rateios-chave',
+    registro: 'rateios',
+    descricao: 'Migracao automatica de rateios salvos na chave de lancamentos.',
+    valorAnterior: {
+      totalItensChaveLancamentos: parsedLancamentos.length,
+      rateiosDetectados: candidatosRateio.length,
+    },
+    novoValor: {
+      totalLancamentosMantidos: candidatosLancamento.length,
+      totalRateiosPersistidos: rateiosComMigracao.length,
+    },
+    camposAlterados: ['financeiro.lancamentos', 'financeiro.rateios'],
+  })
 }
 
 function competenciaParaDataInicio(competencia) {
@@ -208,13 +274,15 @@ export function atualizarRateio(id, dados) {
 
 function cancelarLancamentosDoRateio(rateioId) {
   const lancamentos = listarLancamentos()
-  const atualizados = lancamentos.map((item) => {
-    if (item.origem === 'rateio' && item.rateioId === rateioId && item.status !== 'cancelado') {
-      return { ...item, status: 'cancelado', atualizadoEm: new Date().toISOString() }
-    }
-    return item
-  })
-  localStorage.setItem('cvholding_financeiro_lancamentos', JSON.stringify(atualizados))
+  lancamentos
+    .filter((item) => item.origem === 'rateio' && item.rateioId === rateioId && item.status !== 'cancelado')
+    .forEach((item) => {
+      atualizarLancamento(item.id, {
+        ...item,
+        status: 'cancelado',
+        atualizadoEm: new Date().toISOString(),
+      })
+    })
 }
 
 export function processarRateio(id, dados) {

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { criarCaucao } from '../services/caucaoService.js'
 import { listarContas } from '../services/contaService.js'
 
 export default function CaucaoFormPage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const [contratoId, setContratoId] = useState('')
   const [valor, setValor] = useState('')
@@ -11,8 +12,22 @@ export default function CaucaoFormPage() {
   const [contaCustodia, setContaCustodia] = useState('')
   const [contas, setContas] = useState([])
 
+  const universalState = location.state?.universalEntry
+
   useEffect(() => { setContas(listarContas()) }, [])
-  useEffect(() => { if (!contaRecebimento && contas.length>0) setContaRecebimento(contas[0].id); if (!contaCustodia && contas.length>1) setContaCustodia(contas[1].id) }, [contas])
+  useEffect(() => {
+    if (universalState?.contaId) {
+      setContaRecebimento(universalState.contaId)
+    } else if (!contaRecebimento && contas.length > 0) {
+      setContaRecebimento(contas[0].id)
+    }
+    if (!contaCustodia && contas.length > 1) {
+      setContaCustodia(contas[1].id)
+    }
+    if (universalState?.valor) {
+      setValor(universalState.valor)
+    }
+  }, [contas, contaCustodia, contaRecebimento, universalState])
 
   const handleSubmit = (e) => {
     e.preventDefault()

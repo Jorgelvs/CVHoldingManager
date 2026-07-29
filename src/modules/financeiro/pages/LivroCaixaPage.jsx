@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { listarMovimentos, estornarMovimento } from '../services/livroCaixaService.js'
+import { buscarContaPorId } from '../services/contaService.js'
+import ExportButtons from '../../reports/components/ExportButtons.jsx'
 import Modal from '../../../components/Modal.jsx'
 
 export default function LivroCaixaPage() {
@@ -12,6 +14,14 @@ export default function LivroCaixaPage() {
   }, [])
 
   function refresh() { setMovs(listarMovimentos()) }
+
+  function formatarValor(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  }
+
+  function nomeDaConta(contaId) {
+    return buscarContaPorId(contaId)?.nome || 'Conta não cadastrada'
+  }
 
   function transfers() {
     const byId = {}
@@ -55,6 +65,23 @@ export default function LivroCaixaPage() {
           <p className="page-subtitle">Livro Caixa - movimentos financeiros efetivos.</p>
           <h1>Livro Caixa</h1>
         </div>
+        <ExportButtons
+          title="Livro Caixa"
+          filename="livro-caixa"
+          columns={[
+            { key: 'data', label: 'Data', type: 'date' },
+            { key: 'conta', label: 'Conta' },
+            { key: 'origem', label: 'Origem' },
+            { key: 'descricao', label: 'Descrição' },
+            { key: 'natureza', label: 'Natureza' },
+            { key: 'valor', label: 'Valor', type: 'currency' },
+          ]}
+          rows={movs.map((mov) => ({
+            ...mov,
+            conta: nomeDaConta(mov.contaFinanceiraId),
+            valor: Number(mov.valor || 0),
+          }))}
+        />
       </div>
 
       {movs.length === 0 ? (
@@ -78,11 +105,11 @@ export default function LivroCaixaPage() {
               {movs.map((m) => (
                 <tr key={m.id}>
                   <td>{m.data}</td>
-                  <td>{m.contaFinanceiraId}</td>
+                  <td>{nomeDaConta(m.contaFinanceiraId)}</td>
                   <td>{m.origem}</td>
                   <td>{m.descricao}</td>
                   <td>{m.natureza}</td>
-                  <td>{Number(m.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                  <td>{formatarValor(m.valor)}</td>
                 </tr>
               ))}
             </tbody>
@@ -94,17 +121,29 @@ export default function LivroCaixaPage() {
         <h2>Transferências registradas</h2>
         {transfers().length === 0 ? <p>Nenhuma transferência registrada.</p> : (
           <table className="data-table">
-            <thead><tr><th>Transferência</th><th>Movimentos</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Transferência</th><th>Detalhes</th><th>Ações</th></tr></thead>
             <tbody>
-              {transfers().map(t => (
-                <tr key={t.id}>
-                  <td>{t.id}</td>
-                  <td>{t.itens.map(i => `${i.contaFinanceiraId}: ${Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`).join(' | ')}</td>
-                  <td>
-                    {canEstornarTransfer(t.itens) ? <button className="button button-danger" onClick={() => handleEstornarTransfer(t.id)}>Estornar transferência</button> : <span>Estornada</span>}
-                  </td>
-                </tr>
-              ))}
+              {transfers().map(t => {
+                const origem = t.itens.find((item) => item.natureza === 'saida')
+                const destino = t.itens.find((item) => item.natureza === 'entrada')
+                const valorTotal = t.itens.reduce((sum, item) => sum + Number(item.valor || 0), 0)
+                return (
+                  <tr key={t.id}>
+                    <td>
+                      <div>{`${nomeDaConta(origem?.contaFinanceiraId)} → ${nomeDaConta(destino?.contaFinanceiraId)}`}</div>
+                      <small style={{ color: 'var(--text)' }}>{t.id}</small>
+                    </td>
+                    <td>
+                      <div><strong>Origem:</strong> {nomeDaConta(origem?.contaFinanceiraId)}</div>
+                      <div><strong>Destino:</strong> {nomeDaConta(destino?.contaFinanceiraId)}</div>
+                      <div><strong>Valor:</strong> {formatarValor(valorTotal)}</div>
+                    </td>
+                    <td>
+                      {canEstornarTransfer(t.itens) ? <button className="button button-danger" onClick={() => handleEstornarTransfer(t.id)}>Estornar transferência</button> : <span>Estornada</span>}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}

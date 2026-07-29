@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
 import { contratoAtivoPorUnidade, validarContrato } from '../services/contratoService.js'
-import { reajusteTipos, indicesReajuste, situacoesContrato } from '../constants/contratoConstants.js'
+import { reajusteTipos, indicesReajuste, periodicidadesReajuste, situacoesContrato } from '../constants/contratoConstants.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
+import { obterParametrosContratos, obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
 
 const defaultForm = {
   patrimonioId: '',
@@ -21,13 +22,17 @@ const defaultForm = {
   percentualJuros: '',
   reajusteTipo: 'Sem reajuste',
   indiceReajuste: 'Sem índice',
+  percentualReajuste: '',
+  periodicidadeReajuste: 'Anual',
+  prazoAlertaReajusteDias: '',
   dataBaseReajuste: '',
+  historicoReajustes: [],
   prazoMeses: '',
   situacao: 'Rascunho',
   observacoes: '',
 }
 
-export default function ContratoForm({ initialData = null, onSave, headerLabel }) {
+export default function ContratoForm({ initialData = null, headerLabel = 'Contrato', onSave }) {
   const navigate = useNavigate()
   const [form, setForm] = useState(defaultForm)
   const [errors, setErrors] = useState({})
@@ -35,6 +40,20 @@ export default function ContratoForm({ initialData = null, onSave, headerLabel }
   const [locatarios, setLocatarios] = useState([])
   const [patrimonios, setPatrimonios] = useState([])
   const [unidades, setUnidades] = useState([])
+  const [defaultsAplicados, setDefaultsAplicados] = useState(false)
+
+  const parametrosContratos = React.useMemo(() => obterParametrosContratos(), [])
+  const parametrosFinanceiros = React.useMemo(() => obterParametrosFinanceiros(), [])
+  const opcoesIndiceReajuste = React.useMemo(
+    () => (parametrosContratos?.indicesReajustePermitidos?.length ? parametrosContratos.indicesReajustePermitidos : indicesReajuste),
+    [parametrosContratos],
+  )
+  const opcoesPeriodicidade = React.useMemo(() => {
+    const base = periodicidadesReajuste
+    const padrao = parametrosContratos?.periodicidadePadrao
+    if (!padrao) return base
+    return Array.from(new Set([padrao, ...base]))
+  }, [parametrosContratos])
 
   useEffect(() => {
     setLocatarios(listarLocatarios())
@@ -47,8 +66,28 @@ export default function ContratoForm({ initialData = null, onSave, headerLabel }
         ...defaultForm,
         ...initialData,
       })
+      setDefaultsAplicados(true)
+    } else {
+      setForm(defaultForm)
+      setDefaultsAplicados(false)
     }
   }, [initialData])
+
+  useEffect(() => {
+    if (initialData || defaultsAplicados) return
+
+    setForm((current) => ({
+      ...current,
+      diaVencimento: current.diaVencimento || String(parametrosFinanceiros?.diaPadraoVencimento || ''),
+      indiceReajuste: current.indiceReajuste === 'Sem índice'
+        ? (parametrosContratos?.indicesReajustePermitidos?.[0] || current.indiceReajuste)
+        : current.indiceReajuste,
+      periodicidadeReajuste: current.periodicidadeReajuste || parametrosContratos?.periodicidadePadrao || 'Anual',
+      prazoAlertaReajusteDias: current.prazoAlertaReajusteDias || String(parametrosContratos?.prazoAlertaReajusteDias || ''),
+      observacoes: current.observacoes || parametrosContratos?.textoPadraoObservacoes || '',
+    }))
+    setDefaultsAplicados(true)
+  }, [initialData, defaultsAplicados, parametrosContratos, parametrosFinanceiros])
 
   useEffect(() => {
     if (form.patrimonioId) {
@@ -80,7 +119,7 @@ export default function ContratoForm({ initialData = null, onSave, headerLabel }
       setSubmitMessage({ type: 'error', text: 'Corrija os erros antes de salvar.' })
       return
     }
-    onSave({
+    const response = onSave({
       ...form,
       valorAluguel: form.valorAluguel || '0',
       valorCondominio: form.valorCondominio || '0',
@@ -88,6 +127,13 @@ export default function ContratoForm({ initialData = null, onSave, headerLabel }
       percentualMulta: form.percentualMulta || '0',
       percentualJuros: form.percentualJuros || '0',
     })
+
+    if (response?.error) {
+      setSubmitMessage({ type: 'error', text: response.error })
+      return
+    }
+
+    setSubmitMessage({ type: 'success', text: 'Contrato salvo com sucesso.' })
   }
 
   const unidadesElegiveis = unidades.filter((unidade) => unidade.situacao !== 'Em implantação' && unidade.situacao !== 'Inativa')
@@ -222,7 +268,7 @@ export default function ContratoForm({ initialData = null, onSave, headerLabel }
           <label className="form-field">
             <span>Índice de reajuste</span>
             <select value={form.indiceReajuste} onChange={(event) => updateField('indiceReajuste', event.target.value)}>
-              {indicesReajuste.map((indice) => (
+              {opcoesIndiceReajuste.map((indice) => (
                 <option key={indice} value={indice}>
                   {indice}
                 </option>
@@ -230,8 +276,26 @@ export default function ContratoForm({ initialData = null, onSave, headerLabel }
             </select>
           </label>
           <label className="form-field">
+            <span>Periodicidade</span>
+            <select value={form.periodicidadeReajuste} onChange={(event) => updateField('periodicidadeReajuste', event.target.value)}>
+              {opcoesPeriodicidade.map((periodicidade) => (
+                <option key={periodicidade} value={periodicidade}>
+                  {periodicidade}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="form-field">
+            <span>Percentual de reajuste</span>
+            <input type="number" min="0" step="0.01" value={form.percentualReajuste} onChange={(event) => updateField('percentualReajuste', event.target.value)} />
+          </label>
+          <label className="form-field">
             <span>Data base do reajuste</span>
             <input type="date" value={form.dataBaseReajuste} onChange={(event) => updateField('dataBaseReajuste', event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>Prazo de alerta (dias)</span>
+            <input type="number" min="1" value={form.prazoAlertaReajusteDias || ''} onChange={(event) => updateField('prazoAlertaReajusteDias', event.target.value)} />
           </label>
         </div>
       </FormSection>

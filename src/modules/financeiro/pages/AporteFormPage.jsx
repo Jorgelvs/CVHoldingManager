@@ -1,17 +1,29 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { criarAporte } from '../services/aporteService.js'
 import { listarContas } from '../services/contaService.js'
 
 export default function AporteFormPage() {
+  const location = useLocation()
   const navigate = useNavigate()
   const [valor, setValor] = useState('')
   const [tipo, setTipo] = useState('temporario')
   const [conta, setConta] = useState('')
   const [contas, setContas] = useState([])
 
+  const universalState = location.state?.universalEntry
+
   useEffect(() => { setContas(listarContas()) }, [])
-  useEffect(() => { if (!conta && contas.length>0) setConta(contas[0].id) }, [contas])
+  useEffect(() => {
+    if (universalState?.contaId) {
+      setConta(universalState.contaId)
+    } else if (!conta && contas.length > 0) {
+      setConta(contas[0].id)
+    }
+    if (universalState?.valor) {
+      setValor(universalState.valor)
+    }
+  }, [contas, conta, universalState])
 
   const handleSubmit = (e) => {
     e.preventDefault()

@@ -1,22 +1,14 @@
 import { STORAGE_KEY_LIVRO_CAIXA } from '../constants/financeiroConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 
 function carregarMovimentos() {
-  const raw = localStorage.getItem(STORAGE_KEY_LIVRO_CAIXA)
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY_LIVRO_CAIXA, JSON.stringify(empty))
-    return empty
-  }
+  const parsed = localGet(STORAGE_KEY_LIVRO_CAIXA, [])
+  return Array.isArray(parsed) ? parsed : []
 }
 
 function salvarMovimentos(items) {
-  localStorage.setItem(STORAGE_KEY_LIVRO_CAIXA, JSON.stringify(items))
+  localSet(STORAGE_KEY_LIVRO_CAIXA, items)
 }
 
 export function listarMovimentos(filters) {
@@ -35,6 +27,24 @@ export function listarMovimentos(filters) {
     }
     return true
   })
+}
+
+export function removerMovimentosRelacionados(documentoFinanceiroId, referenciaId = null) {
+  if (!documentoFinanceiroId) return 0
+
+  const movs = carregarMovimentos()
+  const filtrados = movs.filter((mov) => {
+    if (mov.documentoFinanceiroId !== documentoFinanceiroId) return true
+    if (referenciaId && mov.referenciaId !== referenciaId) return true
+    return false
+  })
+
+  const removidos = movs.length - filtrados.length
+  if (removidos > 0) {
+    salvarMovimentos(filtrados)
+  }
+
+  return removidos
 }
 
 export function buscarMovimentoPorId(id) {

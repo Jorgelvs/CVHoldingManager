@@ -2,23 +2,15 @@ import { STORAGE_KEY_BAIXAS } from '../constants/financeiroConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
 import { registrarMovimento, estornarMovimento } from './livroCaixaService.js'
 import { buscarLancamentoPorId, atualizarLancamento } from './financeiroService.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 
 function carregarBaixas() {
-  const raw = localStorage.getItem(STORAGE_KEY_BAIXAS)
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY_BAIXAS, JSON.stringify(empty))
-    return empty
-  }
+  const parsed = localGet(STORAGE_KEY_BAIXAS, [])
+  return Array.isArray(parsed) ? parsed : []
 }
 
 function salvarBaixas(items) {
-  localStorage.setItem(STORAGE_KEY_BAIXAS, JSON.stringify(items))
+  localSet(STORAGE_KEY_BAIXAS, items)
 }
 
 export function listarBaixas() {

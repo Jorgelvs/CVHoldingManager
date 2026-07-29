@@ -1,23 +1,15 @@
 import { STORAGE_KEY_APORTES } from '../constants/financeiroConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
 import { registrarMovimento } from './livroCaixaService.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 
 function carregarAportes() {
-  const raw = localStorage.getItem(STORAGE_KEY_APORTES)
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY_APORTES, JSON.stringify(empty))
-    return empty
-  }
+  const parsed = localGet(STORAGE_KEY_APORTES, [])
+  return Array.isArray(parsed) ? parsed : []
 }
 
 function salvarAportes(items) {
-  localStorage.setItem(STORAGE_KEY_APORTES, JSON.stringify(items))
+  localSet(STORAGE_KEY_APORTES, items)
 }
 
 export function listarAportes() { return carregarAportes() }

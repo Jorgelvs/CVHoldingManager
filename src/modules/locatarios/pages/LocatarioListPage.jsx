@@ -5,6 +5,7 @@ import { locatarioTemContratos } from '../../contratos/services/contratoService.
 import { situacoesLocatario } from '../constants/locatarioConstants.js'
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
+import ExportButtons from '../../reports/components/ExportButtons.jsx'
 
 export default function LocatarioListPage() {
   const [locatarios, setLocatarios] = useState([])
@@ -65,9 +66,23 @@ export default function LocatarioListPage() {
           <p className="page-subtitle">Gestão dos locatários da C&V Holding.</p>
           <h1>Locatários</h1>
         </div>
-        <Link to="/locatarios/novo" className="button button-primary">
-          Novo locatário
-        </Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <ExportButtons
+            title="Locatários"
+            filename="locatarios"
+            columns={[
+              { key: 'nomeCompleto', label: 'Nome' },
+              { key: 'cpf', label: 'CPF' },
+              { key: 'telefone', label: 'Telefone' },
+              { key: 'whatsapp', label: 'WhatsApp' },
+              { key: 'situacao', label: 'Situação' },
+            ]}
+            rows={filtrados.map((item) => ({ ...item }))}
+          />
+          <Link to="/locatarios/novo" className="button button-primary">
+            Novo locatário
+          </Link>
+        </div>
       </div>
 
       <div className="filters-panel">

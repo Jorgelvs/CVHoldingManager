@@ -1,30 +1,69 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { ChevronDown, ChevronRight, Filter, Plus, Search } from 'lucide-react'
 import FinanceiroFilters from '../components/FinanceiroFilters.jsx'
 import ResumoFinanceiro from '../components/ResumoFinanceiro.jsx'
 import LancamentoCard from '../components/LancamentoCard.jsx'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
 import { listarLancamentos, buscarLancamentoPorId, cancelarLancamento, excluirLancamento, atualizarLancamento } from '../services/financeiroService.js'
-import { filtrarLancamentos, ordenarLancamentos, calcularTotalReceitas, calcularTotalDespesas, calcularResultado, calcularPendencias, calcularAtrasados } from '../utils/financeiroUtils.js'
+import { filtrarLancamentos, ordenarLancamentos, calcularTotalReceitas, calcularTotalDespesas, calcularResultado, calcularPendencias, calcularAtrasados, getDataConsiderada } from '../utils/financeiroUtils.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
+import { buscarContaPorId } from '../services/contaService.js'
+import ExportButtons from '../../reports/components/ExportButtons.jsx'
+import { obterPreferenciasInterface } from '../../configuracoes/services/configuracaoService.js'
 
 export default function LancamentoListPage() {
+  const location = useLocation()
   const [filtros, setFiltros] = useState({})
+  const [draftFiltros, setDraftFiltros] = useState({})
   const [lancamentos, setLancamentos] = useState([])
   const [alert, setAlert] = useState(null)
   const [confirmExcluir, setConfirmExcluir] = useState(null)
   const [confirmCancelar, setConfirmCancelar] = useState(null)
+  const [filtrosVisiveis, setFiltrosVisiveis] = useState(false)
+
+  const preferenciasInterface = useMemo(() => obterPreferenciasInterface(), [])
+  const itensPorPagina = Number(preferenciasInterface?.itensPorPagina || 20)
 
   useEffect(() => {
     setLancamentos(listarLancamentos())
   }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const queryFilters = {
+      periodoInicio: params.get('periodoInicio') || '',
+      periodoFim: params.get('periodoFim') || '',
+      contaFinanceiraId: params.get('contaFinanceiraId') || '',
+      tipo: params.get('tipo') || '',
+      status: params.get('status') || '',
+      categoria: params.get('categoria') || '',
+      subcategoria: params.get('subcategoria') || '',
+      patrimonioId: params.get('patrimonioId') || '',
+      unidadeId: params.get('unidadeId') || '',
+      termo: params.get('termo') || '',
+    }
+
+    if (location.search) {
+      setFiltros(queryFilters)
+      setDraftFiltros(queryFilters)
+    }
+  }, [location.search])
+
+  useEffect(() => {
+    if (filtrosVisiveis) {
+      setDraftFiltros(filtros)
+    }
+  }, [filtrosVisiveis])
 
   const atualizarLista = () => setLancamentos(listarLancamentos())
 
   const historicoFiltrado = useMemo(() => {
     return ordenarLancamentos(filtrarLancamentos(lancamentos, filtros))
   }, [lancamentos, filtros])
+
+  const historicoPaginado = useMemo(() => historicoFiltrado.slice(0, itensPorPagina), [historicoFiltrado, itensPorPagina])
 
   const patrimonios = useMemo(() => listarPatrimonios(), [])
   const unidades = useMemo(() => listarUnidades(), [])
@@ -46,7 +85,16 @@ export default function LancamentoListPage() {
   }, [historicoFiltrado])
 
   const handleChangeFiltro = (field, value) => {
-    setFiltros((current) => ({ ...current, [field]: value }))
+    setDraftFiltros((current) => ({ ...current, [field]: value }))
+  }
+
+  const handleApplyFiltros = () => {
+    setFiltros(draftFiltros)
+  }
+
+  const handleClearFiltros = () => {
+    setDraftFiltros({})
+    setFiltros({})
   }
 
   const handleMarcarPago = (lancamento) => {
@@ -73,24 +121,68 @@ export default function LancamentoListPage() {
   }
 
   return (
-    <div className="page-content">
-      <div className="page-header">
-        <div>
-          <p className="page-subtitle">Filtre e gerencie seus lançamentos financeiros.</p>
-          <h1>Lançamentos</h1>
+    <div className="page-content page-content-tight">
+      <div className="page-header page-header-compact">
+        <div className="page-title-block">
+          <p className="page-subtitle page-subtitle-tight">Filtre e gerencie seus lançamentos financeiros.</p>
+          <h1 className="page-title-tight">Lançamentos</h1>
         </div>
-        <Link to="/financeiro/novo" className="button button-primary">Novo lançamento</Link>
+        <div className="header-actions-wrap">
+          <ExportButtons
+            title="Lançamentos"
+            filename="lancamentos"
+            periodo={filtros.periodo || ''}
+            columns={[
+              { key: 'descricao', label: 'Descrição' },
+              { key: 'natureza', label: 'Natureza' },
+              { key: 'tipo', label: 'Tipo' },
+              { key: 'categoria', label: 'Categoria' },
+              { key: 'valor', label: 'Valor', type: 'currency' },
+              { key: 'dataCompetencia', label: 'Data competência', type: 'date' },
+              { key: 'dataVencimento', label: 'Data vencimento', type: 'date' },
+              { key: 'dataPagamento', label: 'Data pagamento', type: 'date' },
+              { key: 'dataConsiderada', label: 'Data considerada', type: 'date' },
+              { key: 'status', label: 'Status' },
+            ]}
+            rows={historicoFiltrado.map((item) => ({
+              ...item,
+              valor: Number(item.valor || 0),
+              natureza: item.tipo === 'receita' ? 'Receita' : 'Despesa',
+              tipo: item.tipo,
+              dataConsiderada: getDataConsiderada(item),
+            }))}
+          />
+          <Link to="/financeiro/novo" className="button button-primary">
+            <Plus size={16} /> Novo lançamento
+          </Link>
+        </div>
       </div>
 
       <ResumoFinanceiro {...totais} />
-      <FinanceiroFilters
-        filtros={filtros}
-        onChange={handleChangeFiltro}
-        categorias={categorias}
-        subcategorias={subcategorias}
-        patrimonios={patrimonios}
-        unidades={unidades}
-      />
+
+      <div className="filters-toggle-row">
+        <button
+          type="button"
+          className="button button-secondary"
+          onClick={() => setFiltrosVisiveis((current) => !current)}
+          aria-expanded={filtrosVisiveis}
+        >
+          <Filter size={14} /> Filtros {filtrosVisiveis ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+      </div>
+
+      {filtrosVisiveis ? (
+        <FinanceiroFilters
+          filtros={draftFiltros}
+          onChange={handleChangeFiltro}
+          onApply={handleApplyFiltros}
+          onClear={handleClearFiltros}
+          categorias={categorias}
+          subcategorias={subcategorias}
+          patrimonios={patrimonios}
+          unidades={unidades}
+        />
+      ) : null}
 
       {alert ? <div className={`alert-box ${alert.type === 'success' ? 'alert-success' : 'alert-error'}`}>{alert.message}</div> : null}
 
@@ -101,30 +193,30 @@ export default function LancamentoListPage() {
           <Link className="button button-primary" to="/financeiro/novo">Novo lançamento</Link>
         </div>
       ) : (
-        <div className="table-wrapper">
-          <table className="data-table">
+        <div className="table-wrapper table-wrapper-tight">
+          <table className="data-table data-table-fixed">
             <thead>
               <tr>
-                <th>Descrição</th>
-                <th>Natureza</th>
-                <th>Categoria</th>
-                <th>Subcategoria</th>
-                <th>Patrimônio</th>
-                <th>Unidade</th>
-                <th>Competência</th>
-                <th>Vencimento</th>
-                <th>Status</th>
-                <th>Valor</th>
-                <th>Ações</th>
+                <th className="col-lancamento-descricao">Descrição</th>
+                <th className="col-lancamento-natureza">Natureza</th>
+                <th className="col-lancamento-categoria">Categoria</th>
+                <th className="col-lancamento-patrimonio">Patrimônio</th>
+                <th className="col-lancamento-unidade">Unidade</th>
+                <th className="col-lancamento-valor">Valor</th>
+                <th className="col-lancamento-conta">Conta</th>
+                <th className="col-lancamento-data">Data considerada</th>
+                <th className="col-lancamento-status">Status</th>
+                <th className="col-lancamento-acoes">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {historicoFiltrado.map((item) => (
+              {historicoPaginado.map((item) => (
                 <LancamentoCard
                   key={item.id}
-                  lancamento={item}
+                  lancamento={{ ...item, dataConsiderada: getDataConsiderada(item) }}
                   patrimonio={patrimonios.find((p) => p.id === item.patrimonioId)}
                   unidade={unidades.find((u) => u.id === item.unidadeId)}
+                  conta={buscarContaPorId(item.contaFinanceiraId)}
                   onMarcarPago={(lancamento) => setConfirmCancelar(null) || handleMarcarPago(lancamento)}
                   onCancelar={(lancamento) => setConfirmCancelar(lancamento)}
                   onExcluir={(lancamento) => setConfirmExcluir(lancamento)}

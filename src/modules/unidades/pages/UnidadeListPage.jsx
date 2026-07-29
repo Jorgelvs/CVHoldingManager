@@ -4,6 +4,7 @@ import { listarUnidades, alterarSituacaoUnidade, listarUnidadesPorPatrimonio } f
 import { tiposUnidade, finalidadesUnidade, situacoesUnidade } from '../constants/unidadeConstants.js'
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
+import ExportButtons from '../../reports/components/ExportButtons.jsx'
 
 export default function UnidadeListPage() {
   const { id: patrimonioId } = useParams()
@@ -73,9 +74,23 @@ export default function UnidadeListPage() {
           <p className="page-subtitle">Lista de unidades vinculadas ao patrimônio.</p>
           <h1>Unidades</h1>
         </div>
-        <Link to={patrimonioId ? `/patrimonios/${patrimonioId}/unidades/nova` : '/unidades/nova'} className="button button-primary">
-          Nova unidade
-        </Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <ExportButtons
+            title="Unidades"
+            filename="unidades"
+            columns={[
+              { key: 'nome', label: 'Nome' },
+              { key: 'codigoInterno', label: 'Código' },
+              { key: 'tipo', label: 'Tipo' },
+              { key: 'finalidade', label: 'Finalidade' },
+              { key: 'situacao', label: 'Situação' },
+            ]}
+            rows={filtrados.map((item) => ({ ...item }))}
+          />
+          <Link to={patrimonioId ? `/patrimonios/${patrimonioId}/unidades/nova` : '/unidades/nova'} className="button button-primary">
+            Nova unidade
+          </Link>
+        </div>
       </div>
 
       <div className="filters-panel">

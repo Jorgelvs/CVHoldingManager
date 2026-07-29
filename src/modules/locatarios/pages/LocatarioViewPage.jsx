@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { buscarLocatarioPorId } from '../services/locatarioService.js'
 import { listarContratosPorLocatario } from '../../contratos/services/contratoService.js'
 import { buscarContratoPorId } from '../../contratos/services/contratoService.js'
@@ -40,9 +40,14 @@ export default function LocatarioViewPage() {
           <h1>{locatario.nomeCompleto}</h1>
           <p>{locatario.cpf || '-'} • {locatario.telefone || '-'} • {locatario.whatsapp || '-'}</p>
         </div>
-        <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
-          Voltar
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link className="button button-secondary" to={`/auditoria?modulo=Locatários&registroId=${locatario.id}`}>
+            Ver histórico
+          </Link>
+          <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
+            Voltar
+          </button>
+        </div>
       </div>
 
       <Tabs items={tabItems} activeId={activeTab} onChange={setActiveTab} />

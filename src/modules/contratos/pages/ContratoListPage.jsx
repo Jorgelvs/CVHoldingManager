@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { listarContratos, alterarSituacaoContrato, excluirContrato } from '../services/contratoService.js'
 import { situacoesContrato } from '../constants/contratoConstants.js'
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
@@ -7,20 +7,63 @@ import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
+import ExportButtons from '../../reports/components/ExportButtons.jsx'
+import { listarContratosVencendoPrazo, listarReajustesPendentes } from '../services/reajusteService.js'
+import { obterPreferenciasInterface } from '../../configuracoes/services/configuracaoService.js'
 
 export default function ContratoListPage() {
+  const location = useLocation()
   const [contratos, setContratos] = useState([])
   const [search, setSearch] = useState('')
   const [situacaoFiltro, setSituacaoFiltro] = useState('')
   const [patrimonioFiltro, setPatrimonioFiltro] = useState('')
+  const [alertaFiltro, setAlertaFiltro] = useState('')
   const [confirm, setConfirm] = useState(null)
   const [alert, setAlert] = useState(null)
+  const itensPorPagina = Number(obterPreferenciasInterface()?.itensPorPagina || 20)
 
   useEffect(() => {
     setContratos(listarContratos())
   }, [])
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    setSearch(params.get('termo') || '')
+    setSituacaoFiltro(params.get('situacao') || '')
+    setPatrimonioFiltro(params.get('patrimonioId') || '')
+    setAlertaFiltro(params.get('alerta') || '')
+  }, [location.search])
+
   const atualizarLista = () => setContratos(listarContratos())
+
+  const contratosFiltradosPorAlerta = useMemo(() => {
+    if (!alertaFiltro) return null
+
+    if (alertaFiltro === 'vencendo') {
+      const ids = new Set(
+        listarContratosVencendoPrazo()
+          .filter((item) => item.diasRestantes >= 0 && item.diasRestantes <= 30)
+          .map((item) => item.contrato.id),
+      )
+      return ids
+    }
+
+    if (alertaFiltro === 'vencidos') {
+      const ids = new Set(
+        listarContratosVencendoPrazo()
+          .filter((item) => item.diasRestantes < 0)
+          .map((item) => item.contrato.id),
+      )
+      return ids
+    }
+
+    if (alertaFiltro === 'reajustes-pendentes') {
+      const ids = new Set(listarReajustesPendentes().map((item) => item.contrato.id))
+      return ids
+    }
+
+    return null
+  }, [alertaFiltro, contratos])
 
   const filtrados = useMemo(() => {
     return contratos.filter((item) => {
@@ -36,9 +79,12 @@ export default function ContratoListPage() {
         patrimonio?.nome.toLowerCase().includes(termo)
       const matchesSituacao = !situacaoFiltro || item.situacao === situacaoFiltro
       const matchesPatrimonio = !patrimonioFiltro || item.patrimonioId === patrimonioFiltro
-      return matchesSearch && matchesSituacao && matchesPatrimonio
+      const matchesAlerta = !contratosFiltradosPorAlerta || contratosFiltradosPorAlerta.has(item.id)
+      return matchesSearch && matchesSituacao && matchesPatrimonio && matchesAlerta
     })
-  }, [contratos, search, situacaoFiltro, patrimonioFiltro])
+  }, [contratos, search, situacaoFiltro, patrimonioFiltro, contratosFiltradosPorAlerta])
+
+  const paginados = useMemo(() => filtrados.slice(0, itensPorPagina), [filtrados, itensPorPagina])
 
   const handleAction = (contrato, action) => {
     setConfirm({ contrato, action })
@@ -73,9 +119,33 @@ export default function ContratoListPage() {
           <p className="page-subtitle">Gestão de contratos vinculados a patrimônios e unidades.</p>
           <h1>Contratos</h1>
         </div>
-        <Link to="/contratos/novo" className="button button-primary">
-          Novo contrato
-        </Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <ExportButtons
+            title="Contratos"
+            filename="contratos"
+            columns={[
+              { key: 'codigoInterno', label: 'Código' },
+              { key: 'locatario', label: 'Locatário' },
+              { key: 'unidade', label: 'Unidade' },
+              { key: 'patrimonio', label: 'Patrimônio' },
+              { key: 'situacao', label: 'Situação' },
+            ]}
+            rows={filtrados.map((item) => {
+              const locatario = buscarLocatarioPorId(item.locatarioId)
+              const unidade = buscarUnidadePorId(item.unidadeId)
+              const patrimonio = buscarPatrimonioPorId(item.patrimonioId)
+              return {
+                ...item,
+                locatario: locatario?.nomeCompleto || 'N/A',
+                unidade: unidade?.nome || 'N/A',
+                patrimonio: patrimonio?.nome || 'N/A',
+              }
+            })}
+          />
+          <Link to="/contratos/novo" className="button button-primary">
+            Novo contrato
+          </Link>
+        </div>
       </div>
 
       <div className="filters-panel">
@@ -142,7 +212,7 @@ export default function ContratoListPage() {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((item) => {
+              {paginados.map((item) => {
                 const locatario = buscarLocatarioPorId(item.locatarioId)
                 const unidade = buscarUnidadePorId(item.unidadeId)
                 const patrimonio = buscarPatrimonioPorId(item.patrimonioId)

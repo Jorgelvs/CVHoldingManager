@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { verificarCodigoDuplicado } from '../services/unidadeService.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
+import { gerarCodigoInternoSugestao } from '../utils/unidadeCodeUtils.js'
 
 const defaultForm = {
   patrimonioId: '',
@@ -20,17 +21,61 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
   const [form, setForm] = useState(defaultForm)
   const [errors, setErrors] = useState({})
   const [submitMessage, setSubmitMessage] = useState(null)
+  const [codigoSugestao, setCodigoSugestao] = useState('')
+  const [codigoManualAlterado, setCodigoManualAlterado] = useState(false)
+  const [mensagemPatrimonioSemCodigo, setMensagemPatrimonioSemCodigo] = useState('')
+
+  const isEditingExisting = Boolean(initialData?.id)
+  const patrimonioSelecionado = useMemo(
+    () => patrimonios.find((patrimonio) => patrimonio.id === form.patrimonioId) || null,
+    [patrimonios, form.patrimonioId],
+  )
 
   useEffect(() => {
     if (initialData) {
-      setForm({
+      const nextForm = {
         ...defaultForm,
         ...initialData,
-      })
+      }
+      setForm(nextForm)
+      setCodigoManualAlterado(Boolean(initialData.codigoInterno))
+      setCodigoSugestao('')
+      setMensagemPatrimonioSemCodigo('')
     }
   }, [initialData])
 
+  useEffect(() => {
+    if (isEditingExisting || codigoManualAlterado || !patrimonioSelecionado) {
+      return
+    }
+
+    const sugestao = gerarCodigoInternoSugestao({
+      codigoPatrimonio: patrimonioSelecionado.codigo,
+      tipo: form.tipo,
+      nome: form.nome,
+    })
+
+    if (sugestao) {
+      setCodigoSugestao(sugestao)
+      setForm((prev) => ({ ...prev, codigoInterno: sugestao }))
+      setMensagemPatrimonioSemCodigo('')
+      return
+    }
+
+    if (patrimonioSelecionado.codigo) {
+      setCodigoSugestao('')
+      setMensagemPatrimonioSemCodigo('')
+      return
+    }
+
+    setCodigoSugestao('')
+    setMensagemPatrimonioSemCodigo('O patrimônio selecionado não possui código interno. Cadastre ou informe o código da unidade.')
+  }, [form.nome, form.patrimonioId, form.tipo, isEditingExisting, codigoManualAlterado, patrimonioSelecionado])
+
   const updateField = (key, value) => {
+    if (key === 'codigoInterno') {
+      setCodigoManualAlterado(true)
+    }
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -43,7 +88,7 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
     if (!form.finalidade) nextErrors.finalidade = 'Finalidade obrigatória.'
     if (!form.situacao) nextErrors.situacao = 'Situação obrigatória.'
     if (form.codigoInterno.trim() && verificarCodigoDuplicado(form.codigoInterno, initialData?.id)) {
-      nextErrors.codigoInterno = 'Já existe uma unidade com este código.'
+      nextErrors.codigoInterno = 'Já existe uma unidade com este código interno.'
     }
     const validarArea = (campo, valor) => {
       if (valor === '' || valor === null || valor === undefined) return
@@ -107,6 +152,8 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
               value={form.codigoInterno}
               onChange={(event) => updateField('codigoInterno', event.target.value)}
             />
+            {codigoSugestao ? <small className="field-hint">Sugestão: {codigoSugestao}</small> : null}
+            {mensagemPatrimonioSemCodigo ? <small className="field-hint field-error">{mensagemPatrimonioSemCodigo}</small> : null}
             {errors.codigoInterno ? <span className="field-error">{errors.codigoInterno}</span> : null}
           </label>
           <label className="form-field">

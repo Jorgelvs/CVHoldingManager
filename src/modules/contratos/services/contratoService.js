@@ -3,62 +3,63 @@ import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
 import { buscarUnidadePorId, alterarSituacaoUnidade } from '../../unidades/services/unidadeService.js'
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
+import { identificarCamposAlterados, registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
+import { applyCreationTimestamps, applyDomainSchema, touchUpdatedAt } from '../../../utils/schemaUtils.js'
 
 const SEQUENCE_KEY = `${STORAGE_KEY}_sequence`
 
 function garantirEstrutura(item) {
+  const source = applyCreationTimestamps(applyDomainSchema('contrato', item), {
+    legacyCreatedFields: ['criadoEm', 'dataCriacao'],
+    legacyUpdatedFields: ['atualizadoEm', 'dataAtualizacao'],
+  })
+
   return {
-    id: item.id || gerarId(),
-    codigoInterno: item.codigoInterno || gerarCodigoInterno(),
-    patrimonioId: item.patrimonioId || '',
-    unidadeId: item.unidadeId || '',
-    locatarioId: item.locatarioId || '',
-    dataInicio: item.dataInicio || '',
-    dataFim: item.dataFim || '',
-    diaVencimento: item.diaVencimento ?? '',
-    valorAluguel: item.valorAluguel ?? '',
-    valorCondominio: item.valorCondominio ?? '',
-    valorCaucao: item.valorCaucao ?? '',
-    percentualMulta: item.percentualMulta ?? '',
-    percentualJuros: item.percentualJuros ?? '',
-    reajusteTipo: item.reajusteTipo || 'Sem reajuste',
-    indiceReajuste: item.indiceReajuste || 'Sem índice',
-    dataBaseReajuste: item.dataBaseReajuste || '',
-    prazoMeses: item.prazoMeses ?? '',
-    situacao: item.situacao || 'Rascunho',
-    observacoes: item.observacoes || '',
-    createdAt: item.createdAt || new Date().toISOString(),
-    updatedAt: item.updatedAt || new Date().toISOString(),
+    id: source.id || gerarId(),
+    codigoInterno: source.codigoInterno || gerarCodigoInterno(),
+    patrimonioId: source.patrimonioId || '',
+    unidadeId: source.unidadeId || '',
+    locatarioId: source.locatarioId || '',
+    dataInicio: source.dataInicio || '',
+    dataFim: source.dataFim || '',
+    diaVencimento: source.diaVencimento ?? '',
+    valorAluguel: source.valorAluguel ?? '',
+    valorCondominio: source.valorCondominio ?? '',
+    valorCaucao: source.valorCaucao ?? '',
+    percentualMulta: source.percentualMulta ?? '',
+    percentualJuros: source.percentualJuros ?? '',
+    reajusteTipo: source.reajusteTipo || 'Sem reajuste',
+    indiceReajuste: source.indiceReajuste || 'Sem índice',
+    percentualReajuste: source.percentualReajuste ?? '',
+    periodicidadeReajuste: source.periodicidadeReajuste || source.reajusteTipo || '',
+    prazoAlertaReajusteDias: source.prazoAlertaReajusteDias ?? '',
+    dataBaseReajuste: source.dataBaseReajuste || '',
+    proximaDataReajuste: source.proximaDataReajuste || '',
+    historicoReajustes: Array.isArray(source.historicoReajustes) ? source.historicoReajustes : [],
+    prazoMeses: source.prazoMeses ?? '',
+    situacao: source.situacao || 'Rascunho',
+    observacoes: source.observacoes || '',
+    createdAt: source.createdAt,
+    updatedAt: source.updatedAt,
   }
 }
 
 function carregarContratos() {
-  const raw = localStorage.getItem(STORAGE_KEY)
-  if (!raw) {
-    return []
-  }
-
-  try {
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) throw new Error('Dados inválidos')
-    return parsed.map(garantirEstrutura)
-  } catch {
-    const empty = []
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(empty))
-    return empty
-  }
+  const dados = localGet(STORAGE_KEY, [])
+  const parsed = Array.isArray(dados) ? dados : []
+  return parsed.map(garantirEstrutura)
 }
 
 function salvarContratos(contratos) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(contratos))
+  localSet(STORAGE_KEY, contratos)
 }
 
 function gerarCodigoInterno() {
   const year = new Date().getFullYear()
-  const rawSequence = localStorage.getItem(SEQUENCE_KEY)
-  const sequence = rawSequence ? Number(rawSequence) : 0
+  const sequence = Number(localGet(SEQUENCE_KEY, 0)) || 0
   const next = sequence + 1
-  localStorage.setItem(SEQUENCE_KEY, String(next))
+  localSet(SEQUENCE_KEY, next)
   return `CTR-${year}-${String(next).padStart(4, '0')}`
 }
 
@@ -169,20 +170,29 @@ export function criarContrato(dados) {
     atualizarSituacaoUnidadeSeNecessario(contrato)
   }
 
+  registrarEventoAuditoria({
+    modulo: 'Contratos',
+    acao: 'INCLUSAO',
+    registroId: contrato.id,
+    registro: contrato.codigoInterno || contrato.id,
+    descricao: `Inclusão do contrato ${contrato.codigoInterno || contrato.id}`,
+    valorAnterior: null,
+    novoValor: contrato,
+    camposAlterados: Object.keys(contrato),
+  })
+
   return contrato
 }
 
-export function atualizarContrato(id, dados) {
+export function atualizarContrato(id, dados, opcoes = {}) {
   const contratos = listarContratos()
   const index = contratos.findIndex((item) => item.id === id)
   if (index === -1) return null
 
   const contratoAtual = contratos[index]
   const updated = garantirEstrutura({
-    ...contratoAtual,
-    ...dados,
+    ...touchUpdatedAt({ ...contratoAtual, ...dados }),
     codigoInterno: contratoAtual.codigoInterno,
-    updatedAt: new Date().toISOString(),
   })
 
   if (updated.situacao === 'Ativo') {
@@ -199,10 +209,27 @@ export function atualizarContrato(id, dados) {
   contratos[index] = updated
   salvarContratos(contratos)
   atualizarSituacaoUnidadeSeNecessario(updated)
+
+  if (!opcoes.skipAudit) {
+    const camposAlterados = identificarCamposAlterados(contratoAtual, updated, ['updatedAt'])
+    if (camposAlterados.length > 0) {
+      registrarEventoAuditoria({
+        modulo: 'Contratos',
+        acao: 'ALTERACAO',
+        registroId: updated.id,
+        registro: updated.codigoInterno || updated.id,
+        descricao: `Alteração do contrato ${updated.codigoInterno || updated.id}`,
+        valorAnterior: contratoAtual,
+        novoValor: updated,
+        camposAlterados,
+      })
+    }
+  }
+
   return updated
 }
 
-export function alterarSituacaoContrato(id, novaSituacao) {
+export function alterarSituacaoContrato(id, novaSituacao, opcoes = {}) {
   const contratos = listarContratos()
   const index = contratos.findIndex((item) => item.id === id)
   if (index === -1) return null
@@ -220,12 +247,27 @@ export function alterarSituacaoContrato(id, novaSituacao) {
   }
 
   contratos[index] = {
-    ...contrato,
+    ...touchUpdatedAt(contrato),
     situacao: novaSituacao,
-    updatedAt: new Date().toISOString(),
   }
   salvarContratos(contratos)
   atualizarSituacaoUnidadeSeNecessario(contratos[index])
+
+  if (!opcoes.skipAudit) {
+    const atualizado = contratos[index]
+    const acao = novaSituacao === 'Encerrado' ? 'CONTRATO_ENCERRADO' : novaSituacao === 'Cancelado' ? 'EXCLUSAO_LOGICA' : 'ALTERACAO'
+    registrarEventoAuditoria({
+      modulo: 'Contratos',
+      acao,
+      registroId: atualizado.id,
+      registro: atualizado.codigoInterno || atualizado.id,
+      descricao: `Alteração de situação do contrato para ${novaSituacao}`,
+      valorAnterior: contrato,
+      novoValor: atualizado,
+      camposAlterados: ['situacao'],
+    })
+  }
+
   return contratos[index]
 }
 
@@ -234,7 +276,20 @@ export function excluirContrato(id) {
   const index = contratos.findIndex((item) => item.id === id)
   if (index === -1) return false
   if (contratos[index].situacao === 'Ativo') return false
+  const removido = contratos[index]
   contratos.splice(index, 1)
   salvarContratos(contratos)
+
+  registrarEventoAuditoria({
+    modulo: 'Contratos',
+    acao: 'EXCLUSAO',
+    registroId: removido.id,
+    registro: removido.codigoInterno || removido.id,
+    descricao: `Exclusão do contrato ${removido.codigoInterno || removido.id}`,
+    valorAnterior: removido,
+    novoValor: null,
+    camposAlterados: ['id'],
+  })
+
   return true
 }

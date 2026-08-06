@@ -1,13 +1,19 @@
-import React, { lazy, Suspense, useEffect } from 'react'
+import React, { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import Sidebar from './components/Sidebar.jsx'
+import MobileBottomNav from './components/MobileBottomNav.jsx'
+import AuthGuard from './modules/auth/components/AuthGuard.jsx'
+import LoginPage from './modules/auth/pages/LoginPage.jsx'
+import ResetPasswordPage from './modules/auth/pages/ResetPasswordPage.jsx'
+import { useAuth } from './modules/auth/context/AuthContext.jsx'
 import { inicializarPatrimonios } from './modules/patrimonios/services/patrimonioService.js'
 import { inicializarUnidades } from './modules/unidades/services/unidadeService.js'
 import { inicializarLocatarios } from './modules/locatarios/services/locatarioService.js'
 import { inicializarContratos } from './modules/contratos/services/contratoService.js'
 import { inicializarContas } from './modules/financeiro/services/contaService.js'
 import { obterConfiguracoes } from './modules/configuracoes/services/configuracaoService.js'
+import { getRepositoryRuntimeState } from './utils/localRepository.js'
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const FinanceiroDashboardPage = lazy(() => import('./modules/financeiro/pages/FinanceiroDashboardPage.jsx'))
@@ -121,10 +127,94 @@ function aplicarAriaLabelsCampos() {
   })
 }
 
+function AppShell({ isMobileNav, persistenceState }) {
+  return (
+    <div className={`app-root ${isMobileNav ? 'app-root-mobile' : ''}`}>
+      {isMobileNav ? null : <Sidebar />}
+      <div className="main-area">
+        <Header />
+        <main className="content-area">
+          {persistenceState.mode === 'supabase' && persistenceState.error ? (
+            <div className="alert-box alert-error" style={{ marginBottom: 12 }}>
+              Modo Supabase ativo, mas ocorreu erro de conexao: {persistenceState.error}
+            </div>
+          ) : null}
+          <Suspense fallback={<AppRouteFallback />}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/patrimonios" element={<PatrimonioListPage />} />
+              <Route path="/patrimonios/novo" element={<PatrimonioFormPage />} />
+              <Route path="/patrimonios/:id" element={<PatrimonioDetalhesPage />} />
+              <Route path="/patrimonios/:id/editar" element={<PatrimonioFormPage />} />
+              <Route path="/unidades" element={<UnidadeListPage />} />
+              <Route path="/unidades/nova" element={<UnidadeFormPage />} />
+              <Route path="/unidades/:unidadeId" element={<UnidadeViewPage />} />
+              <Route path="/unidades/:unidadeId/editar" element={<UnidadeFormPage />} />
+              <Route path="/patrimonios/:patrimonioId/unidades" element={<UnidadeListPage />} />
+              <Route path="/patrimonios/:patrimonioId/unidades/nova" element={<UnidadeFormPage />} />
+              <Route path="/locatarios" element={<LocatarioListPage />} />
+              <Route path="/locatarios/novo" element={<LocatarioFormPage />} />
+              <Route path="/locatarios/:id" element={<LocatarioViewPage />} />
+              <Route path="/locatarios/:id/editar" element={<LocatarioFormPage />} />
+              <Route path="/contratos" element={<ContratoListPage />} />
+              <Route path="/contratos/novo" element={<ContratoFormPage />} />
+              <Route path="/contratos/:id" element={<ContratoViewPage />} />
+              <Route path="/contratos/:id/editar" element={<ContratoFormPage />} />
+              <Route path="/financeiro" element={<FinanceiroDashboardPage />} />
+              <Route path="/financeiro/lancamentos" element={<LancamentoListPage />} />
+              <Route path="/financeiro/rateios" element={<RateioListPage />} />
+              <Route path="/financeiro/rateios/novo" element={<RateioFormPage />} />
+              <Route path="/financeiro/rateios/:id" element={<RateioViewPage />} />
+              <Route path="/financeiro/rateios/:id/editar" element={<RateioFormPage />} />
+              <Route path="/financeiro/condominio" element={<CondominioPage />} />
+              <Route path="/financeiro/contas" element={<ContaListPage />} />
+              <Route path="/financeiro/contas/novo" element={<ContaFormPage />} />
+              <Route path="/financeiro/contas/:id" element={<ContaViewPage />} />
+              <Route path="/financeiro/contas/:id/editar" element={<ContaFormPage />} />
+              <Route path="/financeiro/fluxo-caixa" element={<FluxoCaixaPage />} />
+              <Route path="/financeiro/livro-caixa" element={<LivroCaixaPage />} />
+              <Route path="/financeiro/baixas/novo" element={<BaixaFormPage />} />
+              <Route path="/financeiro/transferencias/novo" element={<TransferenciaFormPage />} />
+              <Route path="/financeiro/aportes" element={<AporteListPage />} />
+              <Route path="/financeiro/aportes/novo" element={<AporteFormPage />} />
+              <Route path="/financeiro/caucoes" element={<CaucaoListPage />} />
+              <Route path="/financeiro/caucoes/novo" element={<CaucaoFormPage />} />
+              <Route path="/financeiro/novo" element={<LancamentoFormPage />} />
+              <Route path="/financeiro/:tipo/nova" element={<LancamentoFormPage />} />
+              <Route path="/financeiro/:id" element={<LancamentoViewPage />} />
+              <Route path="/financeiro/:id/editar" element={<LancamentoFormPage />} />
+              <Route path="/documentos" element={<DocumentosPage />} />
+              <Route path="/documentos/novo" element={<DocumentoFormPage />} />
+              <Route path="/documentos/:id/editar" element={<DocumentoFormPage />} />
+              <Route path="/notificacoes" element={<NotificacoesPage />} />
+              <Route path="/auditoria" element={<AuditoriaPage />} />
+              <Route path="/backup" element={<BackupPage />} />
+              <Route path="/relatorios" element={<ReportsPage />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </main>
+      </div>
+      {isMobileNav ? <MobileBottomNav /> : null}
+    </div>
+  )
+}
+
 export default function App() {
   const location = useLocation()
+  const { authRequired, isAuthenticated, recoveryRequired } = useAuth()
+  const persistenceState = getRepositoryRuntimeState()
+  const [isMobileNav, setIsMobileNav] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(max-width: 768px)').matches
+  })
 
   useEffect(() => {
+    if (authRequired && !isAuthenticated) {
+      return
+    }
+
     inicializarPatrimonios()
     inicializarUnidades()
     inicializarLocatarios()
@@ -137,7 +227,7 @@ export default function App() {
     return () => {
       window.removeEventListener('cvholding_configuracoes_updated', onConfigUpdated)
     }
-  }, [])
+  }, [authRequired, isAuthenticated])
 
   useEffect(() => {
     const raf = window.requestAnimationFrame(() => aplicarAriaLabelsCampos())
@@ -148,69 +238,37 @@ export default function App() {
     }
   }, [location.pathname, location.search])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const media = window.matchMedia('(max-width: 768px)')
+    const onChange = (event) => setIsMobileNav(event.matches)
+    setIsMobileNav(media.matches)
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', onChange)
+      return () => media.removeEventListener('change', onChange)
+    }
+    if (typeof media.addListener === 'function') {
+      media.addListener(onChange)
+      return () => media.removeListener(onChange)
+    }
+    return undefined
+  }, [])
+
+  if (recoveryRequired && location.pathname !== '/redefinir-senha') {
+    return <Navigate to="/redefinir-senha" replace />
+  }
+
+  if (location.pathname === '/login') {
+    return <LoginPage />
+  }
+
+  if (location.pathname === '/redefinir-senha') {
+    return <ResetPasswordPage />
+  }
+
   return (
-    <div className="app-root">
-      <Sidebar />
-      <div className="main-area">
-        <Header />
-        <main className="content-area">
-          <Suspense fallback={<AppRouteFallback />}>
-            <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/patrimonios" element={<PatrimonioListPage />} />
-            <Route path="/patrimonios/novo" element={<PatrimonioFormPage />} />
-            <Route path="/patrimonios/:id" element={<PatrimonioDetalhesPage />} />
-            <Route path="/patrimonios/:id/editar" element={<PatrimonioFormPage />} />
-            <Route path="/unidades" element={<UnidadeListPage />} />
-            <Route path="/unidades/nova" element={<UnidadeFormPage />} />
-            <Route path="/unidades/:id" element={<UnidadeViewPage />} />
-            <Route path="/unidades/:id/editar" element={<UnidadeFormPage />} />
-            <Route path="/patrimonios/:id/unidades" element={<UnidadeListPage />} />
-            <Route path="/patrimonios/:id/unidades/nova" element={<UnidadeFormPage />} />
-            <Route path="/locatarios" element={<LocatarioListPage />} />
-            <Route path="/locatarios/novo" element={<LocatarioFormPage />} />
-            <Route path="/locatarios/:id" element={<LocatarioViewPage />} />
-            <Route path="/locatarios/:id/editar" element={<LocatarioFormPage />} />
-            <Route path="/contratos" element={<ContratoListPage />} />
-            <Route path="/contratos/novo" element={<ContratoFormPage />} />
-            <Route path="/contratos/:id" element={<ContratoViewPage />} />
-            <Route path="/contratos/:id/editar" element={<ContratoFormPage />} />
-            <Route path="/financeiro" element={<FinanceiroDashboardPage />} />
-            <Route path="/financeiro/lancamentos" element={<LancamentoListPage />} />
-            <Route path="/financeiro/rateios" element={<RateioListPage />} />
-            <Route path="/financeiro/rateios/novo" element={<RateioFormPage />} />
-            <Route path="/financeiro/rateios/:id" element={<RateioViewPage />} />
-            <Route path="/financeiro/rateios/:id/editar" element={<RateioFormPage />} />
-            <Route path="/financeiro/condominio" element={<CondominioPage />} />
-            <Route path="/financeiro/contas" element={<ContaListPage />} />
-            <Route path="/financeiro/contas/novo" element={<ContaFormPage />} />
-            <Route path="/financeiro/contas/:id" element={<ContaViewPage />} />
-            <Route path="/financeiro/contas/:id/editar" element={<ContaFormPage />} />
-            <Route path="/financeiro/fluxo-caixa" element={<FluxoCaixaPage />} />
-            <Route path="/financeiro/livro-caixa" element={<LivroCaixaPage />} />
-            <Route path="/financeiro/baixas/novo" element={<BaixaFormPage />} />
-            <Route path="/financeiro/transferencias/novo" element={<TransferenciaFormPage />} />
-            <Route path="/financeiro/aportes" element={<AporteListPage />} />
-            <Route path="/financeiro/aportes/novo" element={<AporteFormPage />} />
-            <Route path="/financeiro/caucoes" element={<CaucaoListPage />} />
-            <Route path="/financeiro/caucoes/novo" element={<CaucaoFormPage />} />
-            <Route path="/financeiro/novo" element={<LancamentoFormPage />} />
-            <Route path="/financeiro/:tipo/nova" element={<LancamentoFormPage />} />
-            <Route path="/financeiro/:id" element={<LancamentoViewPage />} />
-            <Route path="/financeiro/:id/editar" element={<LancamentoFormPage />} />
-            <Route path="/documentos" element={<DocumentosPage />} />
-            <Route path="/documentos/novo" element={<DocumentoFormPage />} />
-            <Route path="/documentos/:id/editar" element={<DocumentoFormPage />} />
-            <Route path="/notificacoes" element={<NotificacoesPage />} />
-            <Route path="/auditoria" element={<AuditoriaPage />} />
-            <Route path="/backup" element={<BackupPage />} />
-            <Route path="/relatorios" element={<ReportsPage />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </main>
-      </div>
-    </div>
+    <AuthGuard>
+      <AppShell isMobileNav={isMobileNav} persistenceState={persistenceState} />
+    </AuthGuard>
   )
 }

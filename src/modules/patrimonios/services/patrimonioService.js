@@ -3,8 +3,9 @@ import { gerarId } from '../utils/patrimonioUtils.js'
 import { identificarCamposAlterados, registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
 import { exists as localExists, get as localGet, set as localSet } from '../../../utils/localRepository.js'
 import { applyCreationTimestamps, applyDomainSchema, touchUpdatedAt } from '../../../utils/schemaUtils.js'
+import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
 
-const defaultPatrimonios = [
+const patrimonioSeedPadrao = [
   {
     id: 'patrimonio_rki',
     nome: 'Residence Kitnet I',
@@ -34,10 +35,8 @@ const defaultPatrimonios = [
       condominio: 'Sim',
       iptu: 'Compartilhado',
       limpeza: 'Compartilhada',
-      manutencao: 'Compartilhada',
       regraRateio: '',
       valorPadraoCondominio: '',
-      diaPadraoVencimento: '',
       observacoesOperacionais: '',
     },
     indicadores: {
@@ -78,10 +77,8 @@ const defaultPatrimonios = [
       condominio: 'Sim',
       iptu: 'Compartilhado',
       limpeza: 'Compartilhada',
-      manutencao: 'Compartilhada',
       regraRateio: '',
       valorPadraoCondominio: '',
-      diaPadraoVencimento: '',
       observacoesOperacionais: '',
     },
     indicadores: {
@@ -122,10 +119,8 @@ const defaultPatrimonios = [
       condominio: 'Não',
       iptu: 'Individual',
       limpeza: 'Não se aplica',
-      manutencao: 'Individual',
       regraRateio: '',
       valorPadraoCondominio: '',
-      diaPadraoVencimento: '',
       observacoesOperacionais: '',
     },
     indicadores: {
@@ -142,7 +137,7 @@ const defaultPatrimonios = [
     nome: 'Recanto da Brasa',
     codigo: 'RDB',
     grupoPatrimonial: 'Comercial',
-    tipo: 'Espaço para Eventos',
+    tipo: 'Espaço de eventos',
     finalidade: 'Gerador de Receita',
     modeloReceita: 'Locação por Evento',
     situacao: 'Ativo',
@@ -166,10 +161,8 @@ const defaultPatrimonios = [
       condominio: 'Não',
       iptu: 'Individual',
       limpeza: 'Individual',
-      manutencao: 'Individual',
       regraRateio: '',
       valorPadraoCondominio: '',
-      diaPadraoVencimento: '',
       observacoesOperacionais: '',
     },
     indicadores: {
@@ -182,6 +175,22 @@ const defaultPatrimonios = [
     atualizadoEm: new Date().toISOString(),
   },
 ]
+
+function isHomologationScope() {
+  return (import.meta.env.VITE_SUPABASE_ENV_SCOPE || 'homolog-default') !== 'production'
+}
+
+function isHomologationOnlyMode() {
+  return import.meta.env.VITE_SUPABASE_HOMOLOGATION_ONLY !== 'false'
+}
+
+function isExplicitHomologationSeedEnabled() {
+  return import.meta.env.VITE_ENABLE_HOMOLOGATION_SEED === 'true'
+}
+
+function shouldAutoseedPatrimonios() {
+  return isHomologationScope() && isHomologationOnlyMode() && isExplicitHomologationSeedEnabled()
+}
 
 function garantirEstrutura(item) {
   const source = applyCreationTimestamps(applyDomainSchema('patrimonio', item), {
@@ -205,10 +214,8 @@ function garantirEstrutura(item) {
     condominio: source.configuracoes?.condominio || '',
     iptu: source.configuracoes?.iptu || '',
     limpeza: source.configuracoes?.limpeza || '',
-    manutencao: source.configuracoes?.manutencao || '',
     regraRateio: source.configuracoes?.regraRateio || '',
     valorPadraoCondominio: source.configuracoes?.valorPadraoCondominio || '',
-    diaPadraoVencimento: source.configuracoes?.diaPadraoVencimento || '',
     observacoesOperacionais: source.configuracoes?.observacoesOperacionais || '',
   }
 
@@ -246,12 +253,16 @@ function garantirEstrutura(item) {
 
 function carregarPatrimonios() {
   const chaveExiste = localExists(STORAGE_KEY)
-  const dados = localGet(STORAGE_KEY, defaultPatrimonios)
-  const parsed = Array.isArray(dados) ? dados : defaultPatrimonios
+  const seedPermitido = shouldAutoseedPatrimonios()
+  const seedPadrao = seedPermitido ? patrimonioSeedPadrao : []
+  const dados = localGet(STORAGE_KEY, [])
+  const parsed = Array.isArray(dados) ? dados : []
   const normalizados = parsed.map(garantirEstrutura)
 
   if (!chaveExiste) {
-    salvarPatrimonios(normalizados)
+    const payloadInicial = seedPadrao.map(garantirEstrutura)
+    salvarPatrimonios(payloadInicial)
+    return payloadInicial
   }
 
   return normalizados
@@ -263,6 +274,36 @@ function salvarPatrimonios(patrimonios) {
 
 export function inicializarPatrimonios() {
   carregarPatrimonios()
+}
+
+export function semearPatrimoniosPadraoHomologacao({ force = false } = {}) {
+  if (!isHomologationScope() || !isHomologationOnlyMode()) {
+    return {
+      ok: false,
+      seeded: false,
+      reason: 'Seed padrao bloqueado fora da homologacao isolada.',
+      total: 0,
+    }
+  }
+
+  const atuais = carregarPatrimonios()
+  if (!force && atuais.length > 0) {
+    return {
+      ok: true,
+      seeded: false,
+      reason: 'Seed ignorado: ja existem patrimonios cadastrados.',
+      total: atuais.length,
+    }
+  }
+
+  const seedNormalizado = patrimonioSeedPadrao.map(garantirEstrutura)
+  salvarPatrimonios(seedNormalizado)
+  return {
+    ok: true,
+    seeded: true,
+    reason: '',
+    total: seedNormalizado.length,
+  }
 }
 
 export function listarPatrimonios() {
@@ -405,9 +446,9 @@ export function alterarSituacaoPatrimonio(id, situacao) {
 }
 
 export function podeExcluirPatrimonio(patrimonio) {
-  if (!patrimonio || !patrimonio.indicadores) return false
-  const { unidadesCadastradas, unidadesOcupadas, unidadesVagas, unidadesEmManutencao } = patrimonio.indicadores
-  return [unidadesCadastradas, unidadesOcupadas, unidadesVagas, unidadesEmManutencao].every((valor) => Number(valor) === 0)
+  if (!patrimonio?.id) return false
+  const unidadesVinculadas = listarUnidadesPorPatrimonio(patrimonio.id)
+  return unidadesVinculadas.length === 0
 }
 
 export function codigoUnicoDisponivel(codigo, id = null) {

@@ -48,8 +48,12 @@ function salvarRateios(rateios) {
 
 function isRateioLike(item) {
   if (!item || typeof item !== 'object') return false
-  const hasCoreFields = Boolean(item.patrimonioId || item.competencia || item.metodoRateio || item.criterioElegibilidade)
+  const hasCoreFields = Boolean(
+    item.competencia
+      && (item.metodoRateio || item.criterioElegibilidade || 'valorTotal' in item),
+  )
   const hasRateioStatus = ['rascunho', 'processado', 'cancelado'].includes(item.status)
+  if (isLancamentoLike(item)) return false
   return hasCoreFields || hasRateioStatus || Array.isArray(item.lancamentosGeradosIds)
 }
 

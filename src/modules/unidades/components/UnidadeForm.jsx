@@ -16,11 +16,34 @@ const defaultForm = {
   observacoes: '',
 }
 
-export default function UnidadeForm({ initialData = null, patrimonios, options, onSave, headerLabel }) {
+function sugerirTipoPorPatrimonio(patrimonio) {
+  const base = `${patrimonio?.grupoPatrimonial || ''} ${patrimonio?.tipo || ''} ${patrimonio?.nome || ''}`.toLowerCase()
+  if (base.includes('kitnet')) return 'Kitnet'
+  if (base.includes('apart') || base.includes('edif')) return 'Apartamento'
+  if (base.includes('casa')) return 'Casa'
+  if (base.includes('loja')) return 'Loja'
+  if (base.includes('sala')) return 'Sala'
+  if (base.includes('galp')) return 'Galpão'
+  if (base.includes('terreno')) return 'Terreno'
+  return ''
+}
+
+export default function UnidadeForm({
+  initialData = null,
+  patrimonios,
+  options,
+  onSave,
+  onCancel,
+  headerLabel,
+  submitLabel = 'Salvar unidade',
+  lockPatrimonio = false,
+  simplified = false,
+}) {
   const navigate = useNavigate()
   const [form, setForm] = useState(defaultForm)
   const [errors, setErrors] = useState({})
   const [submitMessage, setSubmitMessage] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [codigoSugestao, setCodigoSugestao] = useState('')
   const [codigoManualAlterado, setCodigoManualAlterado] = useState(false)
   const [mensagemPatrimonioSemCodigo, setMensagemPatrimonioSemCodigo] = useState('')
@@ -72,6 +95,37 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
     setMensagemPatrimonioSemCodigo('O patrimônio selecionado não possui código interno. Cadastre ou informe o código da unidade.')
   }, [form.nome, form.patrimonioId, form.tipo, isEditingExisting, codigoManualAlterado, patrimonioSelecionado])
 
+  useEffect(() => {
+    if (isEditingExisting || !patrimonioSelecionado) return
+    if (form.tipo) return
+
+    const tipoSugerido = sugerirTipoPorPatrimonio(patrimonioSelecionado)
+    if (!tipoSugerido) return
+
+    setForm((prev) => ({
+      ...prev,
+      tipo: prev.tipo || tipoSugerido,
+    }))
+  }, [isEditingExisting, patrimonioSelecionado, form.tipo])
+
+  const isDirty = useMemo(() => {
+    if (!initialData) {
+      return JSON.stringify(form) !== JSON.stringify(defaultForm)
+    }
+    return JSON.stringify(form) !== JSON.stringify({ ...defaultForm, ...initialData })
+  }, [form, initialData])
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!isDirty || submitting) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [isDirty, submitting])
+
   const updateField = (key, value) => {
     if (key === 'codigoInterno') {
       setCodigoManualAlterado(true)
@@ -103,18 +157,37 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
     return Object.keys(nextErrors).length === 0
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
+    if (submitting) return
+
     if (!validate()) {
       setSubmitMessage({ type: 'error', text: 'Corrija os erros antes de salvar.' })
       return
     }
-    onSave({
-      ...form,
-      codigoInterno: form.codigoInterno.trim(),
-      areaUtil: form.areaUtil || '',
-      areaTotal: form.areaTotal || '',
-    })
+
+    setSubmitting(true)
+    setSubmitMessage(null)
+    try {
+      await onSave({
+        ...form,
+        codigoInterno: form.codigoInterno.trim(),
+        areaUtil: form.areaUtil || '',
+        areaTotal: form.areaTotal || '',
+      })
+    } catch (error) {
+      setSubmitMessage({ type: 'error', text: error?.message || 'Falha ao salvar unidade.' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleVoltar = () => {
+    if (isDirty && !submitting) {
+      const confirmLeave = window.confirm('Existem alterações não salvas. Deseja sair desta tela?')
+      if (!confirmLeave) return
+    }
+    navigate(-1)
   }
 
   return (
@@ -136,7 +209,11 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
         <div className="form-grid">
           <label className="form-field">
             <span>Patrimônio *</span>
-            <select value={form.patrimonioId} onChange={(event) => updateField('patrimonioId', event.target.value)}>
+            <select
+              value={form.patrimonioId}
+              onChange={(event) => updateField('patrimonioId', event.target.value)}
+              disabled={lockPatrimonio}
+            >
               <option value="">Selecione</option>
               {patrimonios.map((patrimonio) => (
                 <option key={patrimonio.id} value={patrimonio.id}>
@@ -197,28 +274,32 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
             </select>
             {errors.situacao ? <span className="field-error">{errors.situacao}</span> : null}
           </label>
-          <label className="form-field">
-            <span>Área útil</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.areaUtil}
-              onChange={(event) => updateField('areaUtil', event.target.value)}
-            />
-            {errors.areaUtil ? <span className="field-error">{errors.areaUtil}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>Área total</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.areaTotal}
-              onChange={(event) => updateField('areaTotal', event.target.value)}
-            />
-            {errors.areaTotal ? <span className="field-error">{errors.areaTotal}</span> : null}
-          </label>
+          {!simplified ? (
+            <>
+              <label className="form-field">
+                <span>Área útil</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.areaUtil}
+                  onChange={(event) => updateField('areaUtil', event.target.value)}
+                />
+                {errors.areaUtil ? <span className="field-error">{errors.areaUtil}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Área total</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.areaTotal}
+                  onChange={(event) => updateField('areaTotal', event.target.value)}
+                />
+                {errors.areaTotal ? <span className="field-error">{errors.areaTotal}</span> : null}
+              </label>
+            </>
+          ) : null}
           <label className="form-field form-field-full">
             <span>Observações</span>
             <textarea value={form.observacoes} onChange={(event) => updateField('observacoes', event.target.value)} />
@@ -227,11 +308,11 @@ export default function UnidadeForm({ initialData = null, patrimonios, options, 
       </FormSection>
 
       <div className="form-actions">
-        <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
+        <button className="button button-secondary" type="button" onClick={onCancel || handleVoltar}>
           Voltar
         </button>
-        <button className="button button-primary" type="submit">
-          Salvar unidade
+        <button className="button button-primary" type="submit" disabled={submitting}>
+          {submitting ? 'Salvando...' : submitLabel}
         </button>
       </div>
     </form>

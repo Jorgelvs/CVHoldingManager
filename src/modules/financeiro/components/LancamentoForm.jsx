@@ -3,15 +3,33 @@ import { useNavigate } from 'react-router-dom'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidadesPorPatrimonio, buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
-import { listarCategorias, listarSubcategorias, categoriaTemSubcategorias, adicionarSubcategoriaPersonalizada } from '../services/categoriaFinanceiraService.js'
+import { listarCategorias, listarSubcategoriasDetalhadas, categoriaTemSubcategorias, adicionarSubcategoriaPersonalizada, buscarSubcategoriaDetalhe } from '../services/categoriaFinanceiraService.js'
 import { listarContas } from '../services/contaService.js'
 import AdicionarSubcategoriaDialog from './AdicionarSubcategoriaDialog.jsx'
 import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
+
+const TIPO_MANUTENCAO_AREA_COMUM = 'area_comum'
+const TIPO_MANUTENCAO_UNIDADE_ESPECIFICA = 'unidade_especifica'
+
+function montarDataVencimentoPorDia(anoMes, diaVencimento) {
+  if (!anoMes || !diaVencimento) return ''
+  const [anoTxt, mesTxt] = String(anoMes).split('-')
+  const ano = Number(anoTxt)
+  const mes = Number(mesTxt)
+  const dia = Number(diaVencimento)
+  if (!Number.isInteger(ano) || !Number.isInteger(mes) || !Number.isInteger(dia)) return ''
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return ''
+  const ultimoDiaMes = new Date(ano, mes, 0).getDate()
+  const diaFinal = Math.min(dia, ultimoDiaMes)
+  return `${ano}-${String(mes).padStart(2, '0')}-${String(diaFinal).padStart(2, '0')}`
+}
 
 const initialState = {
   tipo: 'receita',
   categoria: '',
   subcategoria: null,
+  subcategoriaId: '',
+  subcategoriaLabel: '',
   descricao: '',
   valor: '',
   dataCompetencia: '',
@@ -20,6 +38,7 @@ const initialState = {
   status: 'pendente',
   patrimonioId: '',
   unidadeId: '',
+  tipoManutencao: '',
   contratoId: null,
   locatarioId: null,
   contaFinanceiraId: '',
@@ -32,6 +51,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
   const [alert, setAlert] = useState(null)
   const [showSubcategoriaDialog, setShowSubcategoriaDialog] = useState(false)
   const [subcategories, setSubcategories] = useState([])
+  const [suggestedSubcategoria, setSuggestedSubcategoria] = useState('')
   const [defaultsAplicados, setDefaultsAplicados] = useState(false)
 
   const parametrosFinanceiros = useMemo(() => obterParametrosFinanceiros(), [])
@@ -42,6 +62,13 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
     if (!data.patrimonioId) return []
     return listarUnidadesPorPatrimonio(data.patrimonioId)
   }, [data.patrimonioId])
+  const patrimonioSelecionado = useMemo(
+    () => patrimonios.find((item) => item.id === data.patrimonioId) || null,
+    [patrimonios, data.patrimonioId],
+  )
+  const isMaintenanceExpense = data.tipo === 'despesa' && data.categoria === 'Manutenção'
+  const requiresUnitForMaintenance = isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+  const shouldShowSubcategoriaField = Boolean(data.categoria) && (subcategories.length > 0 || data.categoria === 'Manutenção' || Boolean(suggestedSubcategoria))
 
   const aplicarDefaultsFinanceiros = (current) => {
     const hoje = new Date()
@@ -68,6 +95,13 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       const base = {
         ...initialData,
         valor: initialData.valor ?? '',
+        subcategoriaId: initialData.subcategoriaId || '',
+        subcategoriaLabel: initialData.subcategoriaLabel || initialData.subcategoria || '',
+        tipoManutencao:
+          initialData.tipoManutencao
+          || (initialData.tipo === 'despesa' && initialData.categoria === 'Manutenção'
+            ? (initialData.unidadeId ? TIPO_MANUTENCAO_UNIDADE_ESPECIFICA : TIPO_MANUTENCAO_AREA_COMUM)
+            : ''),
       }
       setData(initialData.id ? base : aplicarDefaultsFinanceiros(base))
       setDefaultsAplicados(true)
@@ -83,13 +117,57 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
 
   useEffect(() => {
     if (data.categoria) {
-      setSubcategories(listarSubcategorias(data.tipo, data.categoria))
+      const options = listarSubcategoriasDetalhadas(data.tipo, data.categoria)
+      setSubcategories(options)
+
+      if (data.subcategoria || data.subcategoriaId) {
+        const match = buscarSubcategoriaDetalhe(data.tipo, data.categoria, data.subcategoriaId || data.subcategoria)
+        if (match) {
+          if (match.id !== data.subcategoriaId || match.nome !== data.subcategoria) {
+            setData((current) => ({
+              ...current,
+              subcategoriaId: match.id,
+              subcategoria: match.nome,
+              subcategoriaLabel: match.nome,
+            }))
+          }
+          setSuggestedSubcategoria('')
+        } else if (data.subcategoria) {
+          setSuggestedSubcategoria(data.subcategoria)
+        }
+      } else {
+        setSuggestedSubcategoria('')
+      }
     } else {
       setSubcategories([])
+      setSuggestedSubcategoria('')
     }
-  }, [data.tipo, data.categoria])
+  }, [data.tipo, data.categoria, data.subcategoria, data.subcategoriaId])
+
+  useEffect(() => {
+    if (!data.unidadeId) return
+    const unidade = buscarUnidadePorId(data.unidadeId)
+    if (!unidade?.patrimonioId) return
+    if (data.patrimonioId === unidade.patrimonioId) return
+    setData((current) => ({
+      ...current,
+      patrimonioId: unidade.patrimonioId,
+      unidadeId: unidade.id,
+    }))
+  }, [data.unidadeId, data.patrimonioId])
 
   const handleFieldChange = (field, value) => {
+    if (field === 'subcategoria') {
+      const match = subcategories.find((item) => item.id === value)
+      setData((current) => ({
+        ...current,
+        subcategoriaId: match?.id || '',
+        subcategoria: match?.nome || null,
+        subcategoriaLabel: match?.nome || '',
+      }))
+      return
+    }
+
     setData((current) => ({
       ...current,
       [field]: value,
@@ -102,6 +180,12 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       tipo: value,
       categoria: listarCategorias(value)[0] || '',
       subcategoria: null,
+      subcategoriaId: '',
+      subcategoriaLabel: '',
+      tipoManutencao: '',
+      unidadeId: '',
+      contratoId: null,
+      locatarioId: null,
     }))
   }
 
@@ -109,7 +193,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
     setData((current) => ({
       ...current,
       patrimonioId: value,
-      unidadeId: '',
+      unidadeId: current.unidadeId && buscarUnidadePorId(current.unidadeId)?.patrimonioId === value ? current.unidadeId : '',
       contratoId: null,
       locatarioId: null,
     }))
@@ -118,11 +202,16 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
   const handleUnidadeChange = (value) => {
     const unidade = buscarUnidadePorId(value)
     const contrato = contratoAtivoPorUnidade(value)
+    const ehReceitaAluguel = data.tipo === 'receita' && data.categoria === 'Aluguel'
+    const dataVencimentoContrato = ehReceitaAluguel
+      ? montarDataVencimentoPorDia(data.dataCompetencia, contrato?.diaVencimento)
+      : ''
     setData((current) => ({
       ...current,
       unidadeId: value,
       contratoId: contrato?.id || null,
       locatarioId: contrato?.locatarioId || null,
+      dataVencimento: dataVencimentoContrato || current.dataVencimento,
     }))
     if (unidade && unidade.patrimonioId !== data.patrimonioId) {
       setAlert({ type: 'error', text: 'A unidade não pertence ao patrimônio selecionado.' })
@@ -130,10 +219,49 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
   }
 
   const handleCategoriaChange = (value) => {
+    const ehReceitaAluguel = data.tipo === 'receita' && value === 'Aluguel'
+    const contrato = data.unidadeId ? contratoAtivoPorUnidade(data.unidadeId) : null
+    const dataVencimentoContrato = ehReceitaAluguel
+      ? montarDataVencimentoPorDia(data.dataCompetencia, contrato?.diaVencimento)
+      : ''
+
     setData((current) => ({
       ...current,
       categoria: value,
       subcategoria: null,
+      subcategoriaId: '',
+      subcategoriaLabel: '',
+      tipoManutencao: value === 'Manutenção' && current.tipo === 'despesa' ? current.tipoManutencao : '',
+      unidadeId: value === 'Manutenção' && current.tipo === 'despesa' ? current.unidadeId : '',
+      contratoId: value === 'Manutenção' && current.tipo === 'despesa' ? current.contratoId : null,
+      locatarioId: value === 'Manutenção' && current.tipo === 'despesa' ? current.locatarioId : null,
+      dataVencimento: dataVencimentoContrato || current.dataVencimento,
+    }))
+  }
+
+  useEffect(() => {
+    if (!(data.tipo === 'receita' && data.categoria === 'Aluguel')) return
+    if (!data.unidadeId || !data.dataCompetencia) return
+
+    const contrato = contratoAtivoPorUnidade(data.unidadeId)
+    const dataVencimentoContrato = montarDataVencimentoPorDia(data.dataCompetencia, contrato?.diaVencimento)
+    if (!dataVencimentoContrato || data.dataVencimento === dataVencimentoContrato) return
+
+    setData((current) => ({
+      ...current,
+      contratoId: contrato?.id || current.contratoId,
+      locatarioId: contrato?.locatarioId || current.locatarioId,
+      dataVencimento: dataVencimentoContrato,
+    }))
+  }, [data.tipo, data.categoria, data.unidadeId, data.dataCompetencia, data.dataVencimento])
+
+  const handleTipoManutencaoChange = (value) => {
+    setData((current) => ({
+      ...current,
+      tipoManutencao: value,
+      unidadeId: value === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA ? current.unidadeId : '',
+      contratoId: value === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA ? current.contratoId : null,
+      locatarioId: value === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA ? current.locatarioId : null,
     }))
   }
 
@@ -144,6 +272,12 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
     if (!data.patrimonioId) errors.patrimonioId = 'Patrimônio obrigatório.'
     if (!data.categoria) errors.categoria = 'Categoria obrigatória.'
     if (!data.dataCompetencia) errors.dataCompetencia = 'Data de competência obrigatória.'
+    if (isMaintenanceExpense && !data.tipoManutencao) {
+      errors.tipoManutencao = 'Tipo da manutenção obrigatório.'
+    }
+    if (isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA && !data.unidadeId) {
+      errors.unidadeId = 'Unidade obrigatória para manutenção em unidade específica.'
+    }
     if (categoriaTemSubcategorias(data.tipo, data.categoria) && !data.subcategoria) {
       errors.subcategoria = 'Subcategoria obrigatória para esta categoria.'
     }
@@ -156,7 +290,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
         errors.unidadeId = 'Unidade não pertence ao patrimônio selecionado.'
       }
     }
-    if (data.subcategoria && !subcategories.includes(data.subcategoria)) {
+    if (data.subcategoria && !subcategories.some((item) => item.nome === data.subcategoria)) {
       errors.subcategoria = 'Subcategoria inválida para a categoria selecionada.'
     }
     return errors
@@ -175,6 +309,18 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       ...data,
       valor: Number(data.valor),
       subcategoria: data.subcategoria || null,
+      subcategoriaId: data.subcategoriaId || null,
+      subcategoriaLabel: data.subcategoriaLabel || data.subcategoria || null,
+      tipoManutencao: isMaintenanceExpense ? data.tipoManutencao : null,
+      unidadeId: isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+        ? null
+        : (data.unidadeId || null),
+      contratoId: isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+        ? null
+        : (data.contratoId || null),
+      locatarioId: isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+        ? null
+        : (data.locatarioId || null),
       dataVencimento: data.dataVencimento || null,
       dataPagamento: data.dataPagamento || null,
     }
@@ -187,9 +333,16 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       setAlert({ type: 'error', text: resultado.error })
       return
     }
-    const novasSubcategorias = listarSubcategorias(data.tipo, data.categoria)
+    const novasSubcategorias = listarSubcategoriasDetalhadas(data.tipo, data.categoria)
     setSubcategories(novasSubcategorias)
-    setData((current) => ({ ...current, subcategoria: resultado.item.nome }))
+    setData((current) => ({
+      ...current,
+      subcategoriaId: resultado.item.id,
+      subcategoria: resultado.item.nome,
+      subcategoriaLabel: resultado.item.nome,
+      categoria: current.categoria || data.categoria || 'Manutenção',
+    }))
+    setSuggestedSubcategoria('')
     setShowSubcategoriaDialog(false)
     setAlert({ type: 'success', text: 'Subcategoria adicionada com sucesso.' })
   }
@@ -236,9 +389,26 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
               ))}
             </select>
           </div>
+          {isMaintenanceExpense ? (
+            <div className="form-field">
+              <label className="required-label">Tipo da manutenção</label>
+              <select
+                value={data.tipoManutencao || ''}
+                onChange={(event) => handleTipoManutencaoChange(event.target.value)}
+              >
+                <option value="">Selecione</option>
+                <option value={TIPO_MANUTENCAO_AREA_COMUM}>Área comum / estrutura do patrimônio</option>
+                <option value={TIPO_MANUTENCAO_UNIDADE_ESPECIFICA}>Unidade específica</option>
+              </select>
+            </div>
+          ) : null}
           <div className="form-field">
-            <label>Unidade</label>
-            <select value={data.unidadeId || ''} onChange={(event) => handleUnidadeChange(event.target.value)}>
+            <label className={requiresUnitForMaintenance ? 'required-label' : ''}>Unidade</label>
+            <select
+              value={data.unidadeId || ''}
+              onChange={(event) => handleUnidadeChange(event.target.value)}
+              disabled={isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM}
+            >
               <option value="">Sem unidade</option>
               {unidades.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -246,6 +416,11 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
                 </option>
               ))}
             </select>
+            {isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM ? (
+              <small className="field-help">
+                Manutenção de área comum usa a regra de rateio do patrimônio: {patrimonioSelecionado?.configuracoes?.regraRateio || 'Não se aplica'}.
+              </small>
+            ) : null}
           </div>
           <div className="form-field">
             <label className="required-label">Categoria</label>
@@ -258,18 +433,18 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
               ))}
             </select>
           </div>
-          {subcategories.length > 0 ? (
+          {shouldShowSubcategoriaField ? (
             <div className="form-field">
               <label className={categoriaTemSubcategorias(data.tipo, data.categoria) ? 'required-label' : ''}>Subcategoria</label>
               <div className="inline-form-row">
                 <select
-                  value={data.subcategoria || ''}
+                  value={data.subcategoriaId || ''}
                   onChange={(event) => handleFieldChange('subcategoria', event.target.value)}
                 >
                   <option value="">Selecione a subcategoria</option>
                   {subcategories.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
+                    <option key={item.id} value={item.id}>
+                      {item.nome}
                     </option>
                   ))}
                 </select>
@@ -277,12 +452,18 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
                   + Adicionar subcategoria
                 </button>
               </div>
+              {suggestedSubcategoria ? (
+                <div className="field-error">
+                  A subcategoria "{suggestedSubcategoria}" não existe nesta categoria. Clique em "+ Adicionar subcategoria" para criar e selecionar automaticamente.
+                </div>
+              ) : null}
             </div>
           ) : null}
           <AdicionarSubcategoriaDialog
             open={showSubcategoriaDialog}
             tipo={data.tipo}
             categoria={data.categoria}
+            initialName={suggestedSubcategoria}
             onSave={handleAdicionarSubcategoria}
             onCancel={() => setShowSubcategoriaDialog(false)}
           />

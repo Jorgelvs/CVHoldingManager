@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import ExportButtons from '../components/ExportButtons.jsx'
 import { getRelatoriosData } from '../services/reportService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
@@ -13,6 +14,19 @@ const categorias = [
 ]
 
 const statusOptions = ['', 'pendente', 'pago', 'atrasado', 'cancelado', 'Ativo', 'Encerrado']
+const tipoOptions = ['', 'receita', 'despesa']
+
+function parseFiltersFromParams(searchParams) {
+  return {
+    periodoInicio: searchParams.get('periodoInicio') || '',
+    periodoFim: searchParams.get('periodoFim') || '',
+    patrimonioId: searchParams.get('patrimonioId') || '',
+    unidadeId: searchParams.get('unidadeId') || '',
+    contaFinanceiraId: searchParams.get('contaFinanceiraId') || '',
+    status: searchParams.get('status') || '',
+    tipo: searchParams.get('tipo') || '',
+  }
+}
 
 function safeFormatPercent(value) {
   const number = Number(value)
@@ -21,8 +35,9 @@ function safeFormatPercent(value) {
 }
 
 export default function ReportsPage() {
-  const [categoria, setCategoria] = useState('financeiro')
-  const [filters, setFilters] = useState({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [categoria, setCategoria] = useState(() => searchParams.get('categoria') || 'financeiro')
+  const [filters, setFilters] = useState(() => parseFiltersFromParams(searchParams))
   const patrimonios = useMemo(() => listarPatrimonios(), [])
   const unidades = useMemo(() => listarUnidades(), [])
   const contas = useMemo(() => listarContas(), [])
@@ -36,6 +51,28 @@ export default function ReportsPage() {
   const clearFilters = () => {
     setFilters({})
   }
+
+  React.useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    next.set('categoria', categoria)
+    const campos = [
+      'periodoInicio',
+      'periodoFim',
+      'patrimonioId',
+      'unidadeId',
+      'contaFinanceiraId',
+      'status',
+      'tipo',
+    ]
+    campos.forEach((campo) => {
+      const valor = filters[campo]
+      if (valor) next.set(campo, valor)
+      else next.delete(campo)
+    })
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [categoria, filters, searchParams, setSearchParams])
 
   const renderCategoryPanel = () => {
     switch (categoria) {
@@ -375,6 +412,14 @@ export default function ReportsPage() {
           <select value={filters.status || ''} onChange={(event) => handleFilterChange('status', event.target.value)}>
             {statusOptions.map((status) => (
               <option key={status} value={status}>{status || 'Todos'}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Tipo</label>
+          <select value={filters.tipo || ''} onChange={(event) => handleFilterChange('tipo', event.target.value)}>
+            {tipoOptions.map((tipo) => (
+              <option key={tipo} value={tipo}>{tipo || 'Todos'}</option>
             ))}
           </select>
         </div>

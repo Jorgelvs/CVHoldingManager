@@ -1,0 +1,142 @@
+{
+  "generatedAt": "2026-08-01T18:54:04.594Z",
+  "schemaPath": "supabase/schema_cvholding.sql",
+  "summary": {
+    "totalTables": 9,
+    "tablesWithRlsEnabled": 9,
+    "tablesWithFullCrudCoverage": 9,
+    "tablesWithOwnerBinding": 9
+  },
+  "tables": [
+    {
+      "table": "cv_storage_blobs",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_cv_storage_blobs_owner"
+      ]
+    },
+    {
+      "table": "patrimonios",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_patrimonios_owner"
+      ]
+    },
+    {
+      "table": "unidades",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_unidades_owner"
+      ]
+    },
+    {
+      "table": "locatarios",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_locatarios_owner"
+      ]
+    },
+    {
+      "table": "contratos",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_contratos_owner"
+      ]
+    },
+    {
+      "table": "financeiro_contas",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_contas_owner"
+      ]
+    },
+    {
+      "table": "financeiro_subcategorias",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_subcategorias_owner"
+      ]
+    },
+    {
+      "table": "financeiro_lancamentos",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_lancamentos_owner"
+      ]
+    },
+    {
+      "table": "configuracoes",
+      "rlsEnabled": true,
+      "operations": {
+        "select": true,
+        "insert": true,
+        "update": true,
+        "delete": true
+      },
+      "hasOwnerBindingPolicy": true,
+      "policyNames": [
+        "p_configuracoes_owner"
+      ]
+    }
+  ],
+  "notes": [
+    "FOR ALL foi tratado como cobertura de SELECT/INSERT/UPDATE/DELETE.",
+    "Validacao textual de owner binding considera a expressao owner_id = auth.uid()::text."
+  ]
+}

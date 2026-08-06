@@ -5,9 +5,9 @@ import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioServ
 import { formatarMoeda, formatarData } from '../../patrimonios/utils/patrimonioUtils.js'
 
 export default function UnidadeViewPage() {
-  const { id } = useParams()
+  const { unidadeId } = useParams()
   const navigate = useNavigate()
-  const unidade = buscarUnidadePorId(id)
+  const unidade = buscarUnidadePorId(unidadeId)
 
   if (!unidade) {
     return (

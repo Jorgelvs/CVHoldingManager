@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { formatarData, formatarMoeda, calcularTaxaOcupacao, enderecoResumo } from '../utils/patrimonioUtils.js'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { formatarData, formatarMoeda, calcularResumoUnidadesPatrimonio, enderecoResumo } from '../utils/patrimonioUtils.js'
 import {
   buscarPatrimonioPorId,
   alterarSituacaoPatrimonio,
@@ -11,6 +11,7 @@ import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeServ
 import StatusBadge from '../components/StatusBadge.jsx'
 import Tabs from '../components/Tabs.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
+import { buildFirstUnitSuggestion } from '../../unidades/utils/firstUnitAssistant.js'
 
 const tabItems = [
   { id: 'resumo', label: 'Resumo' },
@@ -24,13 +25,16 @@ const tabItems = [
 export default function PatrimonioDetalhesPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [patrimonio, setPatrimonio] = useState(() => buscarPatrimonioPorId(id))
+  const location = useLocation()
+  const [patrimonio, setPatrimonio] = useState(null)
+  const [unidades, setUnidades] = useState([])
   const [activeTab, setActiveTab] = useState('resumo')
   const [alert, setAlert] = useState(null)
   const [confirmExcluir, setConfirmExcluir] = useState(false)
 
   const handleRefresh = () => {
     setPatrimonio(buscarPatrimonioPorId(id))
+    setUnidades(listarUnidadesPorPatrimonio(id))
   }
 
   const handleToggleSituacao = () => {
@@ -52,12 +56,45 @@ export default function PatrimonioDetalhesPage() {
     setConfirmExcluir(false)
   }
 
-  const resumoTaxa = useMemo(() => calcularTaxaOcupacao(patrimonio || {}), [patrimonio])
-  const endereco = patrimonio ? enderecoResumo(patrimonio.endereco) : ''
-  const unidades = useMemo(
-    () => (patrimonio ? listarUnidadesPorPatrimonio(patrimonio.id) : []),
-    [patrimonio],
+  useEffect(() => {
+    handleRefresh()
+
+    const handleUnidadesUpdate = () => setUnidades(listarUnidadesPorPatrimonio(id))
+    window.addEventListener('cvholding_unidades_updated', handleUnidadesUpdate)
+
+    return () => {
+      window.removeEventListener('cvholding_unidades_updated', handleUnidadesUpdate)
+    }
+  }, [id])
+
+  const resumoUnidades = useMemo(
+    () => calcularResumoUnidadesPatrimonio(patrimonio || {}, unidades),
+    [patrimonio, unidades],
   )
+  const endereco = patrimonio ? enderecoResumo(patrimonio.endereco) : ''
+  const podeCriarPrimeiraUnidade = Boolean(
+    patrimonio && patrimonio.situacao === 'Ativo' && resumoUnidades.cadastradas === 0,
+  )
+
+  useEffect(() => {
+    const message = location.state?.message
+    if (!message) return
+    setAlert({ type: 'success', message })
+  }, [location.state])
+
+  const handleCriarPrimeiraUnidade = () => {
+    if (!patrimonio) return
+    navigate('/unidades/nova', {
+      state: {
+        patrimonioId: patrimonio.id,
+        returnToPatrimonioId: patrimonio.id,
+        assistFirstUnit: true,
+        lockPatrimonio: true,
+        simplified: true,
+        suggestedUnidade: buildFirstUnitSuggestion(patrimonio),
+      },
+    })
+  }
 
   if (!patrimonio) {
     return (
@@ -78,7 +115,7 @@ export default function PatrimonioDetalhesPage() {
             <h1>{patrimonio.nome}</h1>
             <StatusBadge status={patrimonio.situacao} />
           </div>
-          <p className="details-meta">{patrimonio.codigo} — {patrimonio.grupoPatrimonial} • {patrimonio.tipo}</p>
+          <p className="details-meta">{patrimonio.codigo} — Tipo: {patrimonio.grupoPatrimonial} • Classificação: {patrimonio.tipo}</p>
           {endereco ? <p className="details-meta">{endereco}</p> : null}
           <p className="details-meta">Situação registral: {patrimonio.situacaoRegistral || 'Não informado'}</p>
         </div>
@@ -92,6 +129,11 @@ export default function PatrimonioDetalhesPage() {
           <button className="button button-secondary" type="button" onClick={handleToggleSituacao}>
             {patrimonio.situacao === 'Inativo' ? 'Reativar' : 'Inativar'}
           </button>
+          {podeCriarPrimeiraUnidade ? (
+            <button className="button button-primary" type="button" onClick={handleCriarPrimeiraUnidade}>
+              Criar primeira unidade
+            </button>
+          ) : null}
           <button className="button button-danger" type="button" onClick={() => setConfirmExcluir(true)}>
             Excluir
           </button>
@@ -106,27 +148,27 @@ export default function PatrimonioDetalhesPage() {
         {activeTab === 'resumo' && (
           <div className="summary-grid">
             <div className="summary-card">
-              <strong>{patrimonio.quantidadeUnidades || 0}</strong>
+              <strong>{resumoUnidades.totalPrevisto}</strong>
               <span>Unidades</span>
             </div>
             <div className="summary-card">
-              <strong>{patrimonio.indicadores?.unidadesCadastradas || 0}</strong>
+              <strong>{resumoUnidades.cadastradas}</strong>
               <span>Unidades cadastradas</span>
             </div>
             <div className="summary-card">
-              <strong>{patrimonio.indicadores?.unidadesOcupadas || 0}</strong>
+              <strong>{resumoUnidades.ocupadas}</strong>
               <span>Ocupadas</span>
             </div>
             <div className="summary-card">
-              <strong>{patrimonio.indicadores?.unidadesVagas || 0}</strong>
+              <strong>{resumoUnidades.vagas}</strong>
               <span>Vagas</span>
             </div>
             <div className="summary-card">
-              <strong>{patrimonio.indicadores?.unidadesEmManutencao || 0}</strong>
+              <strong>{resumoUnidades.emManutencao}</strong>
               <span>Em manutenção</span>
             </div>
             <div className="summary-card">
-              <strong>{resumoTaxa}%</strong>
+              <strong>{resumoUnidades.taxaOcupacao}%</strong>
               <span>Taxa de ocupação</span>
             </div>
           </div>
@@ -140,7 +182,7 @@ export default function PatrimonioDetalhesPage() {
                 <dt>Finalidade</dt><dd>{patrimonio.finalidade || 'Não informado'}</dd>
                 <dt>Modelo de receita</dt><dd>{patrimonio.modeloReceita || 'Não informado'}</dd>
                 <dt>Situação registral</dt><dd>{patrimonio.situacaoRegistral || 'Não informado'}</dd>
-                <dt>Quantidade de unidades</dt><dd>{patrimonio.quantidadeUnidades || 'Não informado'}</dd>
+                <dt>Quantidade de unidades</dt><dd>{resumoUnidades.totalPrevisto || 'Não informado'}</dd>
                 <dt>Valor patrimonial</dt><dd>{patrimonio.valorPatrimonial ? formatarMoeda(patrimonio.valorPatrimonial) : 'Não informado'}</dd>
                 <dt>Situação</dt><dd>{patrimonio.situacao || 'Não informado'}</dd>
                 <dt>Data de aquisição</dt><dd>{patrimonio.dataAquisicao ? formatarData(patrimonio.dataAquisicao) : 'Não informado'}</dd>
@@ -155,7 +197,6 @@ export default function PatrimonioDetalhesPage() {
                 <dt>Condomínio</dt><dd>{patrimonio.configuracoes?.condominio || '-'}</dd>
                 <dt>IPTU</dt><dd>{patrimonio.configuracoes?.iptu || '-'}</dd>
                 <dt>Limpeza</dt><dd>{patrimonio.configuracoes?.limpeza || '-'}</dd>
-                <dt>Manutenção</dt><dd>{patrimonio.configuracoes?.manutencao || '-'}</dd>
                 <dt>Regra de rateio</dt><dd>{patrimonio.configuracoes?.regraRateio || '-'}</dd>
               </dl>
             </div>
@@ -170,10 +211,10 @@ export default function PatrimonioDetalhesPage() {
           <div className="summary-details">
             <div className="summary-card">
               <h2>Unidades vinculadas</h2>
-              <p>{unidades.length} unidades encontradas</p>
-              <p>Ocupadas: {unidades.filter((item) => item.situacao === 'Ocupada').length}</p>
-              <p>Disponíveis: {unidades.filter((item) => item.situacao === 'Disponível').length}</p>
-              <p>Em manutenção: {unidades.filter((item) => item.situacao === 'Em manutenção').length}</p>
+              <p>{resumoUnidades.cadastradas} unidades encontradas</p>
+              <p>Ocupadas: {resumoUnidades.ocupadas}</p>
+              <p>Disponíveis: {resumoUnidades.vagas}</p>
+              <p>Em manutenção: {resumoUnidades.emManutencao}</p>
               <button
                 className="button button-primary"
                 type="button"
@@ -200,10 +241,8 @@ export default function PatrimonioDetalhesPage() {
                 <dt>Condomínio</dt><dd>{patrimonio.configuracoes?.condominio || '-'}</dd>
                 <dt>IPTU</dt><dd>{patrimonio.configuracoes?.iptu || '-'}</dd>
                 <dt>Limpeza</dt><dd>{patrimonio.configuracoes?.limpeza || '-'}</dd>
-                <dt>Manutenção</dt><dd>{patrimonio.configuracoes?.manutencao || '-'}</dd>
                 <dt>Regra de rateio</dt><dd>{patrimonio.configuracoes?.regraRateio || '-'}</dd>
                 <dt>Valor padrão de condomínio</dt><dd>{formatarMoeda(patrimonio.configuracoes?.valorPadraoCondominio)}</dd>
-                <dt>Dia padrão de vencimento</dt><dd>{patrimonio.configuracoes?.diaPadraoVencimento || '-'}</dd>
               </dl>
             </div>
             <div className="config-block">

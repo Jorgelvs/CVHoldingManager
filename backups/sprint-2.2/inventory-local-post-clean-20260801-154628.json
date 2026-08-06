@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-08-01T18:47:05.000Z",
+  "source": "browser-localStorage",
+  "cleanupResult": {
+    "removedCount": 3,
+    "removed": [
+      "cvholding_patrimonios",
+      "cvholding_unidades",
+      "cvholding_financeiro_contas"
+    ],
+    "mode": "local",
+    "instanceIdStillPresent": true,
+    "remainingKeys": [
+      "cvholding_supabase_instance_id"
+    ]
+  },
+  "verificationByKey": {
+    "cvholding_patrimonios": { "exists": false, "recordsFound": 0 },
+    "cvholding_unidades": { "exists": false, "recordsFound": 0 },
+    "cvholding_locatarios": { "exists": false, "recordsFound": 0 },
+    "cvholding_contratos": { "exists": false, "recordsFound": 0 },
+    "cvholding_contratos_sequence": { "exists": false, "recordsFound": 0 },
+    "cvholding_financeiro_lancamentos": { "exists": false, "recordsFound": 0 },
+    "cvholding_rateios": { "exists": false, "recordsFound": 0 },
+    "cvholding_financeiro_subcategorias_personalizadas": { "exists": false, "recordsFound": 0 },
+    "cvholding_financeiro_contas": { "exists": false, "recordsFound": 0 },
+    "cvholding_livro_caixa": { "exists": false, "recordsFound": 0 },
+    "cvholding_financeiro_baixas": { "exists": false, "recordsFound": 0 },
+    "cvholding_financeiro_aportes": { "exists": false, "recordsFound": 0 },
+    "cvholding_financeiro_caucoes": { "exists": false, "recordsFound": 0 },
+    "cvholding_configuracoes": { "exists": false, "recordsFound": 0 },
+    "cvholding_documentos": { "exists": false, "recordsFound": 0 },
+    "cvholding_auditoria": { "exists": false, "recordsFound": 0 },
+    "cvholding_notificacoes": { "exists": false, "recordsFound": 0 },
+    "cvholding_tarefas_manuais": { "exists": false, "recordsFound": 0 },
+    "cvholding_universal_history": { "exists": false, "recordsFound": 0 },
+    "cvholding_supabase_migration_last_report": { "exists": false, "recordsFound": 0 }
+  }
+}

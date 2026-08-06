@@ -1,5 +1,56 @@
 import React, { useEffect } from 'react'
 
+let activeModalLocks = 0
+let lockedScrollY = 0
+let previousBodyStyles = null
+
+function lockBodyScroll() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return
+  if (activeModalLocks > 0) {
+    activeModalLocks += 1
+    return
+  }
+
+  const { body } = document
+  lockedScrollY = window.scrollY || window.pageYOffset || 0
+  previousBodyStyles = {
+    overflow: body.style.overflow,
+    position: body.style.position,
+    top: body.style.top,
+    width: body.style.width,
+  }
+
+  body.style.overflow = 'hidden'
+  body.style.position = 'fixed'
+  body.style.top = `-${lockedScrollY}px`
+  body.style.width = '100%'
+  activeModalLocks = 1
+}
+
+function unlockBodyScroll() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return
+  if (activeModalLocks === 0) return
+
+  activeModalLocks -= 1
+  if (activeModalLocks > 0) return
+
+  const { body } = document
+  if (previousBodyStyles) {
+    body.style.overflow = previousBodyStyles.overflow
+    body.style.position = previousBodyStyles.position
+    body.style.top = previousBodyStyles.top
+    body.style.width = previousBodyStyles.width
+  } else {
+    body.style.overflow = ''
+    body.style.position = ''
+    body.style.top = ''
+    body.style.width = ''
+  }
+
+  window.scrollTo(0, lockedScrollY)
+  previousBodyStyles = null
+}
+
 export default function Modal({ open, title, children, onClose }) {
   useEffect(() => {
     if (!open) return undefined
@@ -12,7 +63,12 @@ export default function Modal({ open, title, children, onClose }) {
     }
 
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    lockBodyScroll()
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      unlockBodyScroll()
+    }
   }, [open, onClose])
 
   if (!open) return null
@@ -23,22 +79,13 @@ export default function Modal({ open, title, children, onClose }) {
       role="dialog"
       aria-modal="true"
       onClick={onClose}
-      style={{ overflowY: 'auto', padding: '20px 16px' }}
     >
       <div
         className="dialog-panel"
         onClick={(event) => event.stopPropagation()}
-        style={{
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          width: 'min(720px, 100%)',
-          boxSizing: 'border-box',
-        }}
       >
-        {title ? <h3 style={{ flexShrink: 0, margin: 0, padding: '4px 0 12px' }}>{title}</h3> : null}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', marginTop: 12 }}>{children}</div>
+        {title ? <h3 className="dialog-title">{title}</h3> : null}
+        <div className="dialog-content-scroll">{children}</div>
       </div>
     </div>
   )

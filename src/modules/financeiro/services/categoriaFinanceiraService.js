@@ -3,9 +3,40 @@ import { obterParametrosFinanceiros } from '../../configuracoes/services/configu
 import { listarLancamentos } from './financeiroService.js'
 import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 
+function normalizeSubcategoriaText(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function toSlug(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function buildSubcategoriaId(tipo, categoria, nome) {
+  return `subcat_${toSlug(tipo)}_${toSlug(categoria)}_${toSlug(nome)}`
+}
+
 function carregarSubcategoriasPersonalizadas() {
   const parsed = localGet(STORAGE_KEY_SUBCATEGORIES, [])
-  return Array.isArray(parsed) ? parsed : []
+  if (!Array.isArray(parsed)) return []
+  return parsed
+    .map((item) => {
+      const tipo = item?.tipo || ''
+      const categoria = item?.categoria || ''
+      const nome = String(item?.nome || '').trim()
+      if (!tipo || !categoria || !nome) return null
+      return {
+        id: item?.id || buildSubcategoriaId(tipo, categoria, nome),
+        tipo,
+        categoria,
+        nome,
+      }
+    })
+    .filter(Boolean)
 }
 
 function salvarSubcategoriasPersonalizadas(items) {
@@ -18,12 +49,12 @@ export function listarSubcategoriasPersonalizadas() {
 
 export function subcategoriaJaExiste(tipo, categoria, nome) {
   if (!tipo || !categoria || !nome) return false
-  const texto = nome.trim().toLowerCase().replace(/\s+/g, ' ')
+  const texto = normalizeSubcategoriaText(nome)
   return listarSubcategoriasPersonalizadas().some(
     (item) =>
       item.tipo === tipo &&
       item.categoria === categoria &&
-      item.nome.trim().toLowerCase().replace(/\s+/g, ' ') === texto,
+      normalizeSubcategoriaText(item.nome) === texto,
   )
 }
 
@@ -38,32 +69,66 @@ export function adicionarSubcategoriaPersonalizada(tipo, categoria, nome) {
   }
 
   const existentes = listarSubcategoriasPersonalizadas()
-  existentes.push({ tipo, categoria, nome: valor })
+  const novoItem = {
+    id: buildSubcategoriaId(tipo, categoria, valor),
+    tipo,
+    categoria,
+    nome: valor,
+  }
+  existentes.push(novoItem)
   salvarSubcategoriasPersonalizadas(existentes)
-  return { success: true, item: { tipo, categoria, nome: valor } }
+  return { success: true, item: novoItem }
 }
 
 export function subcategoriaEstaEmUso(tipo, categoria, nome) {
-  const valor = nome.trim().toLowerCase().replace(/\s+/g, ' ')
+  const valor = normalizeSubcategoriaText(nome)
   if (!tipo || !categoria || !valor) return false
   return listarLancamentos().some(
     (item) =>
       item.tipo === tipo &&
       item.categoria === categoria &&
       item.subcategoria &&
-      item.subcategoria.trim().toLowerCase().replace(/\s+/g, ' ') === valor,
+      normalizeSubcategoriaText(item.subcategoria) === valor,
   )
 }
 
-export function listarSubcategorias(tipo, categoria) {
+export function listarSubcategoriasDetalhadas(tipo, categoria) {
   const base = CATEGORIAS_FINANCEIRAS[tipo]?.find((item) => item.nome === categoria)
-  const iniciais = base?.subcategorias || []
+  const iniciais = (base?.subcategorias || []).map((nome) => ({
+    id: buildSubcategoriaId(tipo, categoria, nome),
+    nome,
+    personalizada: false,
+  }))
+
   const personalizadas = listarSubcategoriasPersonalizadas()
     .filter((item) => item.tipo === tipo && item.categoria === categoria)
-    .map((item) => item.nome)
+    .map((item) => ({
+      id: item.id || buildSubcategoriaId(tipo, categoria, item.nome),
+      nome: item.nome,
+      personalizada: true,
+    }))
 
-  const todas = [...iniciais, ...personalizadas]
-  return [...new Set(todas)]
+  const mapa = new Map()
+  for (const item of [...iniciais, ...personalizadas]) {
+    const key = normalizeSubcategoriaText(item.nome)
+    if (!key) continue
+    if (!mapa.has(key)) {
+      mapa.set(key, item)
+    }
+  }
+
+  return Array.from(mapa.values())
+}
+
+export function listarSubcategorias(tipo, categoria) {
+  return listarSubcategoriasDetalhadas(tipo, categoria).map((item) => item.nome)
+}
+
+export function buscarSubcategoriaDetalhe(tipo, categoria, value) {
+  if (!tipo || !categoria || !value) return null
+  const normalized = normalizeSubcategoriaText(value)
+  const items = listarSubcategoriasDetalhadas(tipo, categoria)
+  return items.find((item) => item.id === value || normalizeSubcategoriaText(item.nome) === normalized) || null
 }
 
 export function listarCategorias(tipo) {

@@ -1,287 +1,680 @@
-import { listarPatrimonios } from '../modules/patrimonios/services/patrimonioService.js'
+import { listarPatrimonios, buscarPatrimonioPorId } from '../modules/patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../modules/unidades/services/unidadeService.js'
 import { listarContas } from '../modules/financeiro/services/contaService.js'
+import { listarContratos } from '../modules/contratos/services/contratoService.js'
+import { listarLocatarios } from '../modules/locatarios/services/locatarioService.js'
+import { buscarSubcategoriaDetalhe } from '../modules/financeiro/services/categoriaFinanceiraService.js'
+
+let interpreterDeps = {
+  listarPatrimonios,
+  buscarPatrimonioPorId,
+  listarUnidades,
+  listarContas,
+  listarContratos,
+  listarLocatarios,
+  buscarSubcategoriaDetalhe,
+}
+
+export function setCommandInterpreterDependencies(overrides = {}) {
+  interpreterDeps = {
+    ...interpreterDeps,
+    ...overrides,
+  }
+}
+
+export function resetCommandInterpreterDependencies() {
+  interpreterDeps = {
+    listarPatrimonios,
+    buscarPatrimonioPorId,
+    listarUnidades,
+    listarContas,
+    listarContratos,
+    listarLocatarios,
+    buscarSubcategoriaDetalhe,
+  }
+}
 
 function normalize(text) {
-  return String(text)
+  return String(text || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/n[º°]/g, 'n')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
 function toCurrency(value) {
-  if (!value && value !== 0) return ''
+  if (value == null) return ''
   return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+function toIsoDate(date) {
+  if (!date) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function toCompetencia(date) {
+  if (!date) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 function parseAmount(text) {
-  if (!text) return null
   const normalized = normalize(text)
-  const amountRegex = /(?:r\$|reais?|rs)\s*([0-9]{1,3}(?:[\.,][0-9]{3})*(?:[\.,][0-9]{1,2})?|[0-9]+(?:[\.,][0-9]{1,2})?)(?:\s*(mil|m))?/i
-  const match = normalized.match(amountRegex)
-  if (!match) return null
-  let value = match[1].replace(/\./g, '').replace(/,/g, '.')
-  let amount = Number(value)
-  if (Number.isNaN(amount)) return null
-  if (match[2]) {
-    amount *= 1000
+  if (!normalized) return null
+
+  const parseBrazilianNumber = (raw) => {
+    const token = String(raw || '').trim()
+    if (!token) return null
+
+    const hasComma = token.includes(',')
+    const hasDot = token.includes('.')
+    let normalizedNumber = token
+
+    if (hasComma && hasDot) {
+      normalizedNumber = token.replace(/\./g, '').replace(/,/g, '.')
+    } else if (hasComma) {
+      const [intPart, decimalPart] = token.split(',')
+      if (decimalPart && decimalPart.length <= 2) {
+        normalizedNumber = `${intPart.replace(/\./g, '')}.${decimalPart}`
+      } else {
+        normalizedNumber = token.replace(/,/g, '')
+      }
+    } else if (hasDot) {
+      if (/^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(token)) {
+        normalizedNumber = token.replace(/\./g, '').replace(/,/g, '.')
+      }
+    }
+
+    const parsed = Number(normalizedNumber)
+    if (!Number.isFinite(parsed)) return null
+    return parsed
   }
-  return amount
+
+  const numericToken = '([0-9]+(?:[\\.,][0-9]{1,2})?|[0-9]{1,3}(?:\\.[0-9]{3})+(?:,[0-9]{1,2})?)'
+
+  const parseMatch = (match) => {
+    if (!match) return null
+    const amount = parseBrazilianNumber(match[1])
+    if (amount == null) return null
+    if (match[2]) return amount * 1000
+    return amount
+  }
+
+  const currencyMatch = normalized.match(new RegExp(`(?:r\\$|reais?|rs)\\s*${numericToken}(?:\\s+(mil|m)\\b)?(?![0-9])`, 'i'))
+  const byCurrency = parseMatch(currencyMatch)
+  if (byCurrency != null) return byCurrency
+
+  const contextMatch = normalized.match(new RegExp(`(?:de|por|valor|paguei|recebi|pagamento|recebimento)\\s*${numericToken}(?:\\s+(mil|m)\\b)?(?![0-9])`, 'i'))
+  const byContext = parseMatch(contextMatch)
+  if (byContext != null) return byContext
+
+  const standalone = normalized.match(new RegExp(`^${numericToken}(?:\\s+(mil|m)\\b)?$`, 'i'))
+  const byStandalone = parseMatch(standalone)
+  if (byStandalone != null) return byStandalone
+
+  return null
 }
 
 function parseDate(text) {
-  if (!text) return null
+  const normalized = normalize(text)
+  if (!normalized) return null
+
   const now = new Date()
-  const normalized = normalize(text)
+  now.setHours(0, 0, 0, 0)
+
+  if (normalized.includes('hoje')) return now
   if (normalized.includes('ontem')) {
-    const date = new Date(now)
-    date.setDate(now.getDate() - 1)
-    return date
+    const d = new Date(now)
+    d.setDate(d.getDate() - 1)
+    return d
   }
-  if (normalized.includes('hoje')) {
-    return now
-  }
-  const dayMatch = normalized.match(/(?:dia|no dia|d[oia])\s*(\d{1,2})/)
-  if (dayMatch) {
-    const day = Number(dayMatch[1])
-    const date = new Date(now)
-    date.setDate(day)
-    return date
-  }
-  return now
-}
 
-function extractName(text) {
-  const normalized = normalize(text)
-  const nameMatch = normalized.match(/(?:do|da|de)\s+([a-zçãõáâéêíóôúü]+(?:\s+[a-zçãõáâéêíóôúü]+){0,2})/i)
-  if (!nameMatch) return ''
-  const name = nameMatch[1].trim()
-  if (['aluguel', 'casa', 'kitnet', 'conta', 'reserva', 'manutencao', 'manutencao', 'caucao', 'valor'].includes(name)) {
-    return ''
+  const parseLocalDate = (year, month, day) => {
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null
+    const parsed = new Date(year, month - 1, day)
+    if (Number.isNaN(parsed.getTime())) return null
+    if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+      return null
+    }
+    parsed.setHours(0, 0, 0, 0)
+    return parsed
   }
-  return name.split(' ').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
-}
 
-function findAccount(text) {
-  const normalized = normalize(text)
-  const accounts = listarContas()
-  const found = accounts.find((conta) => {
-    const name = normalize(conta.nome)
-    return name && normalized.includes(name)
-  })
-  if (found) return found
-  return accounts.find((conta) => {
-    const name = normalize(conta.nome)
-    return (name.includes('conta') && normalized.includes('conta')) || (name.includes('caixa') && normalized.includes('caixa'))
-  }) || null
+  const isoDate = normalized.match(/\b(\d{4})-(\d{2})-(\d{2})\b/)
+  if (isoDate) {
+    const year = Number(isoDate[1])
+    const month = Number(isoDate[2])
+    const day = Number(isoDate[3])
+    const parsed = parseLocalDate(year, month, day)
+    if (parsed) return parsed
+  }
+
+  const slashDate = normalized.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/)
+  if (slashDate) {
+    const day = Number(slashDate[1])
+    const month = Number(slashDate[2])
+    const rawYear = slashDate[3] ? Number(slashDate[3]) : now.getFullYear()
+    const year = rawYear < 100 ? 2000 + rawYear : rawYear
+    const parsed = parseLocalDate(year, month, day)
+    if (parsed) return parsed
+  }
+
+  return null
 }
 
 function extractUnitReference(text) {
   const normalized = normalize(text)
-  const match = normalized.match(/\b(casa|kitnet|loja|unidade|imovel|apto?)\s*0*([0-9]+)\b/)
+  const match = normalized.match(/\b(casa|kitnet|loja|unidade|imovel|apto?|apartamento)\s*(?:n\.?|num(?:ero)?\.?|#)?\s*0*([0-9]+)\b/)
   if (!match) return null
   return {
     type: match[1],
-    number: match[2],
+    number: String(match[2] || '').replace(/^0+/, ''),
   }
 }
 
-function findUnit(text) {
+function canonicalUnitType(type) {
+  if (type === 'apto') return 'apartamento'
+  if (type === 'imovel') return 'casa'
+  return type
+}
+
+function unitTypeMatches(refType, name, code) {
+  if (!refType) return true
+  if (name.includes(refType) || code.includes(refType)) return true
+  if (refType === 'apartamento' && (name.includes('apto') || code.includes('apto'))) return true
+  if (refType === 'casa' && (name.includes('imovel') || code.includes('imovel'))) return true
+  return false
+}
+
+function listMatchingUnits(text) {
   const normalized = normalize(text)
-  const units = listarUnidades()
-  const unit = units.find((item) => {
+  const units = interpreterDeps.listarUnidades()
+
+  const exactTextMatches = units.filter((item) => {
     const name = normalize(item.nome || '')
     const code = normalize(item.codigoInterno || '')
     return (name && normalized.includes(name)) || (code && normalized.includes(code))
   })
+  if (exactTextMatches.length > 0) return exactTextMatches
 
-  if (unit) return unit
+  const ref = extractUnitReference(text)
+  if (!ref) return []
 
-  const unitReference = extractUnitReference(text)
-  if (!unitReference) return null
+  const type = canonicalUnitType(ref.type)
+  const number = String(ref.number || '').replace(/^0+/, '')
 
-  return units.find((item) => {
+  return units.filter((item) => {
     const name = normalize(item.nome || '')
-    return name && name.includes(unitReference.type) && name.includes(unitReference.number)
-  }) || null
+    const code = normalize(item.codigoInterno || '')
+    if (!name && !code) return false
+
+    const nameNum = (name.match(/\b0*([0-9]+)\b/) || [])[1] || ''
+    const codeNum = (code.match(/\b0*([0-9]+)\b/) || [])[1] || ''
+    const sameNumber = nameNum.replace(/^0+/, '') === number || codeNum.replace(/^0+/, '') === number
+    if (!sameNumber) return false
+
+    return unitTypeMatches(type, name, code)
+  })
+}
+
+function buildUnitCandidate(unit) {
+  if (!unit) return null
+  const patrimonio = unit.patrimonioId ? interpreterDeps.buscarPatrimonioPorId(unit.patrimonioId) : null
+  return {
+    id: unit.id,
+    nome: unit.nome,
+    patrimonioId: unit.patrimonioId || '',
+    patrimonioLabel: patrimonio?.nome || '',
+    codigoInterno: unit.codigoInterno || '',
+  }
+}
+
+function toUnitDisplayLabel(unitCandidate) {
+  if (!unitCandidate) return ''
+  if (!unitCandidate.patrimonioLabel) return unitCandidate.nome || ''
+  return `${unitCandidate.nome || ''} - ${unitCandidate.patrimonioLabel}`
+}
+
+function narrowAmbiguousByPatrimonio(text, candidates) {
+  const normalized = normalize(text)
+  if (!normalized || !Array.isArray(candidates) || candidates.length <= 1) return []
+  const narrowed = candidates.filter((item) => {
+    const patrimonioName = normalize(item.patrimonioLabel || '')
+    return patrimonioName && normalized.includes(patrimonioName)
+  })
+  return narrowed
+}
+
+export function resolveUnitFromCatalog(text) {
+  const ref = extractUnitReference(text)
+  const units = interpreterDeps.listarUnidades()
+
+  if (!Array.isArray(units) || units.length === 0) {
+    return {
+      status: 'empty_catalog',
+      query: ref ? `${ref.type} ${ref.number}` : '',
+      matches: [],
+      unit: null,
+    }
+  }
+
+  if (!ref) {
+    return {
+      status: 'no_reference',
+      query: '',
+      matches: [],
+      unit: null,
+    }
+  }
+
+  const matches = listMatchingUnits(text)
+  const candidates = (matches || []).map(buildUnitCandidate).filter(Boolean)
+  if (matches.length === 1) {
+    const unit = candidates[0]
+    return {
+      status: 'exact',
+      query: `${ref.type} ${ref.number}`,
+      matches: candidates,
+      unit,
+      unidadeId: unit.id,
+      unidadeLabel: unit.nome || '',
+      patrimonioId: unit.patrimonioId || '',
+      patrimonioLabel: unit.patrimonioLabel || '',
+    }
+  }
+
+  if (matches.length > 1) {
+    const narrowed = narrowAmbiguousByPatrimonio(text, candidates)
+    if (narrowed.length === 1) {
+      const unit = narrowed[0]
+      return {
+        status: 'exact',
+        query: `${ref.type} ${ref.number}`,
+        matches: candidates,
+        unit,
+        unidadeId: unit.id,
+        unidadeLabel: unit.nome || '',
+        patrimonioId: unit.patrimonioId || '',
+        patrimonioLabel: unit.patrimonioLabel || '',
+      }
+    }
+
+    return {
+      status: 'ambiguous',
+      query: `${ref.type} ${ref.number}`,
+      matches: candidates,
+      unit: null,
+    }
+  }
+
+  return {
+    status: 'not_found',
+    query: `${ref.type} ${ref.number}`,
+    matches: [],
+    unit: null,
+  }
+}
+
+export function suggestUnitsFromCatalog(text, limit = 5) {
+  const ref = extractUnitReference(text)
+  const units = interpreterDeps.listarUnidades()
+  if (!ref) {
+    return units
+      .slice(0, limit)
+      .map((item) => toUnitDisplayLabel(buildUnitCandidate(item)))
+      .filter(Boolean)
+  }
+
+  const type = canonicalUnitType(ref.type)
+  return units
+    .filter((item) => {
+      const name = normalize(item.nome || '')
+      const code = normalize(item.codigoInterno || '')
+      return unitTypeMatches(type, name, code)
+    })
+    .slice(0, limit)
+    .map((item) => toUnitDisplayLabel(buildUnitCandidate(item)))
+    .filter(Boolean)
+}
+
+function requiresPropertyLink(originalText, categoria, unitResolution, patrimonioMatch) {
+  const normalized = normalize(originalText)
+  const hasExplicitPropertyReference = /\b(casa|kitnet|apartamento|apto|unidade|imovel|patrimonio)\b/.test(normalized)
+  const hasUnitSignal = unitResolution.status === 'exact' || unitResolution.status === 'ambiguous' || unitResolution.status === 'not_found'
+  const isMaintenance = categoria === 'Manutenção'
+  return Boolean(hasExplicitPropertyReference || hasUnitSignal || isMaintenance || patrimonioMatch?.id)
 }
 
 function findPatrimonio(text) {
   const normalized = normalize(text)
-  const patrimonios = listarPatrimonios()
-  const patrimonio = patrimonios.find((item) => {
+  return interpreterDeps.listarPatrimonios().find((item) => {
     const name = normalize(item.nome || '')
     const code = normalize(item.codigo || '')
     return (name && normalized.includes(name)) || (code && normalized.includes(code))
-  })
-  return patrimonio || null
+  }) || null
 }
 
-function findCategory(text, tipo) {
+function findAccount(text) {
   const normalized = normalize(text)
-  const categorias = {
-    receita: [
-      { nome: 'Aluguel', keywords: ['aluguel'] },
-      { nome: 'Condomínio', keywords: ['condomínio', 'condominio'] },
-      { nome: 'Multa', keywords: ['multa'] },
-      { nome: 'Juros', keywords: ['juros'] },
-      { nome: 'Outras receitas', keywords: ['recebi', 'recebimento', 'entrada'] },
-    ],
-    despesa: [
-      { nome: 'Água', keywords: ['água', 'agua'] },
-      { nome: 'Energia', keywords: ['energia'] },
-      { nome: 'Faxina', keywords: ['faxina', 'limpeza'] },
-      { nome: 'Manutenção', keywords: ['manutenção', 'manutencao', 'reparo', 'reparos', 'conserto', 'pintura', 'elétrica', 'eletrica', 'jardinagem', 'dedetização', 'dedetizacao', 'hidráulica', 'hidraulica'] },
-      { nome: 'IPTU', keywords: ['iptu'] },
-      { nome: 'Comissão imobiliária', keywords: ['comissão', 'comissao', 'imobiliária', 'imobiliaria'] },
-      { nome: 'Seguro', keywords: ['seguro'] },
-      { nome: 'Outras despesas', keywords: ['despesa', 'pagamento', 'pago', 'paga', 'taxa'] },
-    ],
-  }[tipo] || []
+  const contas = interpreterDeps.listarContas()
 
-  const category = categorias.find((item) => item.keywords.some((keyword) => normalized.includes(keyword)))
-  if (!category) return { nome: '', subcategoria: null }
+  const exact = contas.find((conta) => {
+    const name = normalize(conta.nome)
+    return name && normalized.includes(name)
+  })
+  if (exact) return exact
 
-  let subcategoria = null
-  if (category.nome === 'Manutenção') {
-    const subKeywords = [
-      { nome: 'Hidráulica', keywords: ['hidráulica', 'hidraulica'] },
-      { nome: 'Pintura', keywords: ['pintura'] },
-      { nome: 'Elétrica', keywords: ['elétrica', 'eletrica'] },
-      { nome: 'Jardinagem', keywords: ['jardinagem'] },
-      { nome: 'Dedetização', keywords: ['dedetização', 'dedetizacao'] },
-      { nome: 'Reparos gerais', keywords: ['reparo', 'reparos', 'conserto'] },
-      { nome: 'Outros', keywords: ['outro', 'reserva', 'manutenção', 'manutencao'] },
-    ]
-    const found = subKeywords.find((item) => item.keywords.some((keyword) => normalized.includes(keyword)))
-    subcategoria = found?.nome || null
+  const byKeyword = contas.find((conta) => {
+    const name = normalize(conta.nome)
+    if (!name) return false
+    if (name.includes('conta corrente') && normalized.includes('conta corrente')) return true
+    if (name.includes('caixa') && normalized.includes('caixa')) return true
+    if (name.includes('caucao') && normalized.includes('caucao')) return true
+    if (name.includes('invest') && normalized.includes('invest')) return true
+    return false
+  })
+
+  return byKeyword || null
+}
+
+function findContractAndLocatario(text) {
+  const normalized = normalize(text)
+  const contratos = interpreterDeps.listarContratos()
+  const locatarios = interpreterDeps.listarLocatarios()
+
+  const contratosMatch = contratos.filter((item) => {
+    const codigo = normalize(item.codigoInterno || '')
+    return codigo && normalized.includes(codigo)
+  })
+
+  if (contratosMatch.length === 1) {
+    const contrato = contratosMatch[0]
+    const locatario = contrato.locatarioId ? locatarios.find((item) => item.id === contrato.locatarioId) : null
+    return {
+      contratoId: contrato.id,
+      contratoLabel: contrato.codigoInterno || contrato.id,
+      locatarioId: locatario?.id || contrato.locatarioId || null,
+      locatarioLabel: locatario?.nomeCompleto || '',
+    }
   }
 
-  return { nome: category.nome, subcategoria }
+  const locatariosMatch = locatarios.filter((item) => {
+    const nome = normalize(item.nomeCompleto || '')
+    return nome && normalized.includes(nome)
+  })
+
+  if (locatariosMatch.length === 1) {
+    const loc = locatariosMatch[0]
+    return {
+      contratoId: null,
+      contratoLabel: '',
+      locatarioId: loc.id,
+      locatarioLabel: loc.nomeCompleto || '',
+    }
+  }
+
+  return {
+    contratoId: null,
+    contratoLabel: '',
+    locatarioId: null,
+    locatarioLabel: '',
+  }
+}
+
+function findCategory(text, natureza) {
+  const normalized = normalize(text)
+
+  const receitas = [
+    { nome: 'Aluguel', keywords: ['aluguel'] },
+    { nome: 'Condomínio', keywords: ['condominio', 'condomínio'] },
+    { nome: 'Multa', keywords: ['multa'] },
+    { nome: 'Juros', keywords: ['juros'] },
+    { nome: 'Outras receitas', keywords: ['recebimento', 'receita', 'entrada'] },
+  ]
+
+  const despesas = [
+    { nome: 'Água', keywords: ['agua', 'água'] },
+    { nome: 'Energia', keywords: ['energia', 'luz'] },
+    { nome: 'Faxina', keywords: ['faxina', 'limpeza'] },
+    { nome: 'Manutenção', keywords: ['manutencao', 'manutenção', 'pintor', 'pintura', 'eletricista', 'eletrica', 'elétrica', 'hidraulica', 'hidráulica', 'reparo', 'conserto', 'pedreiro', 'jardinagem', 'dedetizacao', 'dedetização'] },
+    { nome: 'IPTU', keywords: ['iptu'] },
+    { nome: 'Comissão imobiliária', keywords: ['comissao', 'comissão', 'imobiliaria', 'imobiliária'] },
+    { nome: 'Seguro', keywords: ['seguro'] },
+    { nome: 'Outras despesas', keywords: ['despesa', 'pagamento', 'taxa'] },
+  ]
+
+  const source = natureza === 'receita' ? receitas : despesas
+  const category = source.find((item) => item.keywords.some((kw) => normalized.includes(kw)))
+  if (!category) return { nome: '', subcategoria: '' }
+
+  if (category.nome !== 'Manutenção') {
+    return { nome: category.nome, subcategoria: '' }
+  }
+
+  const subcategorias = [
+    { nome: 'Elétrica', keywords: ['eletrica', 'elétrica', 'eletricista'] },
+    { nome: 'Pintura', keywords: ['pintura', 'pintor'] },
+    { nome: 'Hidráulica', keywords: ['hidraulica', 'hidráulica'] },
+    { nome: 'Jardinagem', keywords: ['jardinagem'] },
+    { nome: 'Dedetização', keywords: ['dedetizacao', 'dedetização'] },
+    { nome: 'Reparos gerais', keywords: ['reparo', 'conserto', 'pedreiro'] },
+  ]
+
+  const sub = subcategorias.find((item) => item.keywords.some((kw) => normalized.includes(kw)))
+  return { nome: category.nome, subcategoria: sub?.nome || '' }
+}
+
+function resolveSubcategoria(natureza, categoria, subcategoria) {
+  if (!natureza || !categoria || !subcategoria) return { id: '', label: '' }
+  const item = interpreterDeps.buscarSubcategoriaDetalhe(natureza, categoria, subcategoria)
+  if (!item) return { id: '', label: subcategoria }
+  return { id: item.id, label: item.nome }
+}
+
+function detectIntent(text) {
+  const normalized = normalize(text)
+
+  if (/\b(quem esta inadimplente|quem está inadimplente|inadimplente|inadimplencia|inadimplência)\b/.test(normalized)) {
+    return { intentType: 'query', intent: 'consultar_inadimplencia', queryType: 'inadimplencia' }
+  }
+
+  if (/\b(quais contas vencem esta semana|quais contas vencem nessa semana|vencem esta semana|vencem nessa semana)\b/.test(normalized)) {
+    return { intentType: 'query', intent: 'consultar_contas_vencem_semana', queryType: 'vencimentos_semana' }
+  }
+
+  if (/\b(quanto tenho na|saldo da|saldo do)\b/.test(normalized) && normalized.includes('conta')) {
+    return { intentType: 'query', intent: 'consultar_saldo_conta', queryType: 'saldo_conta' }
+  }
+
+  if (/\b(qual meu saldo|qual o meu saldo|consultar saldo|ver saldo|saldo)\b/.test(normalized)) {
+    return { intentType: 'query', intent: 'consultar_saldo', queryType: 'saldo_geral' }
+  }
+
+  if (/\b(registrar recebimento|recebimento|recebi|receber)\b/.test(normalized)) {
+    return { intentType: 'register', intent: 'registrar_recebimento', natureza: 'receita', acaoFinanceira: 'recebimento' }
+  }
+
+  if (/\b(registrar pagamento|pagamento|paguei|pagar)\b/.test(normalized)) {
+    return { intentType: 'register', intent: 'registrar_pagamento', natureza: 'despesa', acaoFinanceira: 'pagamento' }
+  }
+
+  if (/\b(registrar receita|lancar receita|lançar receita)\b/.test(normalized)) {
+    return { intentType: 'register', intent: 'registrar_receita', natureza: 'receita', acaoFinanceira: 'registro' }
+  }
+
+  if (/\b(registrar despesa|lancar despesa|lançar despesa)\b/.test(normalized)) {
+    return { intentType: 'register', intent: 'registrar_despesa', natureza: 'despesa', acaoFinanceira: 'registro' }
+  }
+
+  if (/(recebi|paguei|receber|pagar|despesa|receita|aluguel|iptu|condominio|condomínio)/.test(normalized)) {
+    const natureza = /(recebi|receber|receita|aluguel|entrada)/.test(normalized) ? 'receita' : 'despesa'
+    const acaoFinanceira = /(recebi|receber)/.test(normalized)
+      ? 'recebimento'
+      : /(paguei|pagar|pagamento)/.test(normalized)
+        ? 'pagamento'
+        : 'registro'
+    return { intentType: 'register', intent: natureza === 'receita' ? 'registrar_receita' : 'registrar_despesa', natureza, acaoFinanceira }
+  }
+
+  return { intentType: 'unsupported', intent: 'nao_suportado' }
+}
+
+function buildMissingFields(parsed) {
+  if (parsed.intentType === 'query') {
+    if (parsed.queryType === 'saldo_conta' && !parsed.contaId) return ['conta']
+    return []
+  }
+
+  if (parsed.intentType !== 'register') return []
+
+  const missing = []
+  if (!parsed.natureza) missing.push('natureza')
+  if (parsed.valor == null || Number.isNaN(Number(parsed.valor)) || Number(parsed.valor) <= 0) missing.push('valor')
+  if (!parsed.categoria) missing.push('categoria')
+  if (parsed.unidadeAmbigua) missing.push('confirmar_unidade')
+  if (parsed.requiresPropertyLink && !parsed.patrimonioId) missing.push('patrimonio')
+  return missing
+}
+
+function buildHumanMessage(parsed) {
+  if (parsed.intentType === 'unsupported') {
+    return 'Comando não suportado nesta sprint. Tente registrar receita/despesa/pagamento/recebimento ou fazer uma consulta de saldo/inadimplência.'
+  }
+
+  if (parsed.intentType === 'query') {
+    if (parsed.queryType === 'saldo_conta' && !parsed.contaId) {
+      return 'Não identifiquei a conta. Informe o nome da conta para consultar o saldo.'
+    }
+    return 'Consulta identificada. Vou responder sem alterar dados.'
+  }
+
+  if (parsed.unidadeCatalogoVazio) {
+    return 'Não existem unidades cadastradas para vincular este lançamento.'
+  }
+
+  if (parsed.unidadeAmbigua) {
+    return `Encontrei mais de uma unidade para ${parsed.unidadeQuery || 'o imóvel informado'}. Confirme a unidade correta.`
+  }
+
+  if (parsed.unidadeNaoEncontrada) {
+    return `Não encontrei ${parsed.unidadeQuery || 'a unidade informada'} nos cadastros.`
+  }
+
+  if (parsed.missing.length > 0) {
+    return 'Faltam alguns dados obrigatórios para concluir o lançamento.'
+  }
+
+  return `Comando interpretado: ${parsed.naturezaLabel} de ${parsed.valorLabel}. Revise e confirme para registrar.`
 }
 
 function buildLabels(parsed) {
   return {
-    operationLabel: parsed.action === 'aporte' ? 'Aporte' : parsed.action === 'transferencia' ? 'Transferência' : parsed.action === 'caucao' ? 'Caução' : 'Lançamento',
-    tipoLabel: parsed.tipo === 'receita' ? 'Receita' : parsed.tipo === 'despesa' ? 'Despesa' : parsed.tipo === 'despesa' && parsed.action === 'retirada' ? 'Retirada' : 'Despesa',
-    categoriaLabel: parsed.categoria || '',
-    unidadeLabel: parsed.unidadeLabel || '',
-    patrimonioLabel: parsed.patrimonioLabel || '',
-    contaLabel: parsed.contaLabel || '',
+    operationLabel: parsed.intentType === 'query' ? 'Consulta' : 'Lançamento financeiro',
+    tipoLabel: parsed.natureza ? (parsed.natureza === 'receita' ? 'Receita' : 'Despesa') : 'Não identificado',
+    naturezaLabel: parsed.natureza ? (parsed.natureza === 'receita' ? 'receita' : 'despesa') : 'não identificada',
+    valorLabel: parsed.valor != null ? toCurrency(parsed.valor) : 'Não identificado',
     dateLabel: parsed.date ? parsed.date.toLocaleDateString('pt-BR') : 'Não identificada',
-    valorLabel: parsed.valor ? toCurrency(parsed.valor) : 'Não identificado',
   }
 }
 
+export function refreshParsedEntry(base) {
+  const parsed = { ...base }
+  parsed.missing = buildMissingFields(parsed)
+  const withLabels = { ...parsed, ...buildLabels(parsed) }
+  withLabels.humanMessage = buildHumanMessage(withLabels)
+  return withLabels
+}
+
 export function interpretCommand(text) {
-  const originalText = (text || '').trim()
-  const normalized = normalize(originalText)
-  const amount = parseAmount(normalized)
-  const dateObject = parseDate(normalized)
-  const unit = findUnit(normalized)
-  const patrimonio = findPatrimonio(normalized)
-  const account = findAccount(normalized)
-  const name = extractName(originalText)
+  const originalText = String(text || '').trim()
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
 
-  // intent detection using verb keywords
-  const intentMap = [
-    { intent: 'aporte', keywords: ['aporte', 'coloquei', 'depositei', 'depositei'] },
-    { intent: 'transferencia', keywords: ['transfer', 'transferi', 'passei', 'passe', 'pix', 'enviei', 'mandei', 'para a reserva', 'reserva'] },
-    { intent: 'caucao', keywords: ['caução', 'caucao'] },
-    { intent: 'retirada', keywords: ['retirada', 'tirei', 'saiu', 'retirei'] },
-    { intent: 'lancamento', keywords: ['paguei', 'paguei o', 'paguei a', 'recebi', 'recebeu', 'entrou', 'aluguel', 'iptu', 'condominio', 'condomínio', 'pagamento', 'pago', 'paga', 'pague'] },
-  ]
-
-  let action = 'lancamento'
-  for (const rule of intentMap) {
-    if (rule.keywords.some((k) => normalized.includes(k))) {
-      action = rule.intent === 'lancamento' && (normalized.includes('recebi') || normalized.includes('entrou') || normalized.includes('aluguel') || normalized.includes('condomínio') || normalized.includes('condominio')) ? 'lancamento' : rule.intent
-      break
-    }
+  if (!originalText) {
+    return refreshParsedEntry({
+      intentType: 'unsupported',
+      intent: 'nao_suportado',
+      supported: false,
+      action: null,
+      originalText,
+    })
   }
 
-  // normalize some special cases
-  if (normalized.includes('recebi') || normalized.includes('entrou') || normalized.includes('entrada')) action = 'lancamento'
-  if (normalized.includes('retirada') || normalized.includes('tirei')) action = 'retirada'
+  const detected = detectIntent(originalText)
+  const amount = parseAmount(originalText)
+  const explicitDate = parseDate(originalText)
+  const account = findAccount(originalText)
+  const unitResolution = resolveUnitFromCatalog(originalText)
+  const patrimonioMatch = findPatrimonio(originalText)
+  const vinculos = findContractAndLocatario(originalText)
 
-  // determine type for lancamento (receita/despesa)
-  let tipo = 'despesa'
-  if (action === 'lancamento') {
-    if (normalized.includes('recebi') || normalized.includes('recebimento') || normalized.includes('entrou') || normalized.includes('aluguel') || normalized.includes('entrada')) {
-      tipo = 'receita'
-    } else if (normalized.includes('retirada') || normalized.includes('tirei')) {
-      tipo = 'despesa'
-    } else if (normalized.includes('despesa') || normalized.includes('pago') || normalized.includes('paga') || normalized.includes('pagamento') || normalized.includes('paguei')) {
-      tipo = 'despesa'
-    }
-  }
+  const isRegister = detected.intentType === 'register'
+  const natureza = isRegister ? detected.natureza : ''
 
-  const category = action === 'lancamento' ? findCategory(normalized, tipo) : { nome: '', subcategoria: null }
-  const status = normalized.includes('pago') || normalized.includes('paga') ? 'pago' : 'pendente'
-  const patrimonioId = unit?.patrimonioId || (patrimonio?.id || null)
-  const unidadeId = unit?.id || null
-  const patrimonioLabel = unit ? `${unit.nome}` : patrimonio ? `${patrimonio.nome}` : ''
-  const unidadeLabel = unit ? unit.nome : ''
-  const contaLabel = account ? account.nome : ''
-  const descricao = originalText
-  const observacoes = name ? `Sócio: ${name}` : ''
+  const inferredCategory = isRegister ? findCategory(originalText, natureza || 'despesa') : { nome: '', subcategoria: '' }
+  const subcategoriaResolved = resolveSubcategoria(natureza || 'despesa', inferredCategory.nome, inferredCategory.subcategoria)
 
-  let parsed = {
-    action,
-    intent: action,
-    supported: ['lancamento', 'transferencia', 'aporte', 'caucao', 'retirada'].includes(action),
-    tipo,
+  const finalDate = (() => {
+    if (!isRegister) return explicitDate
+    if (explicitDate) return explicitDate
+    if (detected.acaoFinanceira === 'pagamento' || detected.acaoFinanceira === 'recebimento') return now
+    return null
+  })()
+
+  const status = (() => {
+    if (!isRegister) return 'pendente'
+    if (detected.acaoFinanceira === 'pagamento' || detected.acaoFinanceira === 'recebimento') return 'pago'
+    return 'pendente'
+  })()
+
+  const patrimonioFromUnit = unitResolution.patrimonioId ? interpreterDeps.buscarPatrimonioPorId(unitResolution.patrimonioId) : null
+
+  const parsed = {
+    supported: detected.intentType !== 'unsupported',
+    intentType: detected.intentType,
+    intent: detected.intent,
+    queryType: detected.queryType || '',
+    action: detected.intentType === 'register' ? 'lancamento' : 'consulta',
+    acaoFinanceira: detected.acaoFinanceira || '',
+    natureza,
+    tipo: natureza,
     valor: amount,
-    date: dateObject,
-    dataCompetencia: dateObject ? `${dateObject.getFullYear()}-${String(dateObject.getMonth() + 1).padStart(2, '0')}` : '',
-    dataPagamento: status === 'pago' && dateObject ? `${dateObject.getFullYear()}-${String(dateObject.getMonth() + 1).padStart(2, '0')}-${String(dateObject.getDate()).padStart(2, '0')}` : '',
-    categoria: category.nome,
-    subcategoria: category.subcategoria,
-    patrimonioId,
-    unidadeId,
-    patrimonioLabel,
-    unidadeLabel,
+    categoria: inferredCategory.nome,
+    subcategoria: subcategoriaResolved.label || inferredCategory.subcategoria || '',
+    subcategoriaId: subcategoriaResolved.id || '',
+    subcategoriaLabel: subcategoriaResolved.label || inferredCategory.subcategoria || '',
+    patrimonioId: unitResolution.patrimonioId || patrimonioMatch?.id || '',
+    patrimonioLabel: unitResolution.patrimonioLabel || patrimonioFromUnit?.nome || patrimonioMatch?.nome || '',
+    unidadeId: unitResolution.unidadeId || '',
+    unidadeLabel: unitResolution.unidadeLabel || '',
+    unidadeAmbigua: unitResolution.status === 'ambiguous',
+    unidadeNaoEncontrada: unitResolution.status === 'not_found',
+    unidadeCatalogoVazio: unitResolution.status === 'empty_catalog',
+    unidadeCandidates: (unitResolution.matches || []).map((item) => ({
+      id: item.id,
+      nome: item.nome,
+      patrimonioId: item.patrimonioId,
+      patrimonioLabel: item.patrimonioLabel || '',
+    })),
+    unidadeQuery: unitResolution.query || '',
     contaId: account?.id || '',
     contaLabel: account?.nome || '',
-    descricao,
-    observacoes,
-    originalText,
+    date: finalDate,
+    dateIso: toIsoDate(finalDate),
+    dataCompetencia: finalDate ? toCompetencia(finalDate) : '',
+    dataPagamento: status === 'pago' && finalDate ? toIsoDate(finalDate) : '',
     status,
+    descricao: originalText,
+    observacoes: '',
+    contratoId: vinculos.contratoId,
+    contratoLabel: vinculos.contratoLabel,
+    locatarioId: vinculos.locatarioId,
+    locatarioLabel: vinculos.locatarioLabel,
+    originalText,
+    requiresPropertyLink: isRegister ? requiresPropertyLink(originalText, inferredCategory.nome, unitResolution, patrimonioMatch) : false,
   }
 
-  const missing = []
-  if (!parsed.valor) missing.push('valor')
-  if (!parsed.date) missing.push('data')
-  if (action === 'lancamento') {
-    if (!parsed.categoria) missing.push('categoria')
-    if (!parsed.patrimonioId && !parsed.unidadeId) missing.push('patrimonio')
-  }
-  if (action === 'aporte') {
-    if (!parsed.valor) missing.push('valor')
-  }
-  if (action === 'transferencia') {
-    if (!parsed.valor) missing.push('valor')
-  }
-  if (action === 'caucao') {
-    if (!parsed.valor) missing.push('valor')
-  }
-
-  parsed.missing = missing
-  parsed = { ...parsed, ...buildLabels(parsed) }
-
-  // human-friendly message
-  if (!parsed.supported) {
-    parsed.humanMessage = 'Esta operação será suportada em breve.'
-  } else if (parsed.missing.length > 0) {
-    parsed.humanMessage = 'Quase lá — faltam algumas informações.'
-  } else {
-    if (parsed.action === 'aporte') parsed.humanMessage = `O sistema entendeu que você deseja registrar um aporte de ${parsed.valorLabel}.`
-    else if (parsed.action === 'transferencia') parsed.humanMessage = `O sistema entendeu que você deseja transferir ${parsed.valorLabel}.`
-    else if (parsed.action === 'caucao') parsed.humanMessage = `O sistema entendeu que você recebeu uma caução de ${parsed.valorLabel}.`
-    else if (parsed.action === 'retirada') parsed.humanMessage = `O sistema entendeu que você realizou uma retirada de ${parsed.valorLabel}.`
-    else parsed.humanMessage = `O sistema entendeu que você deseja registrar ${parsed.tipoLabel.toLowerCase()} de ${parsed.valorLabel}${parsed.unidadeLabel ? ' para ' + parsed.unidadeLabel : ''}.`
-  }
-
-  return parsed
+  return refreshParsedEntry(parsed)
 }

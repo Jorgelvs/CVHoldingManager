@@ -9,6 +9,8 @@ export default function Tabs({ items, activeId, onChange }) {
             key={tab.id}
             type="button"
             className={`tab-item ${tab.id === activeId ? 'active' : ''}`}
+            role="tab"
+            aria-selected={tab.id === activeId}
             onClick={() => onChange(tab.id)}
           >
             {tab.label}

@@ -76,6 +76,12 @@ export default function LancamentoViewPage() {
     return String(valor).charAt(0).toUpperCase() + String(valor).slice(1)
   }
 
+  const formatarTipoManutencao = (valor) => {
+    if (valor === 'area_comum') return 'Área comum / estrutura do patrimônio'
+    if (valor === 'unidade_especifica') return 'Unidade específica'
+    return '-'
+  }
+
   return (
     <div className="page-content">
       <div className="page-header" style={{ alignItems: 'flex-end' }}>
@@ -107,14 +113,15 @@ export default function LancamentoViewPage() {
             {[
               ['Natureza', lancamento.tipo === 'receita' ? 'Receita' : 'Despesa'],
               ['Categoria', lancamento.categoria],
-              ['Subcategoria', lancamento.subcategoria || '-'],
+              ['Subcategoria', lancamento.subcategoriaLabel || lancamento.subcategoria || '-'],
               ['Competência', formatarCompetencia(lancamento.dataCompetencia)],
               ['Vencimento', formatarData(lancamento.dataVencimento)],
               ['Pagamento', formatarData(lancamento.dataPagamento)],
               ['Data considerada', formatarData(getDataConsiderada(lancamento))],
               ['Status', formatarStatus(getStatusEfetivo(lancamento))],
-              ['Patrimônio', patrimonio?.nome || 'N/A'],
-              ['Unidade', unidade?.nome || '-'],
+              ['Patrimônio', patrimonio?.nome || lancamento.patrimonioLabel || 'N/A'],
+              ['Tipo da manutenção', lancamento.categoria === 'Manutenção' && lancamento.tipo === 'despesa' ? formatarTipoManutencao(lancamento.tipoManutencao) : '-'],
+              ['Unidade', unidade?.nome || lancamento.unidadeLabel || '-'],
               ['Conta financeira', conta?.nome || '-'],
               ['Contrato', lancamento.contratoId || '-'],
               ['Locatário', lancamento.locatarioId || '-'],

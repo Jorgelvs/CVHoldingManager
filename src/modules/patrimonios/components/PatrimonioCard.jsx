@@ -1,13 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import StatusBadge from './StatusBadge.jsx'
-import { calcularTaxaOcupacao, enderecoResumo } from '../utils/patrimonioUtils.js'
+import { calcularResumoUnidadesPatrimonio, enderecoResumo } from '../utils/patrimonioUtils.js'
 
-export default function PatrimonioCard({ patrimonio, onToggleSituacao, onExcluir }) {
-  const ocupadas = patrimonio.indicadores?.unidadesOcupadas || 0
-  const vagas = patrimonio.indicadores?.unidadesVagas || 0
-  const cadastradas = patrimonio.indicadores?.unidadesCadastradas || 0
-  const taxa = calcularTaxaOcupacao(patrimonio)
+export default function PatrimonioCard({ patrimonio, unidadesVinculadas = [], onToggleSituacao, onExcluir }) {
+  const resumoUnidades = calcularResumoUnidadesPatrimonio(patrimonio, unidadesVinculadas)
   const endereco = enderecoResumo(patrimonio.endereco)
   const situacao = patrimonio.situacao || 'N/A'
 
@@ -21,29 +18,29 @@ export default function PatrimonioCard({ patrimonio, onToggleSituacao, onExcluir
         <StatusBadge status={situacao} />
       </div>
       <div className="card-meta">
-        <span>{patrimonio.grupoPatrimonial}</span>
         <span>{patrimonio.tipo}</span>
+        <span>{patrimonio.grupoPatrimonial}</span>
         <span>{endereco}</span>
       </div>
       <div className="card-stats">
         <div>
-          <strong>{patrimonio.quantidadeUnidades || 0}</strong>
+          <strong>{resumoUnidades.totalPrevisto}</strong>
           <span>Total de unidades</span>
         </div>
         <div>
-          <strong>{cadastradas}</strong>
+          <strong>{resumoUnidades.cadastradas}</strong>
           <span>Cadastradas</span>
         </div>
         <div>
-          <strong>{ocupadas}</strong>
+          <strong>{resumoUnidades.ocupadas}</strong>
           <span>Ocupadas</span>
         </div>
         <div>
-          <strong>{vagas}</strong>
+          <strong>{resumoUnidades.vagas}</strong>
           <span>Vagas</span>
         </div>
         <div>
-          <strong>{taxa}%</strong>
+          <strong>{resumoUnidades.taxaOcupacao}%</strong>
           <span>Ocupação</span>
         </div>
       </div>

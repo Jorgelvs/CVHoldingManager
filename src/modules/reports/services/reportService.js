@@ -4,6 +4,7 @@ import { listarMovimentos } from '../../financeiro/services/livroCaixaService.js
 import { listarContratos, contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
+import { calcularResumoUnidadesPatrimonio } from '../../patrimonios/utils/patrimonioUtils.js'
 import { getDataConsiderada, filtrarLancamentos, calcularTotalReceitas, calcularTotalDespesas, calcularResultado, getStatusEfetivo } from '../../financeiro/utils/financeiroUtils.js'
 
 function parseDate(value) {
@@ -37,6 +38,7 @@ function normalizeFilters(filters = {}) {
     unidadeId: filters.unidadeId || '',
     contaFinanceiraId: filters.contaFinanceiraId || '',
     status: filters.status || '',
+    tipo: filters.tipo || '',
   }
 }
 
@@ -152,6 +154,7 @@ export function getRelatoriosData(filters = {}) {
     periodoFim: safeFilters.periodoFim,
     contaFinanceiraId: safeFilters.contaFinanceiraId,
     status: safeFilters.status,
+    tipo: safeFilters.tipo,
     patrimonioId: safeFilters.patrimonioId,
     unidadeId: safeFilters.unidadeId,
   })
@@ -170,6 +173,7 @@ export function getRelatoriosData(filters = {}) {
     periodoFim: prevPeriod.periodoFim,
     contaFinanceiraId: safeFilters.contaFinanceiraId,
     status: safeFilters.status,
+    tipo: safeFilters.tipo,
     patrimonioId: safeFilters.patrimonioId,
     unidadeId: safeFilters.unidadeId,
   })
@@ -198,7 +202,7 @@ export function getRelatoriosData(filters = {}) {
     const receitasPatrimonio = calcularTotalReceitas(lancamentosDoPatrimonio)
     const despesasPatrimonio = calcularTotalDespesas(lancamentosDoPatrimonio)
     const resultadoPatrimonio = calcularResultado(lancamentosDoPatrimonio)
-    const ocupacaoPatrimonio = getVacanciaStatistics(unidadesDoPatrimonio, contratosDoPatrimonio)
+    const resumoUnidades = calcularResumoUnidadesPatrimonio(patrimonio, unidadesDoPatrimonio)
     const rentabilidade = receitasPatrimonio ? Math.round((resultadoPatrimonio / receitasPatrimonio) * 10000) / 100 : 0
     return {
       patrimonioId: patrimonio.id,
@@ -206,9 +210,13 @@ export function getRelatoriosData(filters = {}) {
       receitas: receitasPatrimonio,
       despesas: despesasPatrimonio,
       resultado: resultadoPatrimonio,
-      taxaOcupacao: ocupacaoPatrimonio.totalUnidades ? Math.round((ocupacaoPatrimonio.unidadesOcupadas / ocupacaoPatrimonio.totalUnidades) * 10000) / 100 : 0,
+      taxaOcupacao: resumoUnidades.taxaOcupacao,
       rentabilidade,
-      totalUnidades: ocupacaoPatrimonio.totalUnidades,
+      totalUnidades: resumoUnidades.totalPrevisto,
+      unidadesCadastradas: resumoUnidades.cadastradas,
+      unidadesOcupadas: resumoUnidades.ocupadas,
+      unidadesVagas: resumoUnidades.vagas,
+      unidadesEmManutencao: resumoUnidades.emManutencao,
     }
   })
 

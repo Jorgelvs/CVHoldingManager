@@ -6,10 +6,8 @@ export const tiposUnidade = [
   'Casa',
   'Loja',
   'Sala',
-  'Espaço para Eventos',
-  'Terreno',
   'Galpão',
-  'Unidade Principal',
+  'Terreno',
   'Outro',
 ]
 

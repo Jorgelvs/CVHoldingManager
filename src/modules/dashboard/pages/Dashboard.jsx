@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import UniversalEntryButton from '../../../components/UniversalEntryButton.jsx'
 import DashboardCard from '../components/DashboardCard.jsx'
 import FilterPeriod from '../components/FilterPeriod.jsx'
@@ -9,8 +9,17 @@ import { getDashboardData, formatarValor, formatarVariacao } from '../services/d
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [periodo, setPeriodo] = useState({ ano: new Date().getFullYear(), mes: new Date().getMonth() + 1 })
-  const [contaId, setContaId] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [periodo, setPeriodo] = useState(() => {
+    const anoAtual = new Date().getFullYear()
+    const mesAtual = new Date().getMonth() + 1
+    const anoParam = Number(searchParams.get('ano') || anoAtual)
+    const mesParam = Number(searchParams.get('mes') || mesAtual)
+    const ano = Number.isInteger(anoParam) && anoParam > 1900 ? anoParam : anoAtual
+    const mes = Number.isInteger(mesParam) && mesParam >= 1 && mesParam <= 12 ? mesParam : mesAtual
+    return { ano, mes }
+  })
+  const [contaId, setContaId] = useState(() => searchParams.get('contaId') || '')
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
@@ -25,6 +34,20 @@ export default function Dashboard() {
       setError(err?.message || 'Erro ao carregar o dashboard.')
     }
   }, [periodo, contaId])
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    next.set('ano', String(periodo.ano))
+    next.set('mes', String(periodo.mes))
+    if (contaId) {
+      next.set('contaId', contaId)
+    } else {
+      next.delete('contaId')
+    }
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [periodo, contaId, searchParams, setSearchParams])
 
   const dashboard = data
 
@@ -117,6 +140,39 @@ export default function Dashboard() {
     },
   ].filter((item) => item.value > 0)
 
+  const mobileEssentials = [
+    {
+      title: 'Saldo total',
+      value: formatarValor(dashboard.indicadores.totalFinanceiro),
+      to: '/financeiro/contas',
+    },
+    {
+      title: 'Receitas do mês',
+      value: formatarValor(dashboard.indicadores.receitas),
+      to: `/financeiro/lancamentos?${lancamentosQuery}`,
+    },
+    {
+      title: 'Despesas do mês',
+      value: formatarValor(dashboard.indicadores.despesas),
+      to: `/financeiro/lancamentos?${lancamentosQuery}`,
+    },
+    {
+      title: 'Resultado do mês',
+      value: formatarValor(dashboard.indicadores.resultado),
+      to: `/financeiro/lancamentos?${lancamentosQuery}`,
+    },
+    {
+      title: 'Atrasos',
+      value: String(Number(dashboard.alertas.inadimplenciaQuantidade || 0)),
+      to: '/financeiro/lancamentos?status=atrasado',
+    },
+    {
+      title: 'Alertas prioritários',
+      value: String(alertCards.length),
+      to: '/financeiro/lancamentos',
+    },
+  ]
+
   return (
     <div className="page-content dashboard-page">
       <div className="page-header">
@@ -126,6 +182,21 @@ export default function Dashboard() {
         </div>
         <UniversalEntryButton />
       </div>
+
+      <section className="dashboard-mobile-essentials" aria-label="Resumo mobile essencial">
+        {mobileEssentials.map((item) => (
+          <button
+            key={item.title}
+            type="button"
+            className="summary-card dashboard-mobile-essential-card"
+            onClick={() => navigate(item.to)}
+            aria-label={`${item.title}: ${item.value}`}
+          >
+            <strong>{item.title}</strong>
+            <span>{item.value}</span>
+          </button>
+        ))}
+      </section>
 
       <div className="dashboard-top-row">
         <FilterPeriod periodo={periodo} onChange={setPeriodo} className="dashboard-filter-card" />

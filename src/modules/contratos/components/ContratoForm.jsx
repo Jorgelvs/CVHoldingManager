@@ -6,7 +6,7 @@ import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeServ
 import { contratoAtivoPorUnidade, validarContrato } from '../services/contratoService.js'
 import { reajusteTipos, indicesReajuste, periodicidadesReajuste, situacoesContrato } from '../constants/contratoConstants.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
-import { obterParametrosContratos, obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
+import { obterParametrosContratos } from '../../configuracoes/services/configuracaoService.js'
 
 const defaultForm = {
   patrimonioId: '',
@@ -43,7 +43,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   const [defaultsAplicados, setDefaultsAplicados] = useState(false)
 
   const parametrosContratos = React.useMemo(() => obterParametrosContratos(), [])
-  const parametrosFinanceiros = React.useMemo(() => obterParametrosFinanceiros(), [])
   const opcoesIndiceReajuste = React.useMemo(
     () => (parametrosContratos?.indicesReajustePermitidos?.length ? parametrosContratos.indicesReajustePermitidos : indicesReajuste),
     [parametrosContratos],
@@ -78,7 +77,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
 
     setForm((current) => ({
       ...current,
-      diaVencimento: current.diaVencimento || String(parametrosFinanceiros?.diaPadraoVencimento || ''),
       indiceReajuste: current.indiceReajuste === 'Sem índice'
         ? (parametrosContratos?.indicesReajustePermitidos?.[0] || current.indiceReajuste)
         : current.indiceReajuste,
@@ -87,7 +85,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       observacoes: current.observacoes || parametrosContratos?.textoPadraoObservacoes || '',
     }))
     setDefaultsAplicados(true)
-  }, [initialData, defaultsAplicados, parametrosContratos, parametrosFinanceiros])
+  }, [initialData, defaultsAplicados, parametrosContratos])
 
   useEffect(() => {
     if (form.patrimonioId) {
@@ -207,7 +205,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             {errors.dataFim ? <span className="field-error">{errors.dataFim}</span> : null}
           </label>
           <label className="form-field">
-            <span>Dia de vencimento</span>
+            <span>Dia de vencimento do aluguel {form.situacao === 'Ativo' ? '*' : ''}</span>
             <input type="number" min="1" max="31" value={form.diaVencimento} onChange={(event) => updateField('diaVencimento', event.target.value)} />
             {errors.diaVencimento ? <span className="field-error">{errors.diaVencimento}</span> : null}
           </label>

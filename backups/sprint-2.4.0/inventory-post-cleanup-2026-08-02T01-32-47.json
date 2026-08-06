@@ -1,0 +1,229 @@
+{
+  "phase": "post-cleanup",
+  "generatedAt": "2026-08-02T01:32:47.660Z",
+  "scope": {
+    "owner_id": "3182***7da1",
+    "environment_scope": "prod***tion"
+  },
+  "owner": {
+    "ownerIdMasked": "3182***7da1",
+    "emailMasked": "jorg***.com"
+  },
+  "inventoryByModule": {
+    "patrimonios": 0,
+    "unidades": 0,
+    "locatarios": 0,
+    "contratos": 0,
+    "documentos": 0,
+    "notificacoes": 0,
+    "auditoria": 0,
+    "configuracoes": 0,
+    "categoriasFinanceiras": 0,
+    "contasFinanceiras": 0,
+    "lancamentos": 0,
+    "movimentos": 0,
+    "baixas": 0,
+    "aportes": 0,
+    "caucoes": 0,
+    "rateios": 0,
+    "historicoEntradaUniversal": 0,
+    "tarefasManuais": 0,
+    "sequenciaContratos": 1
+  },
+  "inventoryByKey": [
+    {
+      "key": "cvholding_patrimonios",
+      "count": 0,
+      "rowVersion": 11,
+      "updatedAt": "2026-08-02T01:32:45.739604+00:00"
+    },
+    {
+      "key": "cvholding_unidades",
+      "count": 0,
+      "rowVersion": 11,
+      "updatedAt": "2026-08-02T01:32:45.848704+00:00"
+    },
+    {
+      "key": "cvholding_locatarios",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:45.962614+00:00"
+    },
+    {
+      "key": "cvholding_contratos",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:46.165587+00:00"
+    },
+    {
+      "key": "cvholding_contratos_sequence",
+      "count": 1,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:46.254042+00:00"
+    },
+    {
+      "key": "cvholding_financeiro_lancamentos",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:46.340594+00:00"
+    },
+    {
+      "key": "cvholding_rateios",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:46.459304+00:00"
+    },
+    {
+      "key": "cvholding_financeiro_subcategorias_personalizadas",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:46.627198+00:00"
+    },
+    {
+      "key": "cvholding_financeiro_contas",
+      "count": 0,
+      "rowVersion": 12,
+      "updatedAt": "2026-08-02T01:32:46.716127+00:00"
+    },
+    {
+      "key": "cvholding_livro_caixa",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:46.85365+00:00"
+    },
+    {
+      "key": "cvholding_financeiro_baixas",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:46.938565+00:00"
+    },
+    {
+      "key": "cvholding_financeiro_aportes",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.116056+00:00"
+    },
+    {
+      "key": "cvholding_financeiro_caucoes",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.207584+00:00"
+    },
+    {
+      "key": "cvholding_configuracoes",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.288804+00:00"
+    },
+    {
+      "key": "cvholding_documentos",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.372268+00:00"
+    },
+    {
+      "key": "cvholding_auditoria",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.464792+00:00"
+    },
+    {
+      "key": "cvholding_notificacoes",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.637283+00:00"
+    },
+    {
+      "key": "cvholding_tarefas_manuais",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.727781+00:00"
+    },
+    {
+      "key": "cvholding_universal_history",
+      "count": 0,
+      "rowVersion": 3,
+      "updatedAt": "2026-08-02T01:32:47.815153+00:00"
+    }
+  ],
+  "classification": {
+    "businessDataTotal": 0,
+    "technicalDataTotal": 1,
+    "businessKeys": [
+      {
+        "key": "cvholding_patrimonios",
+        "count": 0
+      },
+      {
+        "key": "cvholding_unidades",
+        "count": 0
+      },
+      {
+        "key": "cvholding_locatarios",
+        "count": 0
+      },
+      {
+        "key": "cvholding_contratos",
+        "count": 0
+      },
+      {
+        "key": "cvholding_documentos",
+        "count": 0
+      },
+      {
+        "key": "cvholding_notificacoes",
+        "count": 0
+      },
+      {
+        "key": "cvholding_tarefas_manuais",
+        "count": 0
+      },
+      {
+        "key": "cvholding_financeiro_contas",
+        "count": 0
+      },
+      {
+        "key": "cvholding_financeiro_lancamentos",
+        "count": 0
+      },
+      {
+        "key": "cvholding_livro_caixa",
+        "count": 0
+      },
+      {
+        "key": "cvholding_financeiro_baixas",
+        "count": 0
+      },
+      {
+        "key": "cvholding_financeiro_aportes",
+        "count": 0
+      },
+      {
+        "key": "cvholding_financeiro_caucoes",
+        "count": 0
+      },
+      {
+        "key": "cvholding_rateios",
+        "count": 0
+      },
+      {
+        "key": "cvholding_universal_history",
+        "count": 0
+      }
+    ],
+    "technicalKeys": [
+      {
+        "key": "cvholding_configuracoes",
+        "count": 0
+      },
+      {
+        "key": "cvholding_financeiro_subcategorias_personalizadas",
+        "count": 0
+      },
+      {
+        "key": "cvholding_contratos_sequence",
+        "count": 1
+      }
+    ]
+  }
+}

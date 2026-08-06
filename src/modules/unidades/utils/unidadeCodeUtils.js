@@ -1,12 +1,12 @@
 const MAPA_TIPO = {
   Casa: 'C',
   Kitnet: 'K',
+  Apartamento: 'A',
   Loja: 'L',
   Unidade: 'U',
   'Unidade genérica': 'U',
   'Unidade Principal': 'U',
   Outro: 'U',
-  Apartamento: 'U',
   Sala: 'U',
   'Espaço para Eventos': 'U',
   Terreno: 'U',

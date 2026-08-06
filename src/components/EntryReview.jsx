@@ -17,19 +17,16 @@ export default function EntryReview({ parsed }) {
 
   return (
     <div>
-      {parsed.humanMessage ? <div style={{ marginBottom: 8 }}>{parsed.humanMessage}</div> : null}
       <div className="universal-review-grid">
-        {field('Operação', parsed.operationLabel, 'operation')}
-      {field('Tipo', parsed.tipoLabel, 'tipo')}
-      {field('Categoria', parsed.categoria || 'Não identificada', 'categoria')}
-      {field('Subcategoria', parsed.subcategoria || 'Não identificada', 'subcategoria')}
-      {field('Imóvel', parsed.patrimonioLabel || 'Não identificado', 'patrimonio')}
-      {field('Unidade', parsed.unidadeLabel || 'Não identificada', 'unidade')}
-      {field('Valor', parsed.valorLabel, 'valor')}
-      {field('Data', parsed.dateLabel, 'data')}
-      {field('Conta', parsed.contaLabel || 'Não identificada', 'conta')}
-      {field('Descrição', parsed.descricao || 'Não identificada', 'descricao')}
-      {field('Observações', parsed.observacoes || 'Nenhuma', 'observacoes')}
+        {field('Tipo', parsed.tipoLabel || 'Não identificado', 'natureza')}
+        {field('Valor', parsed.valorLabel || 'Não identificado', 'valor')}
+        {field('Categoria', parsed.categoria || 'Não identificada', 'categoria')}
+        {field('Subcategoria', parsed.subcategoriaLabel || parsed.subcategoria || 'Não identificada', 'subcategoria')}
+        {field('Patrimônio', parsed.patrimonioLabel || 'Não identificado', 'patrimonio')}
+        {field('Unidade', parsed.unidadeLabel || 'Sem unidade', 'unidade')}
+        {field('Conta', parsed.contaLabel || 'Não identificada', 'conta')}
+        {field('Data', parsed.dateLabel || 'Não identificada', 'data')}
+        {field('Descrição', parsed.descricao || 'Não identificada', 'descricao')}
       </div>
     </div>
   )

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { Gauge, Building, Users, FileText, DollarSign, BarChart2, Settings, Archive, History, Bell, Database } from 'lucide-react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Gauge, Building, Users, FileText, DollarSign, BarChart2, Settings, Archive, History, Bell, Database, LogOut } from 'lucide-react'
 import { contarNotificacoesNaoLidas } from '../modules/notificacoes/services/notificacaoService.js'
+import { useAuth } from '../modules/auth/context/AuthContext.jsx'
+import Modal from './Modal.jsx'
 
 const items = [
   { to: '/', label: 'Dashboard', icon: <Gauge size={18} /> },
@@ -18,8 +20,11 @@ const items = [
 ]
 
 export default function Sidebar() {
+  const navigate = useNavigate()
   const location = useLocation()
   const [naoLidas, setNaoLidas] = useState(0)
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
+  const { authRequired, isAuthenticated, user, authBusy, logout } = useAuth()
 
   useEffect(() => {
     const refreshCount = () => {
@@ -32,6 +37,15 @@ export default function Sidebar() {
       window.removeEventListener('cvholding_notificacoes_updated', refreshCount)
     }
   }, [location.pathname, location.search])
+
+  const handleConfirmLogout = async () => {
+    if (authBusy) return
+    await logout()
+    navigate('/login', { replace: true })
+    setConfirmLogoutOpen(false)
+  }
+
+  const userLabel = user?.email || user?.id || 'Sem sessao'
 
   return (
     <aside className="app-sidebar">
@@ -99,6 +113,46 @@ export default function Sidebar() {
           </li>
         </ul>
       </nav>
+
+      {authRequired ? (
+        <div style={{ marginTop: 'auto', padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8 }}>Conta</div>
+          <div
+            style={{
+              fontSize: 12,
+              marginBottom: 8,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+            title={userLabel}
+          >
+            {`Usuario: ${userLabel}`}
+          </div>
+          <button
+            type="button"
+            className="button button-secondary"
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            onClick={() => setConfirmLogoutOpen(true)}
+            disabled={!isAuthenticated || authBusy}
+          >
+            <LogOut size={16} />
+            {authBusy ? 'Saindo...' : 'Sair do sistema'}
+          </button>
+        </div>
+      ) : null}
+
+      <Modal open={confirmLogoutOpen} title="Confirmar saída" onClose={() => setConfirmLogoutOpen(false)}>
+        <p style={{ marginTop: 0 }}>Deseja realmente sair do CVHolding Manager?</p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button type="button" className="button button-secondary" onClick={() => setConfirmLogoutOpen(false)}>
+            Cancelar
+          </button>
+          <button type="button" className="button button-danger" onClick={handleConfirmLogout}>
+            Sair do sistema
+          </button>
+        </div>
+      </Modal>
     </aside>
   )
 }

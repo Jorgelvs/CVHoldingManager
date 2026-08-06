@@ -1,8 +1,14 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
-export default function AdicionarSubcategoriaDialog({ open, tipo, categoria, onSave, onCancel }) {
+export default function AdicionarSubcategoriaDialog({ open, tipo, categoria, initialName = '', onSave, onCancel }) {
   const [nome, setNome] = useState('')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    setNome(initialName || '')
+    setError('')
+  }, [open, initialName])
 
   if (!open) return null
 

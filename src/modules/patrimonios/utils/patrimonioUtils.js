@@ -46,9 +46,52 @@ export function gerarCodigoPadrao(nome, existentes = []) {
   return codigo
 }
 
+const CLASSIFICACOES_UNIDADE_UNICA = new Set([
+  'Apartamento',
+  'Casa individual',
+  'Loja comercial',
+  'Sala comercial',
+  'Galpão',
+  'Espaço de eventos',
+  'Terreno',
+  'Imóvel individual',
+])
+
+function toNumeroInteiro(valor) {
+  const numero = Number(valor)
+  if (!Number.isFinite(numero)) return 0
+  return Math.max(0, Math.trunc(numero))
+}
+
+export function calcularCapacidadePrevistaPatrimonio(patrimonio) {
+  const capacidadeInformada = toNumeroInteiro(patrimonio?.quantidadeUnidades)
+  if (capacidadeInformada > 0) return capacidadeInformada
+
+  const classificacao = String(patrimonio?.tipo || '').trim()
+  if (CLASSIFICACOES_UNIDADE_UNICA.has(classificacao)) return 1
+  return 0
+}
+
+export function calcularResumoUnidadesPatrimonio(patrimonio, unidadesVinculadas = []) {
+  const cadastradas = Array.isArray(unidadesVinculadas) ? unidadesVinculadas.length : 0
+  const ocupadas = unidadesVinculadas.filter((unidade) => unidade?.situacao === 'Ocupada').length
+  const emManutencao = unidadesVinculadas.filter((unidade) => unidade?.situacao === 'Em manutenção').length
+  const vagas = Math.max(cadastradas - ocupadas, 0)
+  const taxaOcupacao = cadastradas > 0 ? Math.round((ocupadas / cadastradas) * 100) : 0
+
+  return {
+    totalPrevisto: calcularCapacidadePrevistaPatrimonio(patrimonio),
+    cadastradas,
+    ocupadas,
+    vagas,
+    emManutencao,
+    taxaOcupacao,
+  }
+}
+
 export function calcularTaxaOcupacao(patrimonio) {
-  const total = patrimonio.indicadores?.unidadesCadastradas || 0
-  const ocupadas = patrimonio.indicadores?.unidadesOcupadas || 0
+  const total = patrimonio?.indicadores?.unidadesCadastradas || 0
+  const ocupadas = patrimonio?.indicadores?.unidadesOcupadas || 0
   if (total === 0) return 0
   return Math.round((ocupadas / total) * 100)
 }

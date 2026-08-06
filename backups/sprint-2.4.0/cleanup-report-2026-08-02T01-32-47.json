@@ -1,0 +1,136 @@
+{
+  "generatedAt": "2026-08-02T01:32:47.660Z",
+  "scope": {
+    "owner_id": "3182***7da1",
+    "environment_scope": "prod***tion"
+  },
+  "owner": {
+    "ownerIdMasked": "3182***7da1",
+    "emailMasked": "jorg***.com"
+  },
+  "removedByKey": {
+    "cvholding_patrimonios": 1,
+    "cvholding_unidades": 0,
+    "cvholding_locatarios": 0,
+    "cvholding_contratos": 0,
+    "cvholding_contratos_sequence": 0,
+    "cvholding_financeiro_lancamentos": 0,
+    "cvholding_rateios": 0,
+    "cvholding_financeiro_subcategorias_personalizadas": 0,
+    "cvholding_financeiro_contas": 0,
+    "cvholding_livro_caixa": 0,
+    "cvholding_financeiro_baixas": 0,
+    "cvholding_financeiro_aportes": 0,
+    "cvholding_financeiro_caucoes": 0,
+    "cvholding_configuracoes": 0,
+    "cvholding_documentos": 0,
+    "cvholding_auditoria": 0,
+    "cvholding_notificacoes": 0,
+    "cvholding_tarefas_manuais": 0,
+    "cvholding_universal_history": 0
+  },
+  "pre": {
+    "byModule": {
+      "patrimonios": 1,
+      "unidades": 0,
+      "locatarios": 0,
+      "contratos": 0,
+      "documentos": 0,
+      "notificacoes": 0,
+      "auditoria": 0,
+      "configuracoes": 0,
+      "categoriasFinanceiras": 0,
+      "contasFinanceiras": 0,
+      "lancamentos": 0,
+      "movimentos": 0,
+      "baixas": 0,
+      "aportes": 0,
+      "caucoes": 0,
+      "rateios": 0,
+      "historicoEntradaUniversal": 0,
+      "tarefasManuais": 0,
+      "sequenciaContratos": 1
+    },
+    "byKey": {
+      "cvholding_patrimonios": 1,
+      "cvholding_unidades": 0,
+      "cvholding_locatarios": 0,
+      "cvholding_contratos": 0,
+      "cvholding_contratos_sequence": 1,
+      "cvholding_financeiro_lancamentos": 0,
+      "cvholding_rateios": 0,
+      "cvholding_financeiro_subcategorias_personalizadas": 0,
+      "cvholding_financeiro_contas": 0,
+      "cvholding_livro_caixa": 0,
+      "cvholding_financeiro_baixas": 0,
+      "cvholding_financeiro_aportes": 0,
+      "cvholding_financeiro_caucoes": 0,
+      "cvholding_configuracoes": 0,
+      "cvholding_documentos": 0,
+      "cvholding_auditoria": 0,
+      "cvholding_notificacoes": 0,
+      "cvholding_tarefas_manuais": 0,
+      "cvholding_universal_history": 0
+    }
+  },
+  "post": {
+    "byModule": {
+      "patrimonios": 0,
+      "unidades": 0,
+      "locatarios": 0,
+      "contratos": 0,
+      "documentos": 0,
+      "notificacoes": 0,
+      "auditoria": 0,
+      "configuracoes": 0,
+      "categoriasFinanceiras": 0,
+      "contasFinanceiras": 0,
+      "lancamentos": 0,
+      "movimentos": 0,
+      "baixas": 0,
+      "aportes": 0,
+      "caucoes": 0,
+      "rateios": 0,
+      "historicoEntradaUniversal": 0,
+      "tarefasManuais": 0,
+      "sequenciaContratos": 1
+    },
+    "byKey": {
+      "cvholding_patrimonios": 0,
+      "cvholding_unidades": 0,
+      "cvholding_locatarios": 0,
+      "cvholding_contratos": 0,
+      "cvholding_contratos_sequence": 1,
+      "cvholding_financeiro_lancamentos": 0,
+      "cvholding_rateios": 0,
+      "cvholding_financeiro_subcategorias_personalizadas": 0,
+      "cvholding_financeiro_contas": 0,
+      "cvholding_livro_caixa": 0,
+      "cvholding_financeiro_baixas": 0,
+      "cvholding_financeiro_aportes": 0,
+      "cvholding_financeiro_caucoes": 0,
+      "cvholding_configuracoes": 0,
+      "cvholding_documentos": 0,
+      "cvholding_auditoria": 0,
+      "cvholding_notificacoes": 0,
+      "cvholding_tarefas_manuais": 0,
+      "cvholding_universal_history": 0
+    }
+  },
+  "residueCheck": {
+    "businessDataRemaining": 0,
+    "technicalDataRemaining": 1,
+    "businessKeysWithResidual": []
+  },
+  "preservedTechnicalKeys": [
+    "cvholding_configuracoes",
+    "cvholding_financeiro_subcategorias_personalizadas",
+    "cvholding_contratos_sequence"
+  ],
+  "notes": [
+    "Nao foram usados truncate, service_role ou operacoes fora do owner autenticado.",
+    "Nao foram gravados senha, access token, refresh token ou anon key em arquivos de evidencia.",
+    "Limpeza aplica filtros de teste/demonstracao; dados nao marcados como teste permanecem.",
+    "Limpeza de localStorage do navegador nao pode ser executada por script Node e deve ser validada na aplicacao."
+  ]
+}

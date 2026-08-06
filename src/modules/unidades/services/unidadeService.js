@@ -6,6 +6,11 @@ import { applyCreationTimestamps, applyDomainSchema, touchUpdatedAt } from '../.
 
 const defaultUnidades = []
 
+function notifyUnidadesUpdated() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event('cvholding_unidades_updated'))
+}
+
 function garantirEstrutura(item) {
   const source = applyCreationTimestamps(applyDomainSchema('unidade', item), {
     legacyCreatedFields: ['criadoEm', 'dataCriacao'],
@@ -14,7 +19,7 @@ function garantirEstrutura(item) {
 
   return {
     id: source.id || gerarId(),
-    patrimonioId: source.patrimonioId || '',
+    patrimonioId: source.patrimonioId || source.patrimonio_id || '',
     codigoInterno: source.codigoInterno || '',
     nome: source.nome || '',
     tipo: source.tipo || '',
@@ -99,6 +104,8 @@ export function criarUnidade(dados) {
     camposAlterados: Object.keys(unidade),
   })
 
+  notifyUnidadesUpdated()
+
   return unidade
 }
 
@@ -127,6 +134,8 @@ export function atualizarUnidade(id, dados) {
     })
   }
 
+  notifyUnidadesUpdated()
+
   return unidades[index]
 }
 
@@ -153,6 +162,8 @@ export function alterarSituacaoUnidade(id, situacao) {
     novoValor: atualizado,
     camposAlterados: ['situacao'],
   })
+
+  notifyUnidadesUpdated()
 
   return unidades[index]
 }

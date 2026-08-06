@@ -5,9 +5,10 @@ import { tiposUnidade, finalidadesUnidade, situacoesUnidade } from '../constants
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
 import ExportButtons from '../../reports/components/ExportButtons.jsx'
+import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 
 export default function UnidadeListPage() {
-  const { id: patrimonioId } = useParams()
+  const { patrimonioId } = useParams()
   const [unidades, setUnidades] = useState([])
   const [search, setSearch] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState('')
@@ -81,13 +82,21 @@ export default function UnidadeListPage() {
             columns={[
               { key: 'nome', label: 'Nome' },
               { key: 'codigoInterno', label: 'Código' },
+              { key: 'patrimonioNome', label: 'Patrimônio' },
               { key: 'tipo', label: 'Tipo' },
               { key: 'finalidade', label: 'Finalidade' },
               { key: 'situacao', label: 'Situação' },
             ]}
-            rows={filtrados.map((item) => ({ ...item }))}
+            rows={filtrados.map((item) => ({
+              ...item,
+              patrimonioNome: buscarPatrimonioPorId(item.patrimonioId)?.nome || '-',
+            }))}
           />
-          <Link to={patrimonioId ? `/patrimonios/${patrimonioId}/unidades/nova` : '/unidades/nova'} className="button button-primary">
+          <Link
+            to={patrimonioId ? `/patrimonios/${patrimonioId}/unidades/nova` : '/unidades/nova'}
+            state={patrimonioId ? { patrimonioId } : undefined}
+            className="button button-primary"
+          >
             Nova unidade
           </Link>
         </div>
@@ -178,6 +187,7 @@ export default function UnidadeListPage() {
               <tr>
                 <th>Nome</th>
                 <th>Código</th>
+                <th>Patrimônio</th>
                 <th>Tipo</th>
                 <th>Finalidade</th>
                 <th>Situação</th>
@@ -189,14 +199,23 @@ export default function UnidadeListPage() {
                 <tr key={item.id}>
                   <td>{item.nome}</td>
                   <td>{item.codigoInterno}</td>
+                  <td>{buscarPatrimonioPorId(item.patrimonioId)?.nome || '-'}</td>
                   <td>{item.tipo}</td>
                   <td>{item.finalidade}</td>
                   <td>{item.situacao}</td>
                   <td className="table-actions">
-                    <Link className="button button-secondary" to={`/unidades/${item.id}`}>
+                    <Link
+                      className="button button-secondary"
+                      to={`/unidades/${item.id}`}
+                      state={patrimonioId ? { patrimonioId } : undefined}
+                    >
                       Visualizar
                     </Link>
-                    <Link className="button button-secondary" to={`/unidades/${item.id}/editar`}>
+                    <Link
+                      className="button button-secondary"
+                      to={`/unidades/${item.id}/editar`}
+                      state={patrimonioId ? { patrimonioId } : undefined}
+                    >
                       Editar
                     </Link>
                     <select

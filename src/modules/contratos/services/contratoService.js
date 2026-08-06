@@ -102,6 +102,9 @@ export function validarContrato(dados) {
   if (dados.dataFim && dados.dataInicio && dados.dataFim < dados.dataInicio) {
     errors.dataFim = 'Data de término não pode ser anterior à data de início.'
   }
+  if (dados.situacao === 'Ativo' && (dados.diaVencimento === '' || dados.diaVencimento === null || dados.diaVencimento === undefined)) {
+    errors.diaVencimento = 'Dia de vencimento do aluguel é obrigatório para contrato ativo.'
+  }
   if (dados.diaVencimento !== '') {
     const dia = Number(dados.diaVencimento)
     if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
@@ -148,6 +151,11 @@ function atualizarSituacaoUnidadeSeNecessario(contrato) {
 }
 
 export function criarContrato(dados) {
+  const erros = validarContrato(dados)
+  if (Object.keys(erros).length > 0) {
+    return { error: Object.values(erros)[0], errors: erros }
+  }
+
   const contrato = garantirEstrutura({
     ...dados,
     id: gerarId(),
@@ -190,6 +198,12 @@ export function atualizarContrato(id, dados, opcoes = {}) {
   if (index === -1) return null
 
   const contratoAtual = contratos[index]
+  const dadosValidacao = { ...contratoAtual, ...dados }
+  const erros = validarContrato(dadosValidacao)
+  if (Object.keys(erros).length > 0) {
+    return { error: Object.values(erros)[0], errors: erros }
+  }
+
   const updated = garantirEstrutura({
     ...touchUpdatedAt({ ...contratoAtual, ...dados }),
     codigoInterno: contratoAtual.codigoInterno,
@@ -240,6 +254,11 @@ export function alterarSituacaoContrato(id, novaSituacao, opcoes = {}) {
   }
 
   if (novaSituacao === 'Ativo') {
+    const dia = Number(contrato.diaVencimento)
+    if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
+      return { error: 'Dia de vencimento do aluguel é obrigatório para ativar o contrato.' }
+    }
+
     const ativoExistente = contratoAtivoPorUnidade(contrato.unidadeId)
     if (ativoExistente && ativoExistente.id !== contrato.id) {
       return { error: `Já existe contrato ativo ${ativoExistente.codigoInterno} nesta unidade.` }

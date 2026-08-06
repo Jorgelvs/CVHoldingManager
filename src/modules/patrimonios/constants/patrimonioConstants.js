@@ -3,22 +3,22 @@ export const STORAGE_KEY = 'cvholding_patrimonios'
 export const gruposPatrimoniais = [
   'Residencial',
   'Comercial',
-  'Industrial',
+  'Misto',
   'Rural',
-  'Investimentos',
-  'Outros',
+  'Industrial',
+  'Outro',
 ]
 
 export const tiposPatrimonio = [
   'Condomínio de Kitnets',
-  'Condomínio de Apartamentos',
   'Condomínio de Casas',
-  'Casa',
+  'Casas independentes',
   'Apartamento',
-  'Loja',
-  'Prédio',
-  'Espaço para Eventos',
+  'Casa individual',
+  'Loja comercial',
+  'Sala comercial',
   'Galpão',
+  'Espaço de eventos',
   'Terreno',
   'Outro',
 ]
@@ -58,5 +58,4 @@ export const opcoesEnergia = ['Individual', 'Compartilhada']
 export const opcoesCondominio = ['Sim', 'Não']
 export const opcoesIPTU = ['Individual', 'Compartilhado', 'Não se aplica']
 export const opcoesLimpeza = ['Individual', 'Compartilhada', 'Não se aplica']
-export const opcoesManutencao = ['Individual', 'Compartilhada']
 export const opcoesRegraRateio = ['Apenas unidades ocupadas', 'Todas as unidades', 'Não se aplica']

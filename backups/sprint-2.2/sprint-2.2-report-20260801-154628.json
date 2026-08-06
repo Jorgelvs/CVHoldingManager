@@ -1,0 +1,240 @@
+{
+  "version": "Sprint 2.2",
+  "generatedAt": "2026-08-01T18:46:28.291Z",
+  "scope": {
+    "environment_scope": "homolog-default",
+    "owner_id": "anon-homolog",
+    "table": "cvh.cv_storage_blobs"
+  },
+  "files": {
+    "localBackup": "backups/sprint-2.2/local-backup-pre-clean.json",
+    "supabaseBackup": "backups/sprint-2.2/supabase-backup-pre-clean-20260801-154628.json",
+    "schemaBackup": "backups/sprint-2.2/schema_cvholding_pre_clean.sql",
+    "inventoryLocalPre": "backups/sprint-2.2/inventory-local-pre-clean-20260801-154628.json",
+    "inventorySupabasePre": "backups/sprint-2.2/inventory-supabase-pre-clean-20260801-154628.json",
+    "inventorySupabasePost": "backups/sprint-2.2/inventory-supabase-post-clean-20260801-154628.json"
+  },
+  "inventoryBefore": {
+    "local": {
+      "byKey": {
+        "cvholding_patrimonios": {
+          "exists": true,
+          "recordsFound": 4
+        },
+        "cvholding_unidades": {
+          "exists": true,
+          "recordsFound": 0
+        },
+        "cvholding_locatarios": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_contratos": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_contratos_sequence": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_financeiro_lancamentos": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_rateios": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_financeiro_subcategorias_personalizadas": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_financeiro_contas": {
+          "exists": true,
+          "recordsFound": 3
+        },
+        "cvholding_livro_caixa": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_financeiro_baixas": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_financeiro_aportes": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_financeiro_caucoes": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_configuracoes": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_documentos": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_auditoria": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_notificacoes": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_tarefas_manuais": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_universal_history": {
+          "exists": false,
+          "recordsFound": 0
+        },
+        "cvholding_supabase_migration_last_report": {
+          "exists": false,
+          "recordsFound": 0
+        }
+      },
+      "byModule": {
+        "patrimonios": 4,
+        "unidades": 0,
+        "locatarios": 0,
+        "contratos": 0,
+        "lancamentos": 0,
+        "rateios": 0,
+        "categorias": 0,
+        "contas": 3,
+        "movimentos": 0,
+        "baixas": 0,
+        "aportes": 0,
+        "caucoes": 0,
+        "configuracoes": 0,
+        "documentos": 0,
+        "auditoria": 0,
+        "notificacoes": 0,
+        "outros": 0,
+        "historico_entrada_universal": 0
+      }
+    },
+    "supabase": {
+      "totalRows": 7,
+      "byModule": {
+        "auditoria": 4,
+        "contas": 3,
+        "lancamentos": 0,
+        "movimentos": 2,
+        "notificacoes": 2,
+        "patrimonios": 4,
+        "unidades": 0
+      },
+      "rows": [
+        {
+          "storage_key": "cvholding_auditoria",
+          "recordsFound": 4,
+          "row_version": 4,
+          "updated_at": "2026-08-01T16:43:16.919155+00:00",
+          "payload_hash": "h39b1756f"
+        },
+        {
+          "storage_key": "cvholding_financeiro_contas",
+          "recordsFound": 3,
+          "row_version": 3,
+          "updated_at": "2026-08-01T16:44:16.177232+00:00",
+          "payload_hash": "h718837e2"
+        },
+        {
+          "storage_key": "cvholding_financeiro_lancamentos",
+          "recordsFound": 0,
+          "row_version": 3,
+          "updated_at": "2026-08-01T16:44:16.080092+00:00",
+          "payload_hash": "h59765d"
+        },
+        {
+          "storage_key": "cvholding_livro_caixa",
+          "recordsFound": 2,
+          "row_version": 2,
+          "updated_at": "2026-08-01T16:43:16.816054+00:00",
+          "payload_hash": "ha67cb1f3"
+        },
+        {
+          "storage_key": "cvholding_notificacoes",
+          "recordsFound": 2,
+          "row_version": 2,
+          "updated_at": "2026-08-01T16:44:20.067997+00:00",
+          "payload_hash": "h66bace5a"
+        },
+        {
+          "storage_key": "cvholding_patrimonios",
+          "recordsFound": 4,
+          "row_version": 3,
+          "updated_at": "2026-08-01T16:44:16.459772+00:00",
+          "payload_hash": "h2a8dcb05"
+        },
+        {
+          "storage_key": "cvholding_unidades",
+          "recordsFound": 0,
+          "row_version": 3,
+          "updated_at": "2026-08-01T16:44:16.353913+00:00",
+          "payload_hash": "h59765d"
+        }
+      ]
+    }
+  },
+  "inventoryAfter": {
+    "supabase": {
+      "totalRows": 0,
+      "byModule": {},
+      "rows": []
+    }
+  },
+  "cleanup": {
+    "supabase": {
+      "deletedRows": 7,
+      "residualRows": 0
+    },
+    "local": {
+      "requiredKeysToDelete": [
+        "cvholding_patrimonios",
+        "cvholding_unidades",
+        "cvholding_locatarios",
+        "cvholding_contratos",
+        "cvholding_contratos_sequence",
+        "cvholding_financeiro_lancamentos",
+        "cvholding_rateios",
+        "cvholding_financeiro_subcategorias_personalizadas",
+        "cvholding_financeiro_contas",
+        "cvholding_livro_caixa",
+        "cvholding_financeiro_baixas",
+        "cvholding_financeiro_aportes",
+        "cvholding_financeiro_caucoes",
+        "cvholding_configuracoes",
+        "cvholding_documentos",
+        "cvholding_auditoria",
+        "cvholding_notificacoes",
+        "cvholding_tarefas_manuais",
+        "cvholding_universal_history",
+        "cvholding_supabase_migration_last_report"
+      ],
+      "note": "Use browser-local cleanup step to remove only official keys and required extras."
+    }
+  },
+  "diagnostics": {
+    "connectionProbe": {
+      "ok": true,
+      "readError": null,
+      "deleteError": null,
+      "verifyError": null,
+      "removedAfterTest": true
+    }
+  },
+  "authRlsAssessment": {
+    "hasFrontendAuthFlow": false,
+    "usesAnonOwnerFallback": true,
+    "ownerBindingByAuthUidInSql": true,
+    "productionReady": false,
+    "blocker": "Fluxo de autenticacao real (login/session) ausente no frontend; ambiente segue homologacao anon-homolog."
+  }
+}

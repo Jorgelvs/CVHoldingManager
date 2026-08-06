@@ -8,6 +8,8 @@ import {
   alterarSituacaoPatrimonio,
   excluirPatrimonio,
 } from '../services/patrimonioService.js'
+import { listarUnidades } from '../../unidades/services/unidadeService.js'
+import { calcularResumoUnidadesPatrimonio } from '../utils/patrimonioUtils.js'
 import {
   gruposPatrimoniais,
   tiposPatrimonio,
@@ -17,6 +19,7 @@ import ExportButtons from '../../reports/components/ExportButtons.jsx'
 
 export default function PatrimonioListPage() {
   const [patrimonios, setPatrimonios] = useState([])
+  const [unidades, setUnidades] = useState([])
   const [search, setSearch] = useState('')
   const [grupoFiltro, setGrupoFiltro] = useState('')
   const [tipoFiltro, setTipoFiltro] = useState('')
@@ -24,11 +27,21 @@ export default function PatrimonioListPage() {
   const [confirmExcluir, setConfirmExcluir] = useState(null)
   const [alert, setAlert] = useState(null)
 
-  useEffect(() => {
+  const atualizarLista = () => {
     setPatrimonios(listarPatrimonios())
-  }, [])
+    setUnidades(listarUnidades())
+  }
 
-  const atualizarLista = () => setPatrimonios(listarPatrimonios())
+  useEffect(() => {
+    atualizarLista()
+
+    const handleUnidadesUpdate = () => setUnidades(listarUnidades())
+    window.addEventListener('cvholding_unidades_updated', handleUnidadesUpdate)
+
+    return () => {
+      window.removeEventListener('cvholding_unidades_updated', handleUnidadesUpdate)
+    }
+  }, [])
 
   const filtrados = useMemo(() => {
     return patrimonios.filter((item) => {
@@ -43,6 +56,32 @@ export default function PatrimonioListPage() {
       return matchesSearch && matchesGrupo && matchesTipo && matchesSituacao
     })
   }, [patrimonios, search, grupoFiltro, tipoFiltro, situacaoFiltro])
+
+  const unidadesPorPatrimonio = useMemo(() => {
+    return unidades.reduce((acc, unidade) => {
+      const patrimonioId = unidade?.patrimonioId
+      if (!patrimonioId) return acc
+      if (!acc[patrimonioId]) {
+        acc[patrimonioId] = []
+      }
+      acc[patrimonioId].push(unidade)
+      return acc
+    }, {})
+  }, [unidades])
+
+  const rowsExportacao = useMemo(() => {
+    return filtrados.map((item) => {
+      const resumoUnidades = calcularResumoUnidadesPatrimonio(item, unidadesPorPatrimonio[item.id] || [])
+      return {
+        ...item,
+        totalUnidades: resumoUnidades.totalPrevisto,
+        unidadesCadastradas: resumoUnidades.cadastradas,
+        unidadesOcupadas: resumoUnidades.ocupadas,
+        unidadesVagas: resumoUnidades.vagas,
+        taxaOcupacao: `${resumoUnidades.taxaOcupacao}%`,
+      }
+    })
+  }, [filtrados, unidadesPorPatrimonio])
 
   const handleToggleSituacao = (patrimonio) => {
     const novaSituacao = patrimonio.situacao === 'Inativo' ? 'Ativo' : 'Inativo'
@@ -77,11 +116,16 @@ export default function PatrimonioListPage() {
             columns={[
               { key: 'nome', label: 'Nome' },
               { key: 'codigo', label: 'Código' },
-              { key: 'grupoPatrimonial', label: 'Grupo' },
-              { key: 'tipo', label: 'Tipo' },
+              { key: 'grupoPatrimonial', label: 'Tipo do patrimônio' },
+              { key: 'tipo', label: 'Grupo/classificação' },
+              { key: 'totalUnidades', label: 'Total de unidades' },
+              { key: 'unidadesCadastradas', label: 'Cadastradas' },
+              { key: 'unidadesOcupadas', label: 'Ocupadas' },
+              { key: 'unidadesVagas', label: 'Vagas' },
+              { key: 'taxaOcupacao', label: 'Ocupação' },
               { key: 'situacao', label: 'Situação' },
             ]}
-            rows={filtrados.map((item) => ({ ...item }))}
+            rows={rowsExportacao}
           />
           <Link to="/patrimonios/novo" className="button button-primary">
             Novo patrimônio
@@ -100,7 +144,7 @@ export default function PatrimonioListPage() {
           />
         </div>
         <div className="filter-group">
-          <label>Grupo patrimonial</label>
+          <label>Tipo do patrimônio</label>
           <select value={grupoFiltro} onChange={(event) => setGrupoFiltro(event.target.value)}>
             <option value="">Todos</option>
             {gruposPatrimoniais.map((item) => (
@@ -111,7 +155,7 @@ export default function PatrimonioListPage() {
           </select>
         </div>
         <div className="filter-group">
-          <label>Tipo</label>
+          <label>Grupo/classificação</label>
           <select value={tipoFiltro} onChange={(event) => setTipoFiltro(event.target.value)}>
             <option value="">Todos</option>
             {tiposPatrimonio.map((item) => (
@@ -153,6 +197,7 @@ export default function PatrimonioListPage() {
             <PatrimonioCard
               key={item.id}
               patrimonio={item}
+              unidadesVinculadas={unidadesPorPatrimonio[item.id] || []}
               onToggleSituacao={handleToggleSituacao}
               onExcluir={() => setConfirmExcluir(item)}
             />

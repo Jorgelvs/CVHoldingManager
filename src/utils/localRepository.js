@@ -1,3 +1,12 @@
+import {
+  getRuntimePersistenceState,
+  hasRepositoryValue,
+  readRepositoryValue,
+  removeRepositoryValue,
+  waitForPendingPersistenceWrites,
+  writeRepositoryValue,
+} from '../infrastructure/persistence/persistenceGateway.js'
+
 const loggedReadErrors = new Set()
 const loggedWriteErrors = new Set()
 
@@ -24,15 +33,7 @@ function logWriteErrorOnce(operation, key, error) {
 
 export function get(key, defaultValue) {
   try {
-    const raw = localStorage.getItem(key)
-    if (raw === null) return defaultValue
-
-    try {
-      return JSON.parse(raw)
-    } catch (error) {
-      logReadErrorOnce(key, error)
-      return defaultValue
-    }
+    return readRepositoryValue(key, defaultValue)
   } catch (error) {
     logReadErrorOnce(key, error)
     return defaultValue
@@ -41,8 +42,7 @@ export function get(key, defaultValue) {
 
 export function set(key, value) {
   try {
-    localStorage.setItem(key, JSON.stringify(value))
-    return true
+    return writeRepositoryValue(key, value)
   } catch (error) {
     logWriteErrorOnce('set', key, error)
     return false
@@ -51,8 +51,7 @@ export function set(key, value) {
 
 export function remove(key) {
   try {
-    localStorage.removeItem(key)
-    return true
+    return removeRepositoryValue(key)
   } catch (error) {
     logWriteErrorOnce('remove', key, error)
     return false
@@ -61,9 +60,17 @@ export function remove(key) {
 
 export function exists(key) {
   try {
-    return localStorage.getItem(key) !== null
+    return hasRepositoryValue(key)
   } catch (error) {
     logReadErrorOnce(key, error)
     return false
   }
+}
+
+export function getRepositoryRuntimeState() {
+  return getRuntimePersistenceState()
+}
+
+export async function waitForRepositoryFlush() {
+  await waitForPendingPersistenceWrites()
 }

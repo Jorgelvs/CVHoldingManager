@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-08-06T20:46:39.297Z",
+  "supabase_project_ref": "fkuywttoycknvzccbthj",
+  "auth_uid_masked": "anon***olog",
+  "environment_scope": "homolog-default",
+  "persistence_mode_runtime": "indeterminado_via_node_diagnostic",
+  "browser_origin_runtime": "nao_coletado_neste_contexto",
+  "storage_keys": {
+    "patrimonios": "cvholding_patrimonios",
+    "unidades": "cvholding_unidades",
+    "auditoria": "cvholding_auditoria",
+    "notificacoes": "cvholding_notificacoes"
+  },
+  "localStorage_read_write_confirmed": true,
+  "localStorage_evidence": {
+    "reads": [
+      "src/infrastructure/persistence/modeService.js:getPersistenceMode -> localStorage.getItem(cvholding_persistence_mode)",
+      "src/infrastructure/supabase/client.js:getSupabaseInstanceId -> localStorage.getItem(cvholding_supabase_instance_id)",
+      "src/infrastructure/persistence/persistenceGateway.js:readLocalJson/hasRepositoryValue -> localStorage.getItem(storageKey)"
+    ],
+    "writes": [
+      "src/infrastructure/persistence/modeService.js:setPersistenceMode -> localStorage.setItem(cvholding_persistence_mode)",
+      "src/infrastructure/supabase/client.js:getSupabaseInstanceId -> localStorage.setItem(cvholding_supabase_instance_id)",
+      "src/infrastructure/persistence/persistenceGateway.js:writeLocalJson -> localStorage.setItem(storageKey, JSON)",
+      "src/infrastructure/persistence/persistenceGateway.js:removeLocal -> localStorage.removeItem(storageKey)"
+    ]
+  },
+  "homologation_only_mode": true,
+  "owner_id_masked": "anon***olog"
+}

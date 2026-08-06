@@ -38,10 +38,8 @@ const defaultForm = {
     condominio: '',
     iptu: '',
     limpeza: '',
-    manutencao: '',
     regraRateio: '',
     valorPadraoCondominio: '',
-    diaPadraoVencimento: '',
     observacoesOperacionais: '',
   },
 }
@@ -144,10 +142,10 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
       nextErrors.codigo = 'Código já está em uso.'
     }
     if (!form.grupoPatrimonial) {
-      nextErrors.grupoPatrimonial = 'Grupo patrimonial obrigatório.'
+      nextErrors.grupoPatrimonial = 'Tipo do patrimônio obrigatório.'
     }
     if (!form.tipo) {
-      nextErrors.tipo = 'Tipo obrigatório.'
+      nextErrors.tipo = 'Grupo/classificação obrigatório.'
     }
     if (!form.finalidade) {
       nextErrors.finalidade = 'Finalidade obrigatória.'
@@ -178,12 +176,6 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
         nextErrors.valorPatrimonial = 'Valor patrimonial inválido.'
       } else if (valor < 0) {
         nextErrors.valorPatrimonial = 'Valor patrimonial não pode ser negativo.'
-      }
-    }
-    if (form.configuracoes.diaPadraoVencimento !== '') {
-      const dia = Number(form.configuracoes.diaPadraoVencimento)
-      if (!Number.isInteger(dia) || dia < 1 || dia > 31) {
-        nextErrors.diaPadraoVencimento = 'Informe um dia entre 1 e 31.'
       }
     }
     setErrors(nextErrors)
@@ -254,7 +246,7 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
             {errors.codigo ? <span className="field-error">{errors.codigo}</span> : null}
           </label>
           <label className="form-field">
-            <span>Grupo patrimonial *</span>
+            <span>Tipo do patrimônio *</span>
             <select value={form.grupoPatrimonial} onChange={(event) => handleValueChange('grupoPatrimonial', event.target.value)}>
               <option value="">Selecione</option>
               {options.grupos.map((item) => (
@@ -266,7 +258,7 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
             {errors.grupoPatrimonial ? <span className="field-error">{errors.grupoPatrimonial}</span> : null}
           </label>
           <label className="form-field">
-            <span>Tipo *</span>
+            <span>Grupo/classificação *</span>
             <select value={form.tipo} onChange={(event) => handleValueChange('tipo', event.target.value)}>
               <option value="">Selecione</option>
               {options.tipos.map((item) => (
@@ -549,20 +541,6 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
             </select>
           </label>
           <label className="form-field">
-            <span>Manutenção</span>
-            <select
-              value={form.configuracoes.manutencao}
-              onChange={(event) => updateNestedField('configuracoes', 'manutencao', event.target.value)}
-            >
-              <option value="">Selecione</option>
-              {options.manutencao.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
             <span>Regra de rateio</span>
             <select
               value={form.configuracoes.regraRateio}
@@ -583,17 +561,6 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
               placeholder="0,00"
               onChange={(event) => updateNestedField('configuracoes', 'valorPadraoCondominio', event.target.value)}
             />
-          </label>
-          <label className="form-field">
-            <span>Dia padrão de vencimento</span>
-            <input
-              type="number"
-              min="1"
-              max="31"
-              value={form.configuracoes.diaPadraoVencimento}
-              onChange={(event) => updateNestedField('configuracoes', 'diaPadraoVencimento', event.target.value)}
-            />
-            {errors.diaPadraoVencimento ? <span className="field-error">{errors.diaPadraoVencimento}</span> : null}
           </label>
           <label className="form-field form-field-full">
             <span>Observações operacionais</span>

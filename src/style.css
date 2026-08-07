@@ -556,9 +556,9 @@ code {
   gap: 8px;
 }
 
-.filter-group input,
+.filter-group input:not([type="checkbox"]):not([type="radio"]),
 .filter-group select,
-.form-field input,
+.form-field input:not([type="checkbox"]):not([type="radio"]),
 .form-field textarea,
 .form-field select {
   width: 100%;
@@ -570,6 +570,16 @@ code {
   padding: 10px 12px;
   font: inherit;
   box-sizing: border-box;
+}
+
+.form-field input[type="checkbox"],
+.form-field input[type="radio"],
+.filter-group input[type="checkbox"],
+.filter-group input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  flex-shrink: 0;
 }
 
 .form-field textarea {
@@ -1766,9 +1776,9 @@ button.button-danger {
   grid-column: 1 / -1;
 }
 
-.filter-group input,
+.filter-group input:not([type="checkbox"]):not([type="radio"]),
 .filter-group select,
-.form-field input,
+.form-field input:not([type="checkbox"]):not([type="radio"]),
 .form-field textarea,
 .form-field select,
 .universal-entry-textarea {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
@@ -8,6 +8,7 @@ import { contratoAtivoPorUnidade, validarContrato } from '../services/contratoSe
 import { reajusteTipos, indicesReajuste, periodicidadesReajuste, situacoesContrato } from '../constants/contratoConstants.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
 import { obterParametrosContratos } from '../../configuracoes/services/configuracaoService.js'
+import SearchableSelect from '../../../components/SearchableSelect.jsx'
 
 const defaultForm = {
   patrimonioId: '',
@@ -173,27 +174,37 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
           </label>
           <label className="form-field">
             <span>Unidade *</span>
-            <select value={form.unidadeId} onChange={(event) => updateField('unidadeId', event.target.value)}>
-              <option value="">Selecione</option>
-              {unidadesElegiveis.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nome} - {item.codigoInterno} ({item.situacao})
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={form.unidadeId}
+              onChange={(id) => updateField('unidadeId', id)}
+              options={unidadesElegiveis.map((item) => ({
+                id: item.id,
+                label: `${item.nome} - ${item.codigoInterno}`,
+                sublabel: item.situacao,
+              }))}
+              placeholder={form.patrimonioId ? 'Digite o nome ou código da unidade' : 'Selecione um patrimônio primeiro'}
+              emptyMessage="Nenhuma unidade encontrada neste patrimônio"
+              disabled={!form.patrimonioId}
+            />
             {errors.unidadeId ? <span className="field-error">{errors.unidadeId}</span> : null}
           </label>
           <label className="form-field">
             <span>Locatário *</span>
-            <select value={form.locatarioId} onChange={(event) => updateField('locatarioId', event.target.value)}>
-              <option value="">Selecione</option>
-              {locatarios.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nomeCompleto}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={form.locatarioId}
+              onChange={(id) => updateField('locatarioId', id)}
+              options={locatarios.map((item) => ({
+                id: item.id,
+                label: item.nomeCompleto,
+                sublabel: item.cpf || item.telefone || '',
+              }))}
+              placeholder="Digite o nome do locatário"
+              emptyMessage="Nenhum locatário encontrado"
+            />
             {errors.locatarioId ? <span className="field-error">{errors.locatarioId}</span> : null}
+            <span className="field-hint">
+              Não encontrou? <Link to="/locatarios/novo" target="_blank" rel="noopener noreferrer">Cadastrar novo locatário</Link> (abre em nova aba)
+            </span>
           </label>
           <label className="form-field">
             <span>Imobiliária responsável</span>

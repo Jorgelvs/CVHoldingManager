@@ -4,6 +4,7 @@ import { buscarLancamentoPorId } from '../services/financeiroService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { buscarContaPorId } from '../services/contaService.js'
+import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { formatarMoeda, getStatusEfetivo, getDataConsiderada } from '../utils/financeiroUtils.js'
 import { listarBaixas, estornarBaixa } from '../services/baixaService.js'
 import Modal from '../../../components/Modal.jsx'
@@ -38,6 +39,7 @@ export default function LancamentoViewPage() {
   const patrimonio = buscarPatrimonioPorId(lancamento.patrimonioId)
   const unidade = buscarUnidadePorId(lancamento.unidadeId)
   const conta = buscarContaPorId(lancamento.contaFinanceiraId)
+  const locatario = lancamento.locatarioId ? buscarLocatarioPorId(lancamento.locatarioId) : null
 
   function refreshBaixas() {
     setBaixas(listarBaixas().filter(x => x.lancamentoId === id))
@@ -124,7 +126,7 @@ export default function LancamentoViewPage() {
               ['Unidade', unidade?.nome || lancamento.unidadeLabel || '-'],
               ['Conta financeira', conta?.nome || '-'],
               ['Contrato', lancamento.contratoId || '-'],
-              ['Locatário', lancamento.locatarioId || '-'],
+              ['Locatário', locatario?.nomeCompleto || (lancamento.locatarioId ? 'Locatário não encontrado' : '-')],
               ['Observações', lancamento.observacoes || '-'],
             ].map(([label, value]) => (
               <div key={label} style={{ padding: '12px 14px', border: '1px solid #e5e4e7', borderRadius: 10, background: '#fbfbfd', minWidth: 0 }}>

@@ -11,6 +11,7 @@ import { filtrarLancamentos, ordenarLancamentos, calcularTotalReceitas, calcular
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
 import { buscarContaPorId } from '../services/contaService.js'
+import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
 import ExportButtons from '../../reports/components/ExportButtons.jsx'
 import { obterPreferenciasInterface } from '../../configuracoes/services/configuracaoService.js'
 
@@ -68,6 +69,8 @@ export default function LancamentoListPage() {
 
   const patrimonios = useMemo(() => listarPatrimonios(), [])
   const unidades = useMemo(() => listarUnidades(), [])
+  const locatarios = useMemo(() => listarLocatarios(), [])
+  const locatariosPorId = useMemo(() => new Map(locatarios.map((item) => [item.id, item])), [locatarios])
   const categorias = useMemo(() => {
     return Array.from(new Set(lancamentos.map((item) => item.categoria).filter(Boolean)))
   }, [lancamentos])
@@ -220,7 +223,7 @@ export default function LancamentoListPage() {
                 <th className="col-lancamento-natureza">Natureza</th>
                 <th className="col-lancamento-categoria">Categoria</th>
                 <th className="col-lancamento-patrimonio">Patrimônio</th>
-                <th className="col-lancamento-unidade">Unidade</th>
+                <th className="col-lancamento-unidade">Unidade / Locatário</th>
                 <th className="col-lancamento-valor">Valor</th>
                 <th className="col-lancamento-conta">Conta</th>
                 <th className="col-lancamento-data">Data considerada</th>
@@ -235,6 +238,7 @@ export default function LancamentoListPage() {
                   lancamento={{ ...item, dataConsiderada: getDataConsiderada(item) }}
                   patrimonio={patrimonios.find((p) => p.id === item.patrimonioId)}
                   unidade={unidades.find((u) => u.id === item.unidadeId)}
+                  locatario={item.locatarioId ? locatariosPorId.get(item.locatarioId) : null}
                   conta={buscarContaPorId(item.contaFinanceiraId)}
                   onMarcarPago={(lancamento) => setConfirmCancelar(null) || handleMarcarPago(lancamento)}
                   onCancelar={(lancamento) => setConfirmCancelar(lancamento)}

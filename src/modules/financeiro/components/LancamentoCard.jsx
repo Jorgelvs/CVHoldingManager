@@ -4,7 +4,7 @@ import { Eye, Pencil, CheckCircle2, Ban, Trash2 } from 'lucide-react'
 import StatusFinanceiroBadge from './StatusFinanceiroBadge.jsx'
 import { formatarMoeda, getDataConsiderada } from '../utils/financeiroUtils.js'
 
-export default function LancamentoCard({ lancamento, patrimonio, unidade, conta, onMarcarPago, onCancelar, onExcluir }) {
+export default function LancamentoCard({ lancamento, patrimonio, unidade, locatario, conta, onMarcarPago, onCancelar, onExcluir }) {
   return (
     <tr className="lancamento-row">
       <td>
@@ -15,7 +15,10 @@ export default function LancamentoCard({ lancamento, patrimonio, unidade, conta,
       <td className="table-cell-ellipsis">{lancamento.tipo === 'receita' ? 'Receita' : 'Despesa'}</td>
       <td className="table-cell-ellipsis">{lancamento.categoria}</td>
       <td className="table-cell-ellipsis">{patrimonio?.nome || 'N/A'}</td>
-      <td className="table-cell-ellipsis">{unidade?.nome || '-'}</td>
+      <td>
+        <div className="table-cell-ellipsis">{unidade?.nome || '-'}</div>
+        {locatario ? <div className="table-cell-subtitle">{locatario.nomeCompleto}</div> : null}
+      </td>
       <td className="table-cell-ellipsis"><strong>{formatarMoeda(lancamento.valor)}</strong></td>
       <td className="table-cell-ellipsis">{conta?.nome || '-'}</td>
       <td className="table-cell-ellipsis">{getDataConsiderada(lancamento) || '-'}</td>

@@ -2,7 +2,6 @@ import { listarLancamentos } from './financeiroService.js'
 import { listarRateios } from './rateioService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { getStatusEfetivo } from '../utils/financeiroUtils.js'
-import { competenciaParaDataInicio, competenciaParaDataFim } from '../utils/competenciaUtils.js'
 
 function ordenarCompetencias(competencias) {
   return [...new Set(competencias)].sort()

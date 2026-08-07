@@ -13,6 +13,10 @@ dist-ssr
 *.local
 .env
 
+# Backups/dumps de scripts de manutencao contem dados reais de producao
+# (patrimonios, financeiro, locatarios) - nunca devem ir para o repositorio.
+backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

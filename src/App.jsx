@@ -12,6 +12,7 @@ import { inicializarUnidades } from './modules/unidades/services/unidadeService.
 import { inicializarLocatarios } from './modules/locatarios/services/locatarioService.js'
 import { inicializarContratos } from './modules/contratos/services/contratoService.js'
 import { inicializarContas } from './modules/financeiro/services/contaService.js'
+import { inicializarImobiliarias } from './modules/imobiliarias/services/imobiliariaService.js'
 import { obterConfiguracoes } from './modules/configuracoes/services/configuracaoService.js'
 import { getRepositoryRuntimeState } from './utils/localRepository.js'
 
@@ -24,6 +25,9 @@ const RateioListPage = lazy(() => import('./modules/financeiro/pages/RateioListP
 const RateioFormPage = lazy(() => import('./modules/financeiro/pages/RateioFormPage.jsx'))
 const RateioViewPage = lazy(() => import('./modules/financeiro/pages/RateioViewPage.jsx'))
 const CondominioPage = lazy(() => import('./modules/financeiro/pages/CondominioPage.jsx'))
+const ComissoesPage = lazy(() => import('./modules/financeiro/pages/ComissoesPage.jsx'))
+const ImobiliariaListPage = lazy(() => import('./modules/imobiliarias/pages/ImobiliariaListPage.jsx'))
+const ImobiliariaFormPage = lazy(() => import('./modules/imobiliarias/pages/ImobiliariaFormPage.jsx'))
 const ContaListPage = lazy(() => import('./modules/financeiro/pages/ContaListPage.jsx'))
 const ContaFormPage = lazy(() => import('./modules/financeiro/pages/ContaFormPage.jsx'))
 const ContaViewPage = lazy(() => import('./modules/financeiro/pages/ContaViewPage.jsx'))
@@ -167,6 +171,10 @@ function AppShell({ isMobileNav, persistenceState }) {
               <Route path="/financeiro/rateios/:id" element={<RateioViewPage />} />
               <Route path="/financeiro/rateios/:id/editar" element={<RateioFormPage />} />
               <Route path="/financeiro/condominio" element={<CondominioPage />} />
+              <Route path="/financeiro/comissoes" element={<ComissoesPage />} />
+              <Route path="/financeiro/imobiliarias" element={<ImobiliariaListPage />} />
+              <Route path="/financeiro/imobiliarias/nova" element={<ImobiliariaFormPage />} />
+              <Route path="/financeiro/imobiliarias/:id/editar" element={<ImobiliariaFormPage />} />
               <Route path="/financeiro/contas" element={<ContaListPage />} />
               <Route path="/financeiro/contas/novo" element={<ContaFormPage />} />
               <Route path="/financeiro/contas/:id" element={<ContaViewPage />} />
@@ -220,6 +228,7 @@ export default function App() {
     inicializarLocatarios()
     inicializarContratos()
     inicializarContas()
+    inicializarImobiliarias()
     aplicarTemaConfigurado()
 
     const onConfigUpdated = () => aplicarTemaConfigurado()

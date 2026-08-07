@@ -47,9 +47,8 @@ Variaveis obrigatorias para modo Supabase:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
-- `VITE_SUPABASE_ENV_SCOPE`
-- `VITE_SUPABASE_OWNER_ID`
-- `VITE_SUPABASE_HOMOLOGATION_ONLY`
+- `VITE_SUPABASE_ENV_SCOPE` — unica variavel que decide se o ambiente e producao (`production`) ou homologacao (qualquer outro valor). Ao ser `production`, o app automaticamente exige login real, obriga modo Supabase e esconde os recursos de dados de teste.
+- `VITE_SUPABASE_OWNER_ID` — usado apenas em homologacao (owner anonimo); em producao o owner vem do login real.
 
 Importante:
 
@@ -112,7 +111,7 @@ Garantias da rotina:
 
 Sprint 1.2.0A:
 
-- Em homologacao (`VITE_SUPABASE_HOMOLOGATION_ONLY=true`), envio real de migracao fica bloqueado por padrao.
+- Em homologacao (`VITE_SUPABASE_ENV_SCOPE` diferente de `production`), envio real de migracao fica bloqueado por padrao.
 - O fluxo da sprint valida apenas geracao de resumo, conflitos e riscos.
 - Troca de modo (`local`/`supabase`) exige confirmacao e recarrega a aplicacao.
 

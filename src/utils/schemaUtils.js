@@ -33,6 +33,10 @@ const DOMAIN_SCHEMAS = {
     required: ['id', 'nome'],
     defaults: { tipo: 'banco', ativa: true },
   },
+  imobiliaria: {
+    required: ['id', 'nome'],
+    defaults: { situacao: 'Ativa', percentualComissao: 0 },
+  },
 }
 
 function isValidDateValue(value) {

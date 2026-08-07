@@ -8,9 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite",
-    "sprint:2.4.0": "node scripts/sprint-2.4.0-production-cleanup.mjs",
     "sprint:2.4.1:diag": "node scripts/sprint-2.4.1-diagnostic-no-delete.mjs",
-    "sprint:production:reset": "node scripts/sprint-production-reset.mjs"
+    "sprint:production:reset": "node scripts/sprint-production-reset.mjs",
+    "sprint:2.3:auth-rls": "node scripts/sprint-2.3-auth-rls-runtime-tests.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",

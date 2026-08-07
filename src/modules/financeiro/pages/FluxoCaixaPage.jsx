@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { listarContas, calcularSaldoGeralContas } from '../services/contaService.js'
+import { listarContas, calcularSaldoGeralContas, calcularSaldo } from '../services/contaService.js'
 import { listarLancamentos } from '../services/financeiroService.js'
 import { formatarMoeda } from '../utils/financeiroUtils.js'
 import ExportButtons from '../../reports/components/ExportButtons.jsx'
@@ -32,7 +32,7 @@ export default function FluxoCaixaPage() {
           ]}
           rows={contas.map((conta) => ({
             ...conta,
-            saldo: Number(conta.saldoInicial || 0),
+            saldo: calcularSaldo(conta.id),
             situacao: conta.ativa ? 'Ativa' : 'Inativa',
           }))}
         />
@@ -59,7 +59,7 @@ export default function FluxoCaixaPage() {
                   <td>{conta.nome}</td>
                   <td>{conta.tipo}</td>
                   <td>{conta.ativa ? 'Ativa' : 'Inativa'}</td>
-                  <td>{formatarMoeda(conta.saldoInicial || 0)}</td>
+                  <td>{formatarMoeda(calcularSaldo(conta.id))}</td>
                 </tr>
               ))}
             </tbody>

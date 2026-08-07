@@ -109,6 +109,17 @@ export default function Sidebar() {
                   <span className="label">Controle do Condomínio</span>
                 </NavLink>
               </li>
+              <li className="sidebar-submenu-divider" />
+              <li>
+                <NavLink to="/financeiro/imobiliarias" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  <span className="label">Imobiliárias</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/financeiro/comissoes" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  <span className="label">Comissões</span>
+                </NavLink>
+              </li>
             </ul>
           </li>
         </ul>

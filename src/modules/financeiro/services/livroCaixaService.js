@@ -47,6 +47,24 @@ export function removerMovimentosRelacionados(documentoFinanceiroId, referenciaI
   return removidos
 }
 
+// Remove TODOS os movimentos de caixa ligados a um lançamento (tanto o
+// movimento de auto-sincronização quanto qualquer movimento de baixa),
+// independente de referenciaId. Usado ao cancelar/excluir um lançamento,
+// para não deixar dinheiro "fantasma" contando no saldo de uma conta.
+export function removerTodosMovimentosDoDocumento(documentoFinanceiroId) {
+  if (!documentoFinanceiroId) return 0
+
+  const movs = carregarMovimentos()
+  const filtrados = movs.filter((mov) => mov.documentoFinanceiroId !== documentoFinanceiroId)
+
+  const removidos = movs.length - filtrados.length
+  if (removidos > 0) {
+    salvarMovimentos(filtrados)
+  }
+
+  return removidos
+}
+
 export function buscarMovimentoPorId(id) {
   return listarMovimentos().find((m) => m.id === id) || null
 }

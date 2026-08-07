@@ -21,6 +21,9 @@ function garantirEstrutura(item) {
     patrimonioId: source.patrimonioId || '',
     unidadeId: source.unidadeId || '',
     locatarioId: source.locatarioId || '',
+    // Opcional: imobiliária responsável por este contrato, usada para
+    // calcular comissão (ver financeiro/services/comissaoService.js).
+    imobiliariaId: source.imobiliariaId || '',
     dataInicio: source.dataInicio || '',
     dataFim: source.dataFim || '',
     diaVencimento: source.diaVencimento ?? '',
@@ -216,8 +219,12 @@ export function atualizarContrato(id, dados, opcoes = {}) {
     }
   }
 
+  // Corrigido em 06/08/2026: antes revertia updated.situacao de volta para
+  // 'Ativo' em silêncio (sem informar erro), então a tela dizia "salvo com
+  // sucesso" mesmo a mudança de situação tendo sido descartada. Agora
+  // recusa a operação explicitamente.
   if (contratoAtual.situacao === 'Ativo' && updated.situacao === 'Rascunho') {
-    updated.situacao = contratoAtual.situacao
+    return { error: 'Não é possível voltar um contrato Ativo para Rascunho. Encerre ou cancele o contrato em vez disso.' }
   }
 
   contratos[index] = updated

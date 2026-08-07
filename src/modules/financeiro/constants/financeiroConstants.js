@@ -8,7 +8,12 @@ export const STORAGE_KEY_APORTES = 'cvholding_financeiro_aportes'
 export const STORAGE_KEY_CAUCOES = 'cvholding_financeiro_caucoes'
 
 export const TIPOS_FINANCEIROS = ['receita', 'despesa']
-export const STATUS_FINANCEIRO = ['pendente', 'pago', 'atrasado', 'cancelado']
+// 'parcial' adicionado em 06/08/2026: baixaService já gravava esse status
+// ao registrar uma baixa parcial, mas ele não constava aqui nem era tratado
+// por getStatusEfetivo/calcularAtrasados/calcularPendencias — um lançamento
+// pago pela metade e vencido ficava invisível nos relatórios de
+// inadimplência.
+export const STATUS_FINANCEIRO = ['pendente', 'parcial', 'pago', 'atrasado', 'cancelado']
 export const METODOS_RATEIO = ['igualitario']
 export const CRITERIOS_ELEGIBILIDADE_RATEIO = ['ocupadas_mes_inteiro']
 export const STATUS_RATEIO = ['rascunho', 'processado', 'cancelado']

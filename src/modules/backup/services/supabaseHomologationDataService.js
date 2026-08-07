@@ -1,5 +1,5 @@
 import { getPersistenceMode } from '../../../infrastructure/persistence/modeService.js'
-import { isSupabaseConfigured } from '../../../infrastructure/supabase/client.js'
+import { isSupabaseConfigured, isSupabaseHomologationOnly } from '../../../infrastructure/supabase/client.js'
 import { listarPatrimonios, criarPatrimonio } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades, criarUnidade } from '../../unidades/services/unidadeService.js'
 import { listarContas, criarConta } from '../../financeiro/services/contaService.js'
@@ -19,6 +19,9 @@ function todayIso() {
 }
 
 export function criarDadosDescartaveisSupabase() {
+  if (!isSupabaseHomologationOnly()) {
+    return { error: 'Operacao bloqueada: disponivel apenas em ambiente de homologacao.' }
+  }
   if (getPersistenceMode() !== 'supabase') {
     return { error: 'Ative o modo Supabase antes de criar dados descartaveis.' }
   }
@@ -84,6 +87,9 @@ export function criarDadosDescartaveisSupabase() {
 }
 
 export function criarLancamentoTeste20Supabase() {
+  if (!isSupabaseHomologationOnly()) {
+    return { error: 'Operacao bloqueada: disponivel apenas em ambiente de homologacao.' }
+  }
   if (getPersistenceMode() !== 'supabase') {
     return { error: 'Ative o modo Supabase antes de criar lançamento de teste.' }
   }
@@ -125,6 +131,9 @@ export function criarLancamentoTeste20Supabase() {
 }
 
 export function limparDadosDescartaveisSupabase() {
+  if (!isSupabaseHomologationOnly()) {
+    return { error: 'Operacao bloqueada: disponivel apenas em ambiente de homologacao.' }
+  }
   if (getPersistenceMode() !== 'supabase') {
     return { error: 'Ative o modo Supabase antes de limpar dados descartaveis.' }
   }

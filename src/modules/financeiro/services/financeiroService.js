@@ -1,13 +1,37 @@
-import { STORAGE_KEY } from '../constants/financeiroConstants.js'
+import { STORAGE_KEY, STORAGE_KEY_BAIXAS } from '../constants/financeiroConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
-import { registrarMovimento, listarMovimentos, removerMovimentosRelacionados } from './livroCaixaService.js'
+import { registrarMovimento, listarMovimentos, removerMovimentosRelacionados, removerTodosMovimentosDoDocumento } from './livroCaixaService.js'
 import { getDataConsiderada } from '../utils/financeiroUtils.js'
 import { identificarCamposAlterados, registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
 import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 import { applyCreationTimestamps, applyDomainSchema, touchUpdatedAt } from '../../../utils/schemaUtils.js'
 
+// Lido diretamente (sem importar baixaService) para evitar import circular:
+// baixaService já importa financeiroService (buscarLancamentoPorId,
+// atualizarLancamento).
+function temBaixaAtivaParaLancamento(lancamentoId) {
+  const baixas = localGet(STORAGE_KEY_BAIXAS, [])
+  if (!Array.isArray(baixas)) return false
+  return baixas.some((b) => b.lancamentoId === lancamentoId && !b.estornado)
+}
+
+// Cria/atualiza o movimento de caixa "espelho" de um lançamento.
+//
+// Regras (corrigidas em 06/08/2026 — havia dupla contabilização de caixa):
+// 1. Só roda quando o lançamento está de fato PAGO — um lançamento
+//    pendente/atrasado não deve mexer no saldo da conta ainda, só quando o
+//    dinheiro realmente se move. Isso cobre o fluxo de "marcar como pago"
+//    direto (sem baixa formal).
+// 2. Nunca roda se já existe baixa ativa (não estornada) para o lançamento
+//    — nesse caso, os movimentos de caixa são de responsabilidade exclusiva
+//    de baixaService.js (que registra o valor efetivamente recebido, que
+//    pode ser diferente do valor nominal do lançamento por causa de juros/
+//    desconto). Rodar os dois em paralelo é o que causava o dinheiro
+//    duplicado no livro-caixa.
 function sincronizarMovimentoLancamento(lancamento) {
   if (!lancamento?.contaFinanceiraId) return
+  if (lancamento.status !== 'pago') return
+  if (temBaixaAtivaParaLancamento(lancamento.id)) return
 
   const movs = listarMovimentos()
   const existentes = movs.filter((mov) => mov.documentoFinanceiroId === lancamento.id && mov.referenciaId === lancamento.id)
@@ -118,7 +142,7 @@ export function criarLancamento(dados) {
   return lancamento
 }
 
-export function atualizarLancamento(id, dados) {
+export function atualizarLancamento(id, dados, opcoes = {}) {
   const lancamentos = listarLancamentos()
   const index = lancamentos.findIndex((item) => item.id === id)
   if (index === -1) return null
@@ -131,7 +155,10 @@ export function atualizarLancamento(id, dados) {
 
   salvarLancamentos(lancamentos)
 
-  if (lancamentos[index].contaFinanceiraId) {
+  // skipCaixaSync: usado por baixaService, que já gerencia os movimentos de
+  // caixa deste lançamento com o valor efetivamente recebido — rodar o
+  // auto-sync aqui duplicaria o valor no livro-caixa.
+  if (!opcoes.skipCaixaSync && lancamentos[index].contaFinanceiraId) {
     sincronizarMovimentoLancamento(lancamentos[index])
   }
 
@@ -166,6 +193,11 @@ export function cancelarLancamento(id) {
 
   salvarLancamentos(lancamentos)
 
+  // Um lançamento cancelado não pode continuar contando dinheiro no
+  // livro-caixa (achado crítico da análise de 06/08/2026: cancelar/excluir
+  // não reconciliava o caixa, inflando o saldo indefinidamente).
+  removerTodosMovimentosDoDocumento(id)
+
   registrarEventoAuditoria({
     modulo: 'Financeiro',
     acao: 'EXCLUSAO_LOGICA',
@@ -187,6 +219,10 @@ export function excluirLancamento(id) {
   const removido = lancamentos[index]
   lancamentos.splice(index, 1)
   salvarLancamentos(lancamentos)
+
+  // Mesma correção de cancelarLancamento: excluir o lançamento não pode
+  // deixar movimentos de caixa órfãos contando no saldo.
+  removerTodosMovimentosDoDocumento(id)
 
   registrarEventoAuditoria({
     modulo: 'Financeiro',

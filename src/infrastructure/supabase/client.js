@@ -21,16 +21,26 @@ export function getSupabaseInstanceId() {
   }
 }
 
+// Fonte única da verdade para "isto é produção": deriva exclusivamente de
+// VITE_SUPABASE_ENV_SCOPE. Antes, homologationOnly vinha de uma segunda
+// variável independente (VITE_SUPABASE_HOMOLOGATION_ONLY) que podia ficar
+// dessincronizada do scope (ex.: alguém define ENV_SCOPE=production e
+// esquece de também setar HOMOLOGATION_ONLY=false) — nesse caso o app
+// silenciosamente liberava acesso sem login e gravava sob o owner
+// compartilhado anon-homolog mesmo rotulado como "produção". Eliminado:
+// agora não existe combinação possível de variáveis que produza esse
+// estado inconsistente.
 export function getSupabaseConfig() {
   const environmentScope = import.meta.env.VITE_SUPABASE_ENV_SCOPE || 'homolog-default'
-  const homologationOnly = import.meta.env.VITE_SUPABASE_HOMOLOGATION_ONLY !== 'false'
+  const productionScope = environmentScope === 'production'
+  const homologationOnly = !productionScope
   return {
     url: import.meta.env.VITE_SUPABASE_URL || '',
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
     environmentScope,
     ownerId: import.meta.env.VITE_SUPABASE_OWNER_ID || 'anon-homolog',
     homologationOnly,
-    productionScope: environmentScope === 'production',
+    productionScope,
   }
 }
 

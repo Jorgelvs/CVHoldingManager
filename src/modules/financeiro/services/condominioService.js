@@ -2,19 +2,7 @@ import { listarLancamentos } from './financeiroService.js'
 import { listarRateios } from './rateioService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { getStatusEfetivo } from '../utils/financeiroUtils.js'
-
-function competenciaParaDataInicio(competencia) {
-  if (!competencia) return null
-  const [ano, mes] = competencia.split('-').map(Number)
-  return new Date(ano, mes - 1, 1).toISOString().slice(0, 10)
-}
-
-function competenciaParaDataFim(competencia) {
-  if (!competencia) return null
-  const [ano, mes] = competencia.split('-').map(Number)
-  const ultimoDia = new Date(ano, mes, 0).getDate()
-  return new Date(ano, mes - 1, ultimoDia).toISOString().slice(0, 10)
-}
+import { competenciaParaDataInicio, competenciaParaDataFim } from '../utils/competenciaUtils.js'
 
 function ordenarCompetencias(competencias) {
   return [...new Set(competencias)].sort()

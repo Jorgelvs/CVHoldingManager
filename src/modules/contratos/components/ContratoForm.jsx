@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
+import { listarImobiliariasAtivas } from '../../imobiliarias/services/imobiliariaService.js'
 import { contratoAtivoPorUnidade, validarContrato } from '../services/contratoService.js'
 import { reajusteTipos, indicesReajuste, periodicidadesReajuste, situacoesContrato } from '../constants/contratoConstants.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
@@ -12,6 +13,7 @@ const defaultForm = {
   patrimonioId: '',
   unidadeId: '',
   locatarioId: '',
+  imobiliariaId: '',
   dataInicio: '',
   dataFim: '',
   diaVencimento: '',
@@ -40,6 +42,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   const [locatarios, setLocatarios] = useState([])
   const [patrimonios, setPatrimonios] = useState([])
   const [unidades, setUnidades] = useState([])
+  const [imobiliarias, setImobiliarias] = useState([])
   const [defaultsAplicados, setDefaultsAplicados] = useState(false)
 
   const parametrosContratos = React.useMemo(() => obterParametrosContratos(), [])
@@ -57,7 +60,10 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   useEffect(() => {
     setLocatarios(listarLocatarios())
     setPatrimonios(listarPatrimonios())
+    setImobiliarias(listarImobiliariasAtivas())
   }, [])
+
+  const imobiliariaSelecionada = imobiliarias.find((item) => item.id === form.imobiliariaId) || null
 
   useEffect(() => {
     if (initialData) {
@@ -188,6 +194,22 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
               ))}
             </select>
             {errors.locatarioId ? <span className="field-error">{errors.locatarioId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span>Imobiliária responsável</span>
+            <select value={form.imobiliariaId} onChange={(event) => updateField('imobiliariaId', event.target.value)}>
+              <option value="">Nenhuma (sem comissão)</option>
+              {imobiliarias.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nome} ({Number(item.percentualComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}%)
+                </option>
+              ))}
+            </select>
+            {imobiliariaSelecionada ? (
+              <span className="field-hint">
+                Comissão de {Number(imobiliariaSelecionada.percentualComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}% sobre aluguel e multa deste contrato.
+              </span>
+            ) : null}
           </label>
         </div>
       </FormSection>

@@ -21,6 +21,17 @@ export function buscarBaixaPorId(id) {
   return listarBaixas().find((b) => b.id === id) || null
 }
 
+// Saldo ainda não baixado de um lançamento (valor nominal - soma de baixas
+// ativas). Usado tanto aqui quanto por telas que precisam saber quanto
+// falta receber/pagar antes de registrar uma nova baixa.
+export function calcularSaldoPendente(lancamentoId) {
+  const lanc = buscarLancamentoPorId(lancamentoId)
+  if (!lanc) return 0
+  const baixas = listarBaixas().filter((b) => b.lancamentoId === lancamentoId && !b.estornado)
+  const totalBaixado = baixas.reduce((s, b) => s + Number(b.valorMovimentado || 0), 0)
+  return Number(lanc.valor || 0) - totalBaixado
+}
+
 export function registrarBaixa({ lancamentoId, data, valorPrincipal = 0, juros = 0, desconto = 0, contaFinanceiraId, observacao = '' }) {
   const lanc = buscarLancamentoPorId(lancamentoId)
   if (!lanc) return { error: 'Lançamento não encontrado.' }
@@ -57,12 +68,16 @@ export function registrarBaixa({ lancamentoId, data, valorPrincipal = 0, juros =
   salvarBaixas(all)
 
   // update lancamento status
+  // skipCaixaSync: o movimento de caixa desta baixa já foi registrado acima
+  // (com o valor efetivamente recebido); sem essa flag, atualizarLancamento
+  // rodava o auto-sync do valor NOMINAL do lançamento por cima, duplicando
+  // o dinheiro no livro-caixa.
   const novoTotalBaixado = totalBaixado + valorMovimentado
   const atualizado = { ...lanc }
   if (novoTotalBaixado <= 0) atualizado.status = 'pendente'
   else if (novoTotalBaixado < Number(lanc.valor || 0)) atualizado.status = 'parcial'
   else atualizado.status = 'pago'
-  atualizarLancamento(lancamentoId, atualizado)
+  atualizarLancamento(lancamentoId, atualizado, { skipCaixaSync: true })
 
   return baixa
 }
@@ -74,6 +89,9 @@ export function estornarBaixa(id, motivo = '') {
 
   // estornar movimento
   const est = estornarMovimento(baixa.movimentoId, motivo)
+  if (est?.error) {
+    return { error: `Falha ao estornar movimento de caixa: ${est.error}` }
+  }
   // mark baixa as estornada
   const todas = listarBaixas()
   const idx = todas.findIndex((b) => b.id === id)
@@ -89,7 +107,9 @@ export function estornarBaixa(id, motivo = '') {
     if (totalBaixado <= 0) atualizado.status = 'pendente'
     else if (totalBaixado < Number(lanc.valor || 0)) atualizado.status = 'parcial'
     else atualizado.status = 'pago'
-    atualizarLancamento(lanc.id, atualizado)
+    // skipCaixaSync: o estorno do movimento de caixa já foi feito acima
+    // (estornarMovimento); não recriar o movimento auto-sync por cima.
+    atualizarLancamento(lanc.id, atualizado, { skipCaixaSync: true })
   }
 
   return est

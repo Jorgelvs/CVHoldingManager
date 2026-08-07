@@ -5,7 +5,8 @@ import FinanceiroFilters from '../components/FinanceiroFilters.jsx'
 import ResumoFinanceiro from '../components/ResumoFinanceiro.jsx'
 import LancamentoCard from '../components/LancamentoCard.jsx'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
-import { listarLancamentos, buscarLancamentoPorId, cancelarLancamento, excluirLancamento, atualizarLancamento } from '../services/financeiroService.js'
+import { listarLancamentos, buscarLancamentoPorId, cancelarLancamento, excluirLancamento } from '../services/financeiroService.js'
+import { registrarBaixa, calcularSaldoPendente } from '../services/baixaService.js'
 import { filtrarLancamentos, ordenarLancamentos, calcularTotalReceitas, calcularTotalDespesas, calcularResultado, calcularPendencias, calcularAtrasados, getDataConsiderada } from '../utils/financeiroUtils.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
@@ -98,8 +99,26 @@ export default function LancamentoListPage() {
   }
 
   const handleMarcarPago = (lancamento) => {
-    const updated = { ...lancamento, status: 'pago', dataPagamento: new Date().toISOString().slice(0, 10) }
-    atualizarLancamento(lancamento.id, updated)
+    // Antes gravava status='pago' direto (sem registro de baixa formal: sem
+    // histórico, sem possibilidade de estorno controlado, e correndo por
+    // fora do fluxo que garante um único movimento de caixa por pagamento).
+    // Agora reaproveita o mesmo caminho de baixaService usado na tela de
+    // Baixa, com o valor pendente integral.
+    const pendente = calcularSaldoPendente(lancamento.id)
+    const valorPrincipal = pendente > 0 ? pendente : Number(lancamento.valor || 0)
+    const resultado = registrarBaixa({
+      lancamentoId: lancamento.id,
+      data: new Date().toISOString().slice(0, 10),
+      valorPrincipal,
+      contaFinanceiraId: lancamento.contaFinanceiraId || null,
+      observacao: 'Marcado como pago via listagem.',
+    })
+
+    if (resultado?.error) {
+      setAlert({ type: 'error', message: resultado.error })
+      return
+    }
+
     atualizarLista()
     setAlert({ type: 'success', message: 'Lançamento marcado como pago.' })
   }

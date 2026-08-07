@@ -1,196 +1,15 @@
 import { STORAGE_KEY } from '../constants/patrimonioConstants.js'
 import { gerarId } from '../utils/patrimonioUtils.js'
 import { identificarCamposAlterados, registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
-import { exists as localExists, get as localGet, set as localSet } from '../../../utils/localRepository.js'
+import { get as localGet, set as localSet } from '../../../utils/localRepository.js'
 import { applyCreationTimestamps, applyDomainSchema, touchUpdatedAt } from '../../../utils/schemaUtils.js'
 import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
 
-const patrimonioSeedPadrao = [
-  {
-    id: 'patrimonio_rki',
-    nome: 'Residence Kitnet I',
-    codigo: 'RKI',
-    grupoPatrimonial: 'Residencial',
-    tipo: 'Condomínio de Kitnets',
-    finalidade: 'Gerador de Receita',
-    modeloReceita: 'Locação Mensal',
-    situacao: 'Ativo',
-    quantidadeUnidades: 14,
-    dataAquisicao: '',
-    valorAquisicao: '',
-    valorPatrimonial: '',
-    matricula: '',
-    endereco: {
-      cep: '',
-      logradouro: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      estado: '',
-    },
-    configuracoes: {
-      agua: 'Compartilhada',
-      energia: 'Compartilhada',
-      condominio: 'Sim',
-      iptu: 'Compartilhado',
-      limpeza: 'Compartilhada',
-      regraRateio: '',
-      valorPadraoCondominio: '',
-      observacoesOperacionais: '',
-    },
-    indicadores: {
-      unidadesCadastradas: 0,
-      unidadesOcupadas: 0,
-      unidadesVagas: 0,
-      unidadesEmManutencao: 0,
-    },
-    criadoEm: new Date().toISOString(),
-    atualizadoEm: new Date().toISOString(),
-  },
-  {
-    id: 'patrimonio_rkii',
-    nome: 'Residence Kitnet II',
-    codigo: 'RKII',
-    grupoPatrimonial: 'Residencial',
-    tipo: 'Condomínio de Kitnets',
-    finalidade: 'Gerador de Receita',
-    modeloReceita: 'Locação Mensal',
-    situacao: 'Em implantação',
-    quantidadeUnidades: 16,
-    dataAquisicao: '',
-    valorAquisicao: '',
-    valorPatrimonial: '',
-    matricula: '',
-    endereco: {
-      cep: '',
-      logradouro: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      estado: '',
-    },
-    configuracoes: {
-      agua: 'Individual',
-      energia: 'Individual',
-      condominio: 'Sim',
-      iptu: 'Compartilhado',
-      limpeza: 'Compartilhada',
-      regraRateio: '',
-      valorPadraoCondominio: '',
-      observacoesOperacionais: '',
-    },
-    indicadores: {
-      unidadesCadastradas: 0,
-      unidadesOcupadas: 0,
-      unidadesVagas: 0,
-      unidadesEmManutencao: 0,
-    },
-    criadoEm: new Date().toISOString(),
-    atualizadoEm: new Date().toISOString(),
-  },
-  {
-    id: 'patrimonio_vdo',
-    nome: 'Residencial Villa D’Oeste',
-    codigo: 'VDO',
-    grupoPatrimonial: 'Residencial',
-    tipo: 'Condomínio de Casas',
-    finalidade: 'Gerador de Receita',
-    modeloReceita: 'Locação Mensal',
-    situacao: 'Ativo',
-    quantidadeUnidades: 7,
-    dataAquisicao: '',
-    valorAquisicao: '',
-    valorPatrimonial: '',
-    matricula: '',
-    endereco: {
-      cep: '',
-      logradouro: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      estado: '',
-    },
-    configuracoes: {
-      agua: 'Individual',
-      energia: 'Individual',
-      condominio: 'Não',
-      iptu: 'Individual',
-      limpeza: 'Não se aplica',
-      regraRateio: '',
-      valorPadraoCondominio: '',
-      observacoesOperacionais: '',
-    },
-    indicadores: {
-      unidadesCadastradas: 0,
-      unidadesOcupadas: 0,
-      unidadesVagas: 0,
-      unidadesEmManutencao: 0,
-    },
-    criadoEm: new Date().toISOString(),
-    atualizadoEm: new Date().toISOString(),
-  },
-  {
-    id: 'patrimonio_rb',
-    nome: 'Recanto da Brasa',
-    codigo: 'RDB',
-    grupoPatrimonial: 'Comercial',
-    tipo: 'Espaço de eventos',
-    finalidade: 'Gerador de Receita',
-    modeloReceita: 'Locação por Evento',
-    situacao: 'Ativo',
-    quantidadeUnidades: 1,
-    dataAquisicao: '',
-    valorAquisicao: '',
-    valorPatrimonial: '',
-    matricula: '',
-    endereco: {
-      cep: '',
-      logradouro: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: '',
-      estado: '',
-    },
-    configuracoes: {
-      agua: 'Individual',
-      energia: 'Individual',
-      condominio: 'Não',
-      iptu: 'Individual',
-      limpeza: 'Individual',
-      regraRateio: '',
-      valorPadraoCondominio: '',
-      observacoesOperacionais: '',
-    },
-    indicadores: {
-      unidadesCadastradas: 0,
-      unidadesOcupadas: 0,
-      unidadesVagas: 0,
-      unidadesEmManutencao: 0,
-    },
-    criadoEm: new Date().toISOString(),
-    atualizadoEm: new Date().toISOString(),
-  },
-]
-
-function isHomologationScope() {
-  return (import.meta.env.VITE_SUPABASE_ENV_SCOPE || 'homolog-default') !== 'production'
-}
-
-function isHomologationOnlyMode() {
-  return import.meta.env.VITE_SUPABASE_HOMOLOGATION_ONLY !== 'false'
-}
-
-function isExplicitHomologationSeedEnabled() {
-  return import.meta.env.VITE_ENABLE_HOMOLOGATION_SEED === 'true'
-}
-
-function shouldAutoseedPatrimonios() {
-  return isHomologationScope() && isHomologationOnlyMode() && isExplicitHomologationSeedEnabled()
-}
+// Removido: seed hardcoded com nomes/IDs identicos ao inventario real da
+// C&V Holding (Residence Kitnet I/II, Villa D'Oeste, Recanto da Brasa).
+// Ter dado de demonstracao indistinguivel do dado real do negocio foi uma
+// das causas da contaminacao de dados de teste relatada no handoff do
+// projeto. Nao reintroduzir seed de negocio especifico no codigo-fonte.
 
 function garantirEstrutura(item) {
   const source = applyCreationTimestamps(applyDomainSchema('patrimonio', item), {
@@ -252,20 +71,9 @@ function garantirEstrutura(item) {
 }
 
 function carregarPatrimonios() {
-  const chaveExiste = localExists(STORAGE_KEY)
-  const seedPermitido = shouldAutoseedPatrimonios()
-  const seedPadrao = seedPermitido ? patrimonioSeedPadrao : []
   const dados = localGet(STORAGE_KEY, [])
   const parsed = Array.isArray(dados) ? dados : []
-  const normalizados = parsed.map(garantirEstrutura)
-
-  if (!chaveExiste) {
-    const payloadInicial = seedPadrao.map(garantirEstrutura)
-    salvarPatrimonios(payloadInicial)
-    return payloadInicial
-  }
-
-  return normalizados
+  return parsed.map(garantirEstrutura)
 }
 
 function salvarPatrimonios(patrimonios) {
@@ -274,36 +82,6 @@ function salvarPatrimonios(patrimonios) {
 
 export function inicializarPatrimonios() {
   carregarPatrimonios()
-}
-
-export function semearPatrimoniosPadraoHomologacao({ force = false } = {}) {
-  if (!isHomologationScope() || !isHomologationOnlyMode()) {
-    return {
-      ok: false,
-      seeded: false,
-      reason: 'Seed padrao bloqueado fora da homologacao isolada.',
-      total: 0,
-    }
-  }
-
-  const atuais = carregarPatrimonios()
-  if (!force && atuais.length > 0) {
-    return {
-      ok: true,
-      seeded: false,
-      reason: 'Seed ignorado: ja existem patrimonios cadastrados.',
-      total: atuais.length,
-    }
-  }
-
-  const seedNormalizado = patrimonioSeedPadrao.map(garantirEstrutura)
-  salvarPatrimonios(seedNormalizado)
-  return {
-    ok: true,
-    seeded: true,
-    reason: '',
-    total: seedNormalizado.length,
-  }
 }
 
 export function listarPatrimonios() {

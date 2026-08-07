@@ -533,61 +533,66 @@ export default function BackupPage() {
           </div>
         ) : null}
 
-        <div className="summary-card" style={{ marginTop: 12 }}>
-          <h3>Dados descartaveis para validacao 1.2.0B</h3>
-          <p>Criar apenas dados de teste no modo Supabase: patrimonio, unidade, conta e lancamento de R$ 10,00.</p>
-          <div className="details-actions">
-            <button type="button" className="button button-secondary" onClick={limparDadosHomologacao}>Limpar dados descartaveis</button>
-            <button type="button" className="button button-secondary" onClick={criarDadosHomologacao}>Criar dados descartaveis</button>
-            <button type="button" className="button button-secondary" onClick={criarLancamento20}>Criar lancamento teste R$ 20,00</button>
-            <button type="button" className="button" onClick={() => window.location.reload()}>Recarregar pagina</button>
-          </div>
-          {resultadoHomologacao ? (
-            <div style={{ marginTop: 8 }}>
-              <p><strong>Patrimonio:</strong> {resultadoHomologacao.patrimonio?.nome || '-'}</p>
-              <p><strong>Unidade:</strong> {resultadoHomologacao.unidade?.nome || '-'}</p>
-              <p><strong>Conta:</strong> {resultadoHomologacao.conta?.nome || '-'}</p>
-              <p><strong>Lancamento:</strong> {resultadoHomologacao.lancamento10?.descricao || '-'}</p>
+        {homologationOnly ? (
+          <div className="summary-card" style={{ marginTop: 12 }}>
+            <h3>Dados descartaveis para validacao 1.2.0B</h3>
+            <p>Criar apenas dados de teste no modo Supabase: patrimonio, unidade, conta e lancamento de R$ 10,00.</p>
+            <p style={{ marginTop: 4 }}>
+              <strong>Disponivel apenas em homologacao.</strong> Esta secao fica oculta quando o ambiente esta configurado como producao.
+            </p>
+            <div className="details-actions">
+              <button type="button" className="button button-secondary" onClick={limparDadosHomologacao}>Limpar dados descartaveis</button>
+              <button type="button" className="button button-secondary" onClick={criarDadosHomologacao}>Criar dados descartaveis</button>
+              <button type="button" className="button button-secondary" onClick={criarLancamento20}>Criar lancamento teste R$ 20,00</button>
+              <button type="button" className="button" onClick={() => window.location.reload()}>Recarregar pagina</button>
             </div>
-          ) : null}
-
-          {evidencias ? (
-            <div style={{ marginTop: 12 }}>
-              <p><strong>Evidencias coletadas em:</strong> {evidencias.generatedAt}</p>
-              <p><strong>IDs patrimonio:</strong> {(evidencias.ids?.patrimonios || []).join(', ') || '-'}</p>
-              <p><strong>IDs unidade:</strong> {(evidencias.ids?.unidades || []).join(', ') || '-'}</p>
-              <p><strong>IDs conta:</strong> {(evidencias.ids?.contas || []).join(', ') || '-'}</p>
-              <p><strong>IDs lancamento:</strong> {(evidencias.ids?.lancamentos || []).join(', ') || '-'}</p>
-              <p><strong>Contagem patrimonios:</strong> {evidencias.counts?.patrimonios || 0}</p>
-              <p><strong>Contagem unidades:</strong> {evidencias.counts?.unidades || 0}</p>
-              <p><strong>Contagem contas:</strong> {evidencias.counts?.contas || 0}</p>
-              <p><strong>Contagem lancamentos:</strong> {evidencias.counts?.lancamentos || 0}</p>
-
-              <div className="table-wrapper" style={{ marginTop: 8 }}>
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Storage key</th>
-                      <th>row_version</th>
-                      <th>last_writer_instance</th>
-                      <th>updated_at</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(evidencias.rows || []).map((row) => (
-                      <tr key={row.storageKey}>
-                        <td>{row.storageKey}</td>
-                        <td>{row.rowVersion}</td>
-                        <td>{row.lastWriterInstance || '-'}</td>
-                        <td>{row.updatedAt || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {resultadoHomologacao ? (
+              <div style={{ marginTop: 8 }}>
+                <p><strong>Patrimonio:</strong> {resultadoHomologacao.patrimonio?.nome || '-'}</p>
+                <p><strong>Unidade:</strong> {resultadoHomologacao.unidade?.nome || '-'}</p>
+                <p><strong>Conta:</strong> {resultadoHomologacao.conta?.nome || '-'}</p>
+                <p><strong>Lancamento:</strong> {resultadoHomologacao.lancamento10?.descricao || '-'}</p>
               </div>
-            </div>
-          ) : null}
-        </div>
+            ) : null}
+
+            {evidencias ? (
+              <div style={{ marginTop: 12 }}>
+                <p><strong>Evidencias coletadas em:</strong> {evidencias.generatedAt}</p>
+                <p><strong>IDs patrimonio:</strong> {(evidencias.ids?.patrimonios || []).join(', ') || '-'}</p>
+                <p><strong>IDs unidade:</strong> {(evidencias.ids?.unidades || []).join(', ') || '-'}</p>
+                <p><strong>IDs conta:</strong> {(evidencias.ids?.contas || []).join(', ') || '-'}</p>
+                <p><strong>IDs lancamento:</strong> {(evidencias.ids?.lancamentos || []).join(', ') || '-'}</p>
+                <p><strong>Contagem patrimonios:</strong> {evidencias.counts?.patrimonios || 0}</p>
+                <p><strong>Contagem unidades:</strong> {evidencias.counts?.unidades || 0}</p>
+                <p><strong>Contagem contas:</strong> {evidencias.counts?.contas || 0}</p>
+                <p><strong>Contagem lancamentos:</strong> {evidencias.counts?.lancamentos || 0}</p>
+
+                <div className="table-wrapper" style={{ marginTop: 8 }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Storage key</th>
+                        <th>row_version</th>
+                        <th>last_writer_instance</th>
+                        <th>updated_at</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(evidencias.rows || []).map((row) => (
+                        <tr key={row.storageKey}>
+                          <td>{row.storageKey}</td>
+                          <td>{row.rowVersion}</td>
+                          <td>{row.lastWriterInstance || '-'}</td>
+                          <td>{row.updatedAt || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="summary-card">

@@ -1,13 +1,17 @@
-import { STORAGE_KEY, STORAGE_KEY_RATEIOS } from '../constants/financeiroConstants.js'
+import { STORAGE_KEY, STORAGE_KEY_RATEIOS, METODOS_RATEIO, CRITERIOS_ELEGIBILIDADE_RATEIO } from '../constants/financeiroConstants.js'
 import { gerarId } from '../../patrimonios/utils/patrimonioUtils.js'
 import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
 import { listarContratosPorUnidade } from '../../contratos/services/contratoService.js'
 import { criarLancamento, listarLancamentos, atualizarLancamento } from './financeiroService.js'
 import { registrarEventoAuditoria } from '../../auditoria/services/auditoriaService.js'
 import { exists as localExists, get as localGet, set as localSet } from '../../../utils/localRepository.js'
+import { competenciaParaDataInicio, competenciaParaDataFim } from '../utils/competenciaUtils.js'
 
-const METODOS_RATEIO = ['igualitario']
-const CRITERIOS_ELEGIBILIDADE = ['ocupadas_mes_inteiro']
+// Reexportado a partir de financeiroConstants.js (fonte única): antes esse
+// arquivo redefinia METODOS_RATEIO/CRITERIOS_ELEGIBILIDADE localmente com
+// os mesmos valores de financeiroConstants.js sob outro nome — duas fontes
+// de verdade que podiam divergir silenciosamente numa manutenção futura.
+const CRITERIOS_ELEGIBILIDADE = CRITERIOS_ELEGIBILIDADE_RATEIO
 let migracaoChaveRateioExecutada = false
 
 function garantirRateio(item) {
@@ -123,19 +127,6 @@ function executarMigracaoRateiosChaveIncorreta() {
   })
 }
 
-function competenciaParaDataInicio(competencia) {
-  if (!competencia) return null
-  const [ano, mes] = competencia.split('-').map(Number)
-  return new Date(ano, mes - 1, 1).toISOString().slice(0, 10)
-}
-
-function competenciaParaDataFim(competencia) {
-  if (!competencia) return null
-  const [ano, mes] = competencia.split('-').map(Number)
-  const ultimoDia = new Date(ano, mes, 0).getDate()
-  return new Date(ano, mes - 1, ultimoDia).toISOString().slice(0, 10)
-}
-
 export function listarRateios() {
   return carregarRateios()
 }
@@ -166,6 +157,14 @@ export function validarRateioDados(dados) {
   return errors
 }
 
+// Corrigido em 06/08/2026: antes exigia situacao === 'Ativo', o que
+// distorcia rateios de competências passadas. Se, no momento em que o
+// rateio é (re)processado, o contrato daquela unidade já tinha sido
+// encerrado, a unidade perdia retroativamente a elegibilidade de um mês em
+// que de fato ficou ocupada o mês inteiro. O critério de "mês cheio" deve
+// depender só da janela de vigência (dataInicio/dataFim) cobrir a
+// competência — não do status atual do contrato. 'Rascunho' e 'Cancelado'
+// continuam de fora: nunca chegaram a valer de fato.
 export function isUnidadeOcupadaMesInteiro(unidade, contratos, competencia) {
   if (!unidade || !competencia) return false
   const primeiroDia = competenciaParaDataInicio(competencia)
@@ -176,7 +175,7 @@ export function isUnidadeOcupadaMesInteiro(unidade, contratos, competencia) {
     (item) =>
       item.unidadeId === unidade.id &&
       item.patrimonioId === unidade.patrimonioId &&
-      item.situacao === 'Ativo' &&
+      (item.situacao === 'Ativo' || item.situacao === 'Encerrado') &&
       item.dataInicio <= primeiroDia &&
       (!item.dataFim || item.dataFim >= ultimoDia),
   )

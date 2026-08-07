@@ -1,19 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
+import { isProductionScope } from './lib/writeSafetyGuards.mjs'
 
 const URL = process.env.VITE_SUPABASE_URL || ''
 const ANON = process.env.VITE_SUPABASE_ANON_KEY || ''
 const HOMO_SCOPE = process.env.VITE_SUPABASE_ENV_SCOPE || 'homolog-default'
 const HOMO_OWNER = process.env.VITE_SUPABASE_OWNER_ID || 'anon-homolog'
-const PROD_SCOPE = process.env.SPRINT23_PRODUCTION_SCOPE || 'production'
+// TARGET_SCOPE e o environment_scope usado nos testes de "producao" deste
+// script (por padrao, o literal 'production'). ATENCAO: antigamente essa
+// mesma variavel decidia sozinha, em cada funcao, se o teste devia pular a
+// escrita — funcionava apenas por coincidencia de a comparacao bater com o
+// valor usado para gravar. Agora a decisao de pular fica centralizada em
+// TARGET_IS_PRODUCTION (computada uma unica vez abaixo, usando o helper
+// compartilhado isProductionScope de lib/writeSafetyGuards.mjs), e todo
+// teste que grava dados DEVE checar TARGET_IS_PRODUCTION antes de escrever.
+// Nunca remover essa checagem para "simplificar" o codigo.
+const TARGET_SCOPE = process.env.SPRINT23_PRODUCTION_SCOPE || 'production'
+const TARGET_IS_PRODUCTION = isProductionScope(TARGET_SCOPE)
+// Alias mantido só para não quebrar o restante do arquivo, que referencia
+// PROD_SCOPE como o environment_scope gravado nos testes.
+const PROD_SCOPE = TARGET_SCOPE
 
 const TEST_EMAIL = process.env.SPRINT23_TEST_USER_EMAIL || ''
 const TEST_PASSWORD = process.env.SPRINT23_TEST_USER_PASSWORD || ''
 const TEST_EMAIL_B = process.env.SPRINT23_TEST_USER_B_EMAIL || ''
 const TEST_PASSWORD_B = process.env.SPRINT23_TEST_USER_B_PASSWORD || ''
-
-function isProductionScope(scope) {
-  return String(scope || '').trim().toLowerCase() === 'production'
-}
 
 function baseClient() {
   return createClient(URL, ANON, {

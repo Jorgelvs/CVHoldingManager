@@ -5,7 +5,9 @@ import { tiposUnidade, finalidadesUnidade, situacoesUnidade } from '../constants
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
 import ExportButtons from '../../reports/components/ExportButtons.jsx'
-import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
+import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
+import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
+import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 
 export default function UnidadeListPage() {
   const { patrimonioId } = useParams()
@@ -31,6 +33,21 @@ export default function UnidadeListPage() {
     } else {
       setUnidades(listarUnidades())
     }
+  }
+
+  // Antes: buscarPatrimonioPorId era chamado dentro do .map() de cada linha
+  // (e de novo no export), e cada chamada renormalizava a lista inteira de
+  // patrimônios. Agora monta o mapa uma única vez por render da lista.
+  const patrimoniosPorId = useMemo(() => {
+    const mapa = new Map()
+    listarPatrimonios().forEach((item) => mapa.set(item.id, item))
+    return mapa
+  }, [unidades])
+
+  const inquilinoAtualDaUnidade = (unidadeId) => {
+    const contrato = contratoAtivoPorUnidade(unidadeId)
+    if (!contrato) return null
+    return buscarLocatarioPorId(contrato.locatarioId)
   }
 
   const filtrados = useMemo(() => {
@@ -86,10 +103,12 @@ export default function UnidadeListPage() {
               { key: 'tipo', label: 'Tipo' },
               { key: 'finalidade', label: 'Finalidade' },
               { key: 'situacao', label: 'Situação' },
+              { key: 'inquilinoAtual', label: 'Inquilino atual' },
             ]}
             rows={filtrados.map((item) => ({
               ...item,
-              patrimonioNome: buscarPatrimonioPorId(item.patrimonioId)?.nome || '-',
+              patrimonioNome: patrimoniosPorId.get(item.patrimonioId)?.nome || '-',
+              inquilinoAtual: inquilinoAtualDaUnidade(item.id)?.nomeCompleto || '-',
             }))}
           />
           <Link
@@ -191,6 +210,7 @@ export default function UnidadeListPage() {
                 <th>Tipo</th>
                 <th>Finalidade</th>
                 <th>Situação</th>
+                <th>Inquilino atual</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -199,10 +219,11 @@ export default function UnidadeListPage() {
                 <tr key={item.id}>
                   <td>{item.nome}</td>
                   <td>{item.codigoInterno}</td>
-                  <td>{buscarPatrimonioPorId(item.patrimonioId)?.nome || '-'}</td>
+                  <td>{patrimoniosPorId.get(item.patrimonioId)?.nome || '-'}</td>
                   <td>{item.tipo}</td>
                   <td>{item.finalidade}</td>
                   <td>{item.situacao}</td>
+                  <td>{inquilinoAtualDaUnidade(item.id)?.nomeCompleto || '—'}</td>
                   <td className="table-actions">
                     <Link
                       className="button button-secondary"

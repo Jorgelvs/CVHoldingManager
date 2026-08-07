@@ -3,11 +3,13 @@ import {
   PERSISTENCE_MODE_KEY,
   PERSISTENCE_MODES,
 } from './persistenceConstants.js'
+import { isSupabaseProductionScope } from '../supabase/client.js'
 
+// Fonte única da verdade: src/infrastructure/supabase/client.js (getSupabaseConfig).
+// Não reimplementar essa condição aqui — era exatamente essa duplicação que
+// permitia o app achar que "não é produção" mesmo com VITE_SUPABASE_ENV_SCOPE=production.
 function isProductionSupabaseRequired() {
-  const environmentScope = import.meta.env.VITE_SUPABASE_ENV_SCOPE || 'homolog-default'
-  const homologationOnly = import.meta.env.VITE_SUPABASE_HOMOLOGATION_ONLY !== 'false'
-  return environmentScope === 'production' && homologationOnly === false
+  return isSupabaseProductionScope()
 }
 
 function emitModeChanged(mode) {

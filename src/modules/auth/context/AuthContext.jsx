@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { getPersistenceMode, setPersistenceMode } from '../../../infrastructure/persistence/modeService.js'
 import { PERSISTENCE_EVENT_MODE_CHANGED } from '../../../infrastructure/persistence/persistenceConstants.js'
-import { getSupabaseConfig, isSupabaseConfigured } from '../../../infrastructure/supabase/client.js'
+import { isSupabaseAuthRequired, isSupabaseConfigured } from '../../../infrastructure/supabase/client.js'
 import { bootstrapPersistence } from '../../../infrastructure/persistence/persistenceGateway.js'
 import {
   getInitialSupabaseSession,
@@ -22,21 +22,12 @@ function isRecoveryPath(pathname) {
 function buildPasswordRecoveryRedirectTo() {
   if (typeof window === 'undefined') return '/redefinir-senha'
 
-  const isLocalDevPort = window.location.port === '5173'
-  if (isLocalDevPort) {
-    return 'http://localhost:5173/redefinir-senha'
-  }
-
+  // Sempre usar o origin real da sessão atual (não forçar localhost:5173):
+  // forçar um host/porta fixos aqui foi a causa do bug histórico em que o
+  // link de recuperação de senha redirecionava para uma origin diferente
+  // da que o usuário realmente estava usando (ex.: 127.0.0.1 ou outra porta
+  // do Vite), quebrando localStorage/sessão por serem origins distintas.
   return `${window.location.origin}/redefinir-senha`
-}
-
-function computeAuthRequired() {
-  const config = getSupabaseConfig()
-
-  return (
-    config.environmentScope === 'production'
-    && config.homologationOnly === false
-  )
 }
 
 export function AuthProvider({ children }) {
@@ -50,7 +41,7 @@ export function AuthProvider({ children }) {
     if (typeof window === 'undefined') return false
     return isRecoveryPath(window.location.pathname)
   })
-  const authRequired = useMemo(() => computeAuthRequired(), [])
+  const authRequired = useMemo(() => isSupabaseAuthRequired(), [])
 
   useEffect(() => {
     let mounted = true

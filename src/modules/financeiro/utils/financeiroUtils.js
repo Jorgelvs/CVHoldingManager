@@ -13,7 +13,11 @@ export function getStatusEfetivo(lancamento) {
   if (!lancamento) return ''
   if (lancamento.status === 'cancelado') return 'cancelado'
   if (lancamento.status === 'pago') return 'pago'
-  if (lancamento.status === 'pendente' && lancamento.dataVencimento) {
+  // 'parcial' (baixa parcial registrada) entra na mesma checagem de atraso
+  // que 'pendente' — corrigido em 06/08/2026: antes um lançamento pago pela
+  // metade e vencido não caía em nenhuma das duas condições abaixo e ficava
+  // invisível nos relatórios de inadimplência/pendências.
+  if ((lancamento.status === 'pendente' || lancamento.status === 'parcial') && lancamento.dataVencimento) {
     const hoje = new Date().toISOString().slice(0, 10)
     if (lancamento.dataVencimento < hoje) {
       return 'atrasado'
@@ -39,8 +43,13 @@ export function calcularResultado(lancamentos) {
 }
 
 export function calcularPendencias(lancamentos) {
+  // Inclui 'parcial' (achado crítico de 06/08/2026: lançamentos com baixa
+  // parcial ficavam de fora da soma de pendências). Usa o valor nominal do
+  // lançamento, não o saldo realmente restante após a baixa parcial — para
+  // o valor exato ainda pendente por lançamento, ver
+  // baixaService.calcularSaldoPendente.
   return lancamentos
-    .filter((item) => item.status === 'pendente' && item.status !== 'cancelado')
+    .filter((item) => (item.status === 'pendente' || item.status === 'parcial') && item.status !== 'cancelado')
     .reduce((total, item) => total + Number(item.valor || 0), 0)
 }
 

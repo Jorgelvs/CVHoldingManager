@@ -25,6 +25,7 @@ export default function FinanceiroFilters({ filtros, onChange, onApply, onClear,
         <select value={filtros.status || ''} onChange={(event) => onChange('status', event.target.value)}>
           <option value="">Todos</option>
           <option value="pendente">Pendente</option>
+          <option value="parcial">Pago parcialmente</option>
           <option value="pago">Pago</option>
           <option value="atrasado">Atrasado</option>
           <option value="cancelado">Cancelado</option>

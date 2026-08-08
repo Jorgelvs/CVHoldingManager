@@ -343,6 +343,11 @@ code {
   border-right: 1px solid var(--border);
   padding-top: 16px;
   box-sizing: border-box;
+  /* Com submenus (ex.: Financeiro) expandidos, a lista pode ficar mais alta
+     que a tela. Sem isto, os últimos itens (Imobiliárias, Comissões etc.)
+     ficavam fora da área visível e sem nenhuma forma de rolar até eles. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-sidebar nav ul {

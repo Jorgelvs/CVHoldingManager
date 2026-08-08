@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { codigoUnicoDisponivel, gerarCodigoUnico } from '../services/patrimonioService.js'
 import FormSection from './FormSection.jsx'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 const defaultForm = {
   nome: '',
@@ -413,19 +414,17 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
           </label>
           <label className="form-field">
             <span>Valor de aquisição</span>
-            <input
+            <CurrencyInput
               value={form.valorAquisicao}
-              placeholder="0,00"
-              onChange={(event) => updateField('valorAquisicao', event.target.value)}
+              onChange={(valor) => updateField('valorAquisicao', valor)}
             />
             {errors.valorAquisicao ? <span className="field-error">{errors.valorAquisicao}</span> : null}
           </label>
           <label className="form-field">
             <span>Valor patrimonial</span>
-            <input
+            <CurrencyInput
               value={form.valorPatrimonial}
-              placeholder="0,00"
-              onChange={(event) => updateField('valorPatrimonial', event.target.value)}
+              onChange={(valor) => updateField('valorPatrimonial', valor)}
             />
             {errors.valorPatrimonial ? <span className="field-error">{errors.valorPatrimonial}</span> : null}
           </label>

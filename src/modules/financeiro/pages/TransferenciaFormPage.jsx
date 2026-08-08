@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { listarContas } from '../services/contaService.js'
 import { criarTransferencia } from '../services/transferenciaService.js'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 export default function TransferenciaFormPage() {
   const location = useLocation()
@@ -78,7 +79,7 @@ export default function TransferenciaFormPage() {
         <input type="date" value={data} onChange={(e)=>setData(e.target.value)} />
 
         <label>Valor</label>
-        <input type="number" step="0.01" value={valor} onChange={(e)=>setValor(e.target.value)} />
+        <CurrencyInput value={valor} onChange={setValor} />
 
         <label>Descrição</label>
         <input type="text" value={descricao} onChange={(e)=>setDescricao(e.target.value)} />

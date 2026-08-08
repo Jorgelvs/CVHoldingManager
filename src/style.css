@@ -2482,3 +2482,35 @@ button.button-danger {
   text-align: center;
 }
 
+.currency-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currency-input-prefix {
+  position: absolute;
+  left: 10px;
+  color: var(--text);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.currency-input-wrap input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  padding: 10px 12px 10px 38px;
+  font: inherit;
+  box-sizing: border-box;
+  text-align: right;
+}
+
+.currency-input-wrap input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

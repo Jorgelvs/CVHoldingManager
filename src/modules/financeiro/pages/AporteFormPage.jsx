@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { criarAporte } from '../services/aporteService.js'
 import { listarContas } from '../services/contaService.js'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 export default function AporteFormPage() {
   const location = useLocation()
@@ -43,7 +44,7 @@ export default function AporteFormPage() {
 
       <form className="form-stack" onSubmit={handleSubmit}>
         <label>Valor</label>
-        <input type="number" step="0.01" value={valor} onChange={(e)=>setValor(e.target.value)} required />
+        <CurrencyInput value={valor} onChange={setValor} />
 
         <label>Tipo</label>
         <select value={tipo} onChange={(e)=>setTipo(e.target.value)}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { calcularRateioPreview } from '../services/rateioService.js'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 export default function RateioForm({ initialData, onSave, alert, patrimonios }) {
   const [data, setData] = useState(initialData)
@@ -82,7 +83,7 @@ export default function RateioForm({ initialData, onSave, alert, patrimonios }) 
           </div>
           <div className="form-field">
             <label>Valor total</label>
-            <input type="number" min="0" step="0.01" value={data.valorTotal || ''} onChange={(event) => handleFieldChange('valorTotal', event.target.value)} />
+            <CurrencyInput value={data.valorTotal || ''} onChange={(valor) => handleFieldChange('valorTotal', valor)} />
           </div>
           <div className="form-field">
             <label>Método de rateio</label>

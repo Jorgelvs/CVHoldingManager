@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { criarCaucao } from '../services/caucaoService.js'
 import { listarContas } from '../services/contaService.js'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 export default function CaucaoFormPage() {
   const location = useLocation()
@@ -50,7 +51,7 @@ export default function CaucaoFormPage() {
         <input type="text" value={contratoId} onChange={(e)=>setContratoId(e.target.value)} />
 
         <label>Valor</label>
-        <input type="number" step="0.01" value={valor} onChange={(e)=>setValor(e.target.value)} required />
+        <CurrencyInput value={valor} onChange={setValor} />
 
         <label>Conta de recebimento</label>
         <select value={contaRecebimento} onChange={(e)=>setContaRecebimento(e.target.value)}>

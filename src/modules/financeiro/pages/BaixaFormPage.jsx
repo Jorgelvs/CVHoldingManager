@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listarLancamentos } from '../services/financeiroService.js'
 import { listarContas } from '../services/contaService.js'
 import { registrarBaixa } from '../services/baixaService.js'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 export default function BaixaFormPage() {
   const [searchParams] = useSearchParams()
@@ -131,17 +132,17 @@ export default function BaixaFormPage() {
 
           <label className="form-field">
             <span>Valor principal</span>
-            <input type="number" step="0.01" value={valorPrincipal} onChange={(e) => setValorPrincipal(e.target.value)} required />
+            <CurrencyInput value={valorPrincipal} onChange={setValorPrincipal} />
           </label>
 
           <label className="form-field">
             <span>Juros</span>
-            <input type="number" step="0.01" value={juros} onChange={(e) => setJuros(e.target.value)} />
+            <CurrencyInput value={juros} onChange={setJuros} />
           </label>
 
           <label className="form-field">
             <span>Desconto</span>
-            <input type="number" step="0.01" value={desconto} onChange={(e) => setDesconto(e.target.value)} />
+            <CurrencyInput value={desconto} onChange={setDesconto} />
           </label>
 
           <label className="form-field form-field-full">

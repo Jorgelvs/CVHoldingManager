@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ContratoForm from '../components/ContratoForm.jsx'
 import { criarContrato, atualizarContrato, buscarContratoPorId } from '../services/contratoService.js'
 
 export default function ContratoFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const presetUnidadeId = searchParams.get('unidadeId') || ''
   const [contrato, setContrato] = useState(null)
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function ContratoFormPage() {
         initialData={contrato}
         headerLabel={id ? 'Editar contrato' : 'Novo contrato'}
         onSave={handleSave}
+        presetUnidadeId={presetUnidadeId}
       />
     </div>
   )

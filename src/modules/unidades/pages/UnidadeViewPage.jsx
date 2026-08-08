@@ -80,6 +80,29 @@ export default function UnidadeViewPage() {
             </dl>
           </div>
           <div className="summary-card">
+            <h2>Locatário</h2>
+            {locatarioAtual ? (
+              <>
+                <dl>
+                  <dt>Inquilino atual</dt>
+                  <dd><Link to={`/locatarios/${locatarioAtual.id}`}>{locatarioAtual.nomeCompleto}</Link></dd>
+                  <dt>Contrato</dt>
+                  <dd><Link to={`/contratos/${contratoAtual.id}`}>{contratoAtual.codigoInterno || 'Ver contrato'}</Link></dd>
+                </dl>
+                <p className="page-subtitle" style={{ marginTop: 8 }}>
+                  Veja o histórico completo de inquilinos na aba "Histórico de locação".
+                </p>
+              </>
+            ) : (
+              <>
+                <p>Esta unidade está sem inquilino/contrato ativo no momento.</p>
+                <Link className="button button-primary" to={`/contratos/novo?unidadeId=${unidade.id}`} style={{ marginTop: 8, display: 'inline-flex' }}>
+                  Vincular locatário (novo contrato)
+                </Link>
+              </>
+            )}
+          </div>
+          <div className="summary-card">
             <h2>Medidas</h2>
             <dl>
               <dt>Área útil</dt><dd>{unidade.areaUtil !== '' ? `${unidade.areaUtil} m²` : 'Não informado'}</dd>

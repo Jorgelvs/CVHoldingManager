@@ -11,13 +11,6 @@ const defaultForm = {
   telefone: '',
   whatsapp: '',
   email: '',
-  endereco: '',
-  numero: '',
-  complemento: '',
-  bairro: '',
-  cidade: '',
-  estado: '',
-  cep: '',
   nomePagador: '',
   cpfPagador: '',
   telefonePagador: '',
@@ -33,11 +26,6 @@ function validarEmail(email) {
 function validarCpfFormat(cpf) {
   if (!cpf) return true
   return /^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$/.test(cpf.replace(/\s+/g, ''))
-}
-
-function validarCep(cep) {
-  if (!cep) return true
-  return /^\d{5}-?\d{3}$/.test(cep.replace(/\s+/g, ''))
 }
 
 export default function LocatarioForm({ initialData = null, onSave, headerLabel }) {
@@ -71,9 +59,6 @@ export default function LocatarioForm({ initialData = null, onSave, headerLabel 
     }
     if (form.email && !validarEmail(form.email)) {
       nextErrors.email = 'E-mail inválido.'
-    }
-    if (form.cep && !validarCep(form.cep)) {
-      nextErrors.cep = 'CEP inválido.'
     }
     if (!form.situacao) {
       nextErrors.situacao = 'Situação obrigatória.'
@@ -158,40 +143,6 @@ export default function LocatarioForm({ initialData = null, onSave, headerLabel 
               <option value="Inativo">Inativo</option>
             </select>
             {errors.situacao ? <span className="field-error">{errors.situacao}</span> : null}
-          </label>
-        </div>
-      </FormSection>
-
-      <FormSection title="Endereço" description="Endereço do locatário.">
-        <div className="form-grid">
-          <label className="form-field">
-            <span>Endereço</span>
-            <input value={form.endereco} onChange={(event) => updateField('endereco', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Número</span>
-            <input value={form.numero} onChange={(event) => updateField('numero', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Complemento</span>
-            <input value={form.complemento} onChange={(event) => updateField('complemento', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Bairro</span>
-            <input value={form.bairro} onChange={(event) => updateField('bairro', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Cidade</span>
-            <input value={form.cidade} onChange={(event) => updateField('cidade', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Estado</span>
-            <input value={form.estado} onChange={(event) => updateField('estado', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>CEP</span>
-            <input value={form.cep} onChange={(event) => updateField('cep', event.target.value)} />
-            {errors.cep ? <span className="field-error">{errors.cep}</span> : null}
           </label>
         </div>
       </FormSection>

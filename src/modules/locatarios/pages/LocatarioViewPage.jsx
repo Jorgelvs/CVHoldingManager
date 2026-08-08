@@ -75,19 +75,6 @@ export default function LocatarioViewPage() {
           </div>
 
           <div className="summary-card">
-            <h2>Endereço</h2>
-            <dl>
-              <dt>Endereço</dt><dd>{locatario.endereco || 'Não informado'}</dd>
-              <dt>Número</dt><dd>{locatario.numero || 'Não informado'}</dd>
-              <dt>Complemento</dt><dd>{locatario.complemento || 'Não informado'}</dd>
-              <dt>Bairro</dt><dd>{locatario.bairro || 'Não informado'}</dd>
-              <dt>Cidade</dt><dd>{locatario.cidade || 'Não informado'}</dd>
-              <dt>Estado</dt><dd>{locatario.estado || 'Não informado'}</dd>
-              <dt>CEP</dt><dd>{locatario.cep || 'Não informado'}</dd>
-            </dl>
-          </div>
-
-          <div className="summary-card">
             <h2>Dados do pagador</h2>
             <dl>
               <dt>Nome do pagador</dt><dd>{locatario.nomePagador || 'Não informado'}</dd>

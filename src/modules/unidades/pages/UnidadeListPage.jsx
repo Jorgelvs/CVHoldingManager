@@ -239,6 +239,11 @@ export default function UnidadeListPage() {
                     >
                       Editar
                     </Link>
+                    {!inquilinoAtualDaUnidade(item.id) ? (
+                      <Link className="button button-secondary" to={`/contratos/novo?unidadeId=${item.id}`}>
+                        Vincular locatário
+                      </Link>
+                    ) : null}
                     <select
                       value=""
                       onChange={(event) => {

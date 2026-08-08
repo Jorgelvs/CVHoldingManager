@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
 import { devolverAporte, converterAporte } from '../modules/financeiro/services/aporteService.js'
+import CurrencyInput from './CurrencyInput.jsx'
 
 export default function AporteModal({ open, tipo, aporte, contas, onClose, onSaved }) {
   const [valor, setValor] = useState('')
@@ -59,7 +60,7 @@ export default function AporteModal({ open, tipo, aporte, contas, onClose, onSav
           <input type="date" value={data} readOnly />
 
           <label>Valor</label>
-          <input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} />
+          <CurrencyInput value={valor} onChange={(v) => setValor(v)} />
 
           <label>Conta financeira</label>
           <select value={conta} onChange={(e) => setConta(e.target.value)}>

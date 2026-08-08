@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
-import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
-import { listarUnidadesPorPatrimonio } from '../../unidades/services/unidadeService.js'
+import { listarPatrimonios, buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
+import { listarUnidades, buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { listarImobiliariasAtivas } from '../../imobiliarias/services/imobiliariaService.js'
 import { contratoAtivoPorUnidade, validarContrato } from '../services/contratoService.js'
 import { reajusteTipos, indicesReajuste, periodicidadesReajuste, situacoesContrato } from '../constants/contratoConstants.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
 import { obterParametrosContratos } from '../../configuracoes/services/configuracaoService.js'
 import SearchableSelect from '../../../components/SearchableSelect.jsx'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 const defaultForm = {
   patrimonioId: '',
@@ -35,7 +36,7 @@ const defaultForm = {
   observacoes: '',
 }
 
-export default function ContratoForm({ initialData = null, headerLabel = 'Contrato', onSave }) {
+export default function ContratoForm({ initialData = null, headerLabel = 'Contrato', onSave, presetUnidadeId = '' }) {
   const navigate = useNavigate()
   const [form, setForm] = useState(defaultForm)
   const [errors, setErrors] = useState({})
@@ -45,6 +46,8 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   const [unidades, setUnidades] = useState([])
   const [imobiliarias, setImobiliarias] = useState([])
   const [defaultsAplicados, setDefaultsAplicados] = useState(false)
+
+  const patrimoniosPorId = React.useMemo(() => new Map(patrimonios.map((item) => [item.id, item])), [patrimonios])
 
   const parametrosContratos = React.useMemo(() => obterParametrosContratos(), [])
   const opcoesIndiceReajuste = React.useMemo(
@@ -61,6 +64,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   useEffect(() => {
     setLocatarios(listarLocatarios())
     setPatrimonios(listarPatrimonios())
+    setUnidades(listarUnidades())
     setImobiliarias(listarImobiliariasAtivas())
   }, [])
 
@@ -94,16 +98,36 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
     setDefaultsAplicados(true)
   }, [initialData, defaultsAplicados, parametrosContratos])
 
+  // Preenche automaticamente a unidade (e o patrimônio dela) quando o
+  // formulário é aberto a partir da tela de uma unidade específica (ex.:
+  // botão "Novo contrato" na página da unidade), evitando que o usuário
+  // precise buscar de novo algo que ele já estava vendo.
   useEffect(() => {
-    if (form.patrimonioId) {
-      setUnidades(listarUnidadesPorPatrimonio(form.patrimonioId))
-    } else {
-      setUnidades([])
+    if (initialData || !presetUnidadeId || form.unidadeId) return
+    const unidadePreset = buscarUnidadePorId(presetUnidadeId)
+    if (unidadePreset) {
+      setForm((current) => ({
+        ...current,
+        unidadeId: unidadePreset.id,
+        patrimonioId: unidadePreset.patrimonioId || current.patrimonioId,
+      }))
     }
-  }, [form.patrimonioId])
+  }, [presetUnidadeId, initialData, form.unidadeId])
 
   const updateField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  // Patrimônio é derivado automaticamente da unidade escolhida — o usuário
+  // busca direto pela unidade (por nome/código), sem precisar selecionar o
+  // patrimônio como um passo separado antes.
+  const handleUnidadeChange = (unidadeId) => {
+    const unidadeSelecionada = unidades.find((item) => item.id === unidadeId)
+    setForm((prev) => ({
+      ...prev,
+      unidadeId,
+      patrimonioId: unidadeSelecionada ? unidadeSelecionada.patrimonioId : prev.patrimonioId,
+    }))
   }
 
   const validate = () => {
@@ -161,32 +185,24 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       <FormSection title="Identificação" description="Dados básicos do contrato.">
         <div className="form-grid">
           <label className="form-field">
-            <span>Patrimônio *</span>
-            <select value={form.patrimonioId} onChange={(event) => updateField('patrimonioId', event.target.value)}>
-              <option value="">Selecione</option>
-              {patrimonios.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nome}
-                </option>
-              ))}
-            </select>
-            {errors.patrimonioId ? <span className="field-error">{errors.patrimonioId}</span> : null}
-          </label>
-          <label className="form-field">
             <span>Unidade *</span>
             <SearchableSelect
               value={form.unidadeId}
-              onChange={(id) => updateField('unidadeId', id)}
+              onChange={handleUnidadeChange}
               options={unidadesElegiveis.map((item) => ({
                 id: item.id,
                 label: `${item.nome} - ${item.codigoInterno}`,
-                sublabel: item.situacao,
+                sublabel: `${patrimoniosPorId.get(item.patrimonioId)?.nome || 'Patrimônio não identificado'} · ${item.situacao}`,
               }))}
-              placeholder={form.patrimonioId ? 'Digite o nome ou código da unidade' : 'Selecione um patrimônio primeiro'}
-              emptyMessage="Nenhuma unidade encontrada neste patrimônio"
-              disabled={!form.patrimonioId}
+              placeholder="Digite o nome ou código da unidade"
+              emptyMessage="Nenhuma unidade encontrada"
             />
             {errors.unidadeId ? <span className="field-error">{errors.unidadeId}</span> : null}
+          </label>
+          <label className="form-field">
+            <span>Patrimônio</span>
+            <input value={patrimoniosPorId.get(form.patrimonioId)?.nome || ''} readOnly placeholder="Definido automaticamente pela unidade" />
+            {errors.patrimonioId ? <span className="field-error">{errors.patrimonioId}</span> : null}
           </label>
           <label className="form-field">
             <span>Locatário *</span>
@@ -253,17 +269,17 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
         <div className="form-grid">
           <label className="form-field">
             <span>Valor do aluguel</span>
-            <input type="number" min="0" step="0.01" value={form.valorAluguel} onChange={(event) => updateField('valorAluguel', event.target.value)} />
+            <CurrencyInput value={form.valorAluguel} onChange={(valor) => updateField('valorAluguel', valor)} />
             {errors.valorAluguel ? <span className="field-error">{errors.valorAluguel}</span> : null}
           </label>
           <label className="form-field">
             <span>Valor do condomínio</span>
-            <input type="number" min="0" step="0.01" value={form.valorCondominio} onChange={(event) => updateField('valorCondominio', event.target.value)} />
+            <CurrencyInput value={form.valorCondominio} onChange={(valor) => updateField('valorCondominio', valor)} />
             {errors.valorCondominio ? <span className="field-error">{errors.valorCondominio}</span> : null}
           </label>
           <label className="form-field">
             <span>Valor da caução</span>
-            <input type="number" min="0" step="0.01" value={form.valorCaucao} onChange={(event) => updateField('valorCaucao', event.target.value)} />
+            <CurrencyInput value={form.valorCaucao} onChange={(valor) => updateField('valorCaucao', valor)} />
             {errors.valorCaucao ? <span className="field-error">{errors.valorCaucao}</span> : null}
           </label>
         </div>

@@ -7,6 +7,7 @@ import { listarCategorias, listarSubcategoriasDetalhadas, categoriaTemSubcategor
 import { listarContas } from '../services/contaService.js'
 import AdicionarSubcategoriaDialog from './AdicionarSubcategoriaDialog.jsx'
 import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 const TIPO_MANUTENCAO_AREA_COMUM = 'area_comum'
 const TIPO_MANUTENCAO_UNIDADE_ESPECIFICA = 'unidade_especifica'
@@ -488,14 +489,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
           </div>
           <div className="form-field">
             <label className="required-label">Valor</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={data.valor}
-              onChange={(event) => handleFieldChange('valor', event.target.value)}
-              placeholder={`1500 (${parametrosFinanceiros?.moedaPadrao || 'BRL'})`}
-            />
+            <CurrencyInput value={data.valor} onChange={(valor) => handleFieldChange('valor', valor)} />
           </div>
           <div className="form-field">
             <label className="required-label">Data de competência</label>

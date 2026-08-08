@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { buscarContaPorId, criarConta, atualizarConta } from '../services/contaService.js'
+import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
 const initialState = {
   nome: '',
@@ -101,7 +102,7 @@ export default function ContaFormPage() {
           </div>
           <div className="form-field">
             <label>Saldo inicial</label>
-            <input type="number" step="0.01" value={data.saldoInicial} onChange={(e) => setData({ ...data, saldoInicial: e.target.value })} />
+            <CurrencyInput value={data.saldoInicial} onChange={(valor) => setData({ ...data, saldoInicial: valor })} />
           </div>
           <div className="form-field">
             <label>Data do saldo inicial</label>

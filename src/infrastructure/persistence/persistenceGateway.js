@@ -22,6 +22,11 @@ const runtime = {
   error: '',
   cache: new Map(),
   ignoredLocalBusinessKeys: [],
+  // Marca se já existiu, nesta sessão do app, ALGUM carregamento bem-sucedido
+  // do Supabase. É usado para nunca zerar um cache que já continha dados reais
+  // por causa de uma falha passageira num rebootstrap posterior (ver comentário
+  // em bootstrapPersistence sobre o bug de perda de dados corrigido aqui).
+  hasLoadedOnce: false,
 }
 
 let writeQueue = Promise.resolve()
@@ -139,8 +144,19 @@ export async function bootstrapPersistence() {
   const sessionSync = await syncSupabaseSessionFromAuth()
   if (sessionSync.error && !isSupabaseHomologationOnly()) {
     runtime.error = sessionSync.error
-    runtime.cache = new Map()
-    ensureCacheForKnownKeys()
+    // Importante: NÃO zerar runtime.cache aqui se já tivemos um carregamento
+    // bem-sucedido antes. bootstrapPersistence() é re-executado (sem await,
+    // "fire and forget") a cada evento de sessão do Supabase (troca de rota,
+    // refresh automático de token, etc.). Se essa re-execução falhar por um
+    // motivo passageiro (rede, token expirado por um instante), zerar o cache
+    // fazia a próxima leitura de QUALQUER módulo (ex.: Unidades) achar que a
+    // chave "nunca existiu" e gravar um array vazio de volta no Supabase,
+    // apagando dados reais silenciosamente. Ver também o fix do expectedHash
+    // em writeRepositoryValue, que fechava a mesma brecha por outro ângulo.
+    if (!runtime.hasLoadedOnce) {
+      runtime.cache = new Map()
+      ensureCacheForKnownKeys()
+    }
     runtime.ready = true
     logOnce('supabase-session-sync-error', 'Falha ao recuperar sessao Supabase.', { error: sessionSync.error })
     return { ...runtime }
@@ -149,8 +165,10 @@ export async function bootstrapPersistence() {
   const access = getSupabaseAccessState()
   if (!access.canAccessData) {
     runtime.error = access.reason
-    runtime.cache = new Map()
-    ensureCacheForKnownKeys()
+    if (!runtime.hasLoadedOnce) {
+      runtime.cache = new Map()
+      ensureCacheForKnownKeys()
+    }
     runtime.ready = true
     logOnce('supabase-auth-required', runtime.error)
     return { ...runtime }
@@ -159,8 +177,10 @@ export async function bootstrapPersistence() {
   const result = await fetchStorageRows(PERSISTED_STORAGE_KEYS)
   if (result.error) {
     runtime.error = result.error
-    runtime.cache = new Map()
-    ensureCacheForKnownKeys()
+    if (!runtime.hasLoadedOnce) {
+      runtime.cache = new Map()
+      ensureCacheForKnownKeys()
+    }
     runtime.ready = true
     logOnce('supabase-bootstrap-error', 'Falha ao carregar dados do Supabase.', { error: result.error })
     return { ...runtime }
@@ -168,6 +188,7 @@ export async function bootstrapPersistence() {
 
   runtime.cache = materializeStorageMap(result.data)
   ensureCacheForKnownKeys()
+  runtime.hasLoadedOnce = true
   runtime.ready = true
   return { ...runtime }
 }
@@ -227,7 +248,16 @@ export function writeRepositoryValue(storageKey, value) {
   })
 
   enqueueWrite(async () => {
-    const expectedHash = runtime.cache.get(storageKey)?.payloadHash || null
+    // IMPORTANTE: usar "??" (nullish coalescing) e não "||" aqui. payloadHash
+    // pode legitimamente ser uma string vazia '' quando o cache foi apenas
+    // inicializado com um placeholder (ver ensureCacheForKnownKeys) sem uma
+    // leitura confirmada do Supabase. Com "||", '' virava null, e
+    // upsertStorageRow trata expectedHash===null como "não verificar
+    // conflito" — ou seja, uma escrita baseada em cache não confirmado
+    // sobrescrevia a linha real no Supabase sem qualquer checagem,
+    // silenciosamente. Com "??", '' é preservado e upsertStorageRow
+    // corretamente detecta divergência em relação ao hash real do servidor.
+    const expectedHash = runtime.cache.get(storageKey)?.payloadHash ?? null
     const result = await upsertStorageRow(storageKey, value, { expectedHash })
     if (result.error) {
       runtime.error = result.error
@@ -274,7 +304,7 @@ export function removeRepositoryValue(storageKey) {
     return false
   }
 
-  const currentHash = runtime.cache.get(storageKey)?.payloadHash || null
+  const currentHash = runtime.cache.get(storageKey)?.payloadHash ?? null
   runtime.cache.delete(storageKey)
   enqueueWrite(async () => {
     const result = await upsertStorageRow(storageKey, null, { expectedHash: currentHash })
@@ -301,6 +331,16 @@ export function hasRepositoryValue(storageKey) {
       return false
     }
   }
+
+  // Defesa extra: se o último bootstrap terminou em erro, o cache local pode
+  // não refletir o estado real do Supabase (ver bootstrapPersistence). Nesse
+  // cenário, tratar uma chave como "não existe" é perigoso: os serviços de
+  // cada módulo (ex.: unidadeService.carregarUnidades) usam exatamente esse
+  // sinal para decidir gravar um valor "vazio" de inicialização por cima do
+  // que já existe no servidor. Enquanto o estado estiver incerto, é sempre
+  // mais seguro responder "existe" (não mexer) do que arriscar sobrescrever
+  // dados reais.
+  if (runtime.error) return true
 
   const payload = getCachedValue(storageKey)
   return payload !== null && payload !== undefined

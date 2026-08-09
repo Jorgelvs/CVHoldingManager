@@ -11,6 +11,19 @@ import { obterParametrosContratos } from '../../configuracoes/services/configura
 import SearchableSelect from '../../../components/SearchableSelect.jsx'
 import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
+// Antes o usuário preenchia "Prazo (meses)" manualmente mesmo já tendo
+// informado data de início e data de fim — um campo redundante que podia
+// ficar inconsistente com as datas reais. Agora, sempre que as duas datas
+// estiverem preenchidas, o prazo é calculado a partir delas.
+function calcularPrazoMeses(dataInicio, dataFim) {
+  const inicio = new Date(`${dataInicio}T00:00:00`)
+  const fim = new Date(`${dataFim}T00:00:00`)
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime()) || fim < inicio) return 0
+  const meses = (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth())
+  const ajusteDia = fim.getDate() < inicio.getDate() ? -1 : 0
+  return Math.max(0, meses + ajusteDia)
+}
+
 const defaultForm = {
   patrimonioId: '',
   unidadeId: '',
@@ -155,6 +168,9 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       valorCaucao: form.valorCaucao || '0',
       percentualMulta: form.percentualMulta || '0',
       percentualJuros: form.percentualJuros || '0',
+      prazoMeses: form.dataInicio && form.dataFim
+        ? calcularPrazoMeses(form.dataInicio, form.dataFim)
+        : form.prazoMeses,
     })
 
     if (response?.error) {
@@ -258,11 +274,12 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             <input type="number" min="1" max="31" value={form.diaVencimento} onChange={(event) => updateField('diaVencimento', event.target.value)} />
             {errors.diaVencimento ? <span className="field-error">{errors.diaVencimento}</span> : null}
           </label>
-          <label className="form-field">
-            <span>Prazo (meses)</span>
-            <input type="number" min="0" value={form.prazoMeses} onChange={(event) => updateField('prazoMeses', event.target.value)} />
-          </label>
         </div>
+        {form.dataInicio && form.dataFim ? (
+          <p className="field-hint" style={{ marginTop: 8 }}>
+            Prazo: {calcularPrazoMeses(form.dataInicio, form.dataFim)} mês(es) — calculado automaticamente a partir das datas de início e fim.
+          </p>
+        ) : null}
       </FormSection>
 
       <FormSection title="Valores" description="Valores do aluguel, condomínio e caução.">

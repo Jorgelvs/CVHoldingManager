@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import UnidadeForm from '../components/UnidadeForm.jsx'
+import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
 import {
   criarUnidade,
   atualizarUnidade,
@@ -21,6 +22,11 @@ export default function UnidadeFormPage() {
   const [assistMode, setAssistMode] = useState(Boolean(location.state?.assistFirstUnit))
   const [lockPatrimonio, setLockPatrimonio] = useState(Boolean(location.state?.lockPatrimonio || location.state?.assistFirstUnit))
   const [simplified, setSimplified] = useState(Boolean(location.state?.simplified || location.state?.assistFirstUnit))
+  // Pergunta "cadastrar outra unidade?" logo após salvar, para o usuário
+  // conseguir lançar várias unidades do mesmo patrimônio em sequência sem
+  // precisar voltar para a lista e clicar em "Nova unidade" de novo.
+  const [confirmarProximaUnidade, setConfirmarProximaUnidade] = useState(false)
+  const [formKey, setFormKey] = useState(0)
 
   useEffect(() => {
     const patrimoniosList = listarPatrimonios()
@@ -85,16 +91,36 @@ export default function UnidadeFormPage() {
     const created = criarUnidade(data)
     if (created) {
       await waitForRepositoryFlush()
-      const returnPath = getReturnPath()
-      if (assistMode && originPatrimonioId) {
-        navigate(returnPath, {
-          replace: true,
-          state: { message: 'Primeira unidade criada com sucesso.' },
-        })
+
+      if (originPatrimonioId) {
+        setConfirmarProximaUnidade(true)
         return
       }
-      navigate(returnPath, { replace: true })
+
+      navigate(getReturnPath(), { replace: true })
     }
+  }
+
+  const handleCadastrarProximaUnidade = () => {
+    setConfirmarProximaUnidade(false)
+    setInitialData({ patrimonioId: originPatrimonioId })
+    setAssistMode(false)
+    setLockPatrimonio(true)
+    setSimplified(false)
+    setFormKey((current) => current + 1)
+  }
+
+  const handleFinalizarCadastroUnidades = () => {
+    setConfirmarProximaUnidade(false)
+    const returnPath = getReturnPath()
+    if (assistMode && originPatrimonioId) {
+      navigate(returnPath, {
+        replace: true,
+        state: { message: 'Primeira unidade criada com sucesso.' },
+      })
+      return
+    }
+    navigate(returnPath, { replace: true })
   }
 
   const handleCancel = () => {
@@ -104,6 +130,7 @@ export default function UnidadeFormPage() {
   return (
     <div className="page-content">
       <UnidadeForm
+        key={formKey}
         initialData={unidade || initialData}
         patrimonios={patrimonios}
         headerLabel={unidadeId ? 'Editar unidade' : (assistMode ? 'Criar primeira unidade' : 'Nova unidade')}
@@ -117,6 +144,16 @@ export default function UnidadeFormPage() {
           finalidades: finalidadesUnidade,
           situacoes: situacoesUnidade,
         }}
+      />
+
+      <ConfirmDialog
+        open={confirmarProximaUnidade}
+        title="Cadastrar outra unidade"
+        message="Unidade cadastrada com sucesso. Deseja cadastrar outra unidade neste mesmo patrimônio agora?"
+        confirmLabel="Sim, cadastrar outra"
+        cancelLabel="Não, finalizar"
+        onConfirm={handleCadastrarProximaUnidade}
+        onCancel={handleFinalizarCadastroUnidades}
       />
     </div>
   )

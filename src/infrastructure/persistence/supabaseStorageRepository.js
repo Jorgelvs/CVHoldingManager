@@ -114,14 +114,6 @@ export async function upsertStorageRow(storageKey, payload, options = {}) {
         error: 'CONFLICT_DETECTED',
         conflict: true,
         remoteHash: existingRow.payload_hash,
-        remoteRowVersion: existingRow.row_version,
-        // Dados de diagnóstico temporários: este é o ponto de saída mais
-        // provável do falso-positivo em cadeia (uma vez que o cache local
-        // fica com um hash desatualizado após qualquer gravação mal
-        // classificada como falha, toda escrita seguinte para a mesma
-        // chave cai aqui de novo). Sem acesso direto ao banco, isto é o
-        // jeito de conseguir ver os valores reais no próximo erro relatado.
-        debug: `stage=early-hash-check expectedHash=${expectedHash} remoteHash=${existingRow.payload_hash} rowVersion=${existingRow.row_version}`,
       }
     }
 
@@ -177,8 +169,6 @@ export async function upsertStorageRow(storageKey, payload, options = {}) {
         error: 'CONFLICT_DETECTED',
         conflict: true,
         remoteHash: confirmRow?.payload_hash,
-        remoteRowVersion: confirmRow?.row_version,
-        debug: `stage=ambiguous-update-confirm expectedHash=${expectedHash} attemptedRowVersion=${existingRow.row_version} confirmFound=${Boolean(confirmRow)} confirmHash=${confirmRow?.payload_hash} confirmRowVersion=${confirmRow?.row_version}`,
       }
     }
 

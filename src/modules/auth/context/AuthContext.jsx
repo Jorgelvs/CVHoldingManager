@@ -167,13 +167,8 @@ export function AuthProvider({ children }) {
     setSession(null)
     setUser(null)
 
-    // Nao aguardar bootstrapPersistence() aqui: o listener de mudanca de
-    // sessao (subscribeToSupabaseAuthChanges, no useEffect acima) ja dispara
-    // esse mesmo bootstrap assim que o evento SIGNED_OUT chega, sem travar
-    // quem chamou esta funcao. Aguardar aqui so prendia a tela de "salvando
-    // nova senha" mais tempo do que o necessario, sem nenhum ganho.
     if (getPersistenceMode() === 'supabase') {
-      bootstrapPersistence()
+      await bootstrapPersistence()
     }
 
     return { ok: true, error: null }
@@ -199,18 +194,8 @@ export function AuthProvider({ children }) {
 
     setSession(null)
     setUser(null)
-
-    // IMPORTANTE: nao usar "await" aqui. O listener de mudanca de sessao
-    // (useEffect acima, via subscribeToSupabaseAuthChanges) ja chama
-    // bootstrapPersistence() assim que o evento SIGNED_OUT dispara -- essa
-    // segunda chamada era redundante e, por ser aguardada, mantinha
-    // logout() "pendurada". Como Sidebar.jsx faz
-    // `await logout(); navigate(...); fecha o modal`, qualquer lentidao (ou
-    // travamento) aqui deixava o botao "Sair do sistema" preso em
-    // "Saindo..." e o modal de confirmacao aberto indefinidamente -- este
-    // era o sintoma relatado de "o sistema nao deixa eu sair".
     if (getPersistenceMode() === 'supabase') {
-      bootstrapPersistence()
+      await bootstrapPersistence()
     }
     return result
   }

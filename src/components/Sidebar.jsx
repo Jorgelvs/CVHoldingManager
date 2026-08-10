@@ -40,17 +40,9 @@ export default function Sidebar() {
 
   const handleConfirmLogout = async () => {
     if (authBusy) return
-    try {
-      await logout()
-    } catch {
-      // Mesmo se logout() lancar um erro inesperado, ainda assim tira o
-      // usuario da tela e fecha o modal no finally abaixo -- sem isso, uma
-      // excecao aqui deixava o modal de confirmacao preso na tela para
-      // sempre (o sintoma de "o sistema nao deixa eu sair").
-    } finally {
-      navigate('/login', { replace: true })
-      setConfirmLogoutOpen(false)
-    }
+    await logout()
+    navigate('/login', { replace: true })
+    setConfirmLogoutOpen(false)
   }
 
   const userLabel = user?.email || user?.id || 'Sem sessao'

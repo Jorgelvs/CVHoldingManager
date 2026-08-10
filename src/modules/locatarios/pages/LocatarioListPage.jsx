@@ -16,7 +16,7 @@ import ExportButtons from '../../reports/components/ExportButtons.jsx'
 // combinado exibido na coluna.
 function unidadePatrimonioInfo(locatarioId) {
   const contrato = contratoAtivoPorLocatario(locatarioId)
-  if (!contrato) return { label: '-', patrimonioNome: '' }
+  if (!contrato) return { label: '-', patrimonioNome: '', unidadeNome: '' }
   const unidade = buscarUnidadePorId(contrato.unidadeId)
   const patrimonio = buscarPatrimonioPorId(contrato.patrimonioId)
   const unidadeNome = unidade?.nome || unidade?.codigoInterno || ''
@@ -24,7 +24,7 @@ function unidadePatrimonioInfo(locatarioId) {
   const label = unidadeNome && patrimonioNome
     ? `${unidadeNome} - ${patrimonioNome}`
     : unidadeNome || patrimonioNome || '-'
-  return { label, patrimonioNome }
+  return { label, patrimonioNome, unidadeNome }
 }
 
 export default function LocatarioListPage() {
@@ -54,17 +54,21 @@ export default function LocatarioListPage() {
         return matchesSearch && matchesSituacao
       })
       .map((item) => {
-        const { label, patrimonioNome } = unidadePatrimonioInfo(item.id)
-        return { ...item, unidadePatrimonio: label, patrimonioNome }
+        const { label, patrimonioNome, unidadeNome } = unidadePatrimonioInfo(item.id)
+        return { ...item, unidadePatrimonio: label, patrimonioNome, unidadeNome }
       })
-      // Ordem alfabética por patrimônio (antes vinha na ordem de cadastro,
-      // aleatória). Locatários sem patrimônio vinculado (sem contrato ativo)
-      // ficam por último; dentro do mesmo patrimônio, ordena por nome.
+      // Ordem alfabética por patrimônio e, dentro dele, por unidade (antes
+      // vinha na ordem de cadastro, aleatória, e depois só por patrimônio
+      // sem considerar a unidade). Locatários sem patrimônio vinculado (sem
+      // contrato ativo) ficam por último; "numeric: true" compara números
+      // dentro do nome da unidade corretamente (Kit2 antes de Kit12).
       .sort((a, b) => {
         if (!a.patrimonioNome && b.patrimonioNome) return 1
         if (a.patrimonioNome && !b.patrimonioNome) return -1
         const porPatrimonio = a.patrimonioNome.localeCompare(b.patrimonioNome, 'pt-BR')
         if (porPatrimonio !== 0) return porPatrimonio
+        const porUnidade = a.unidadeNome.localeCompare(b.unidadeNome, 'pt-BR', { numeric: true, sensitivity: 'base' })
+        if (porUnidade !== 0) return porUnidade
         return a.nomeCompleto.localeCompare(b.nomeCompleto, 'pt-BR')
       })
   }, [locatarios, search, situacaoFiltro])

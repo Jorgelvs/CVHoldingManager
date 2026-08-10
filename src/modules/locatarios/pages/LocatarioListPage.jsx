@@ -11,16 +11,20 @@ import ExportButtons from '../../reports/components/ExportButtons.jsx'
 
 // Unidade/patrimônio vinculados são derivados do contrato ATIVO do
 // locatário (não há vínculo direto locatário->unidade, só via contrato).
-// Sem contrato ativo, não há como saber onde ele está hoje.
-function unidadePatrimonioLabel(locatarioId) {
+// Sem contrato ativo, não há como saber onde ele está hoje. Retorna o nome
+// do patrimônio separado (usado para ordenar a lista) junto do rótulo
+// combinado exibido na coluna.
+function unidadePatrimonioInfo(locatarioId) {
   const contrato = contratoAtivoPorLocatario(locatarioId)
-  if (!contrato) return '-'
+  if (!contrato) return { label: '-', patrimonioNome: '' }
   const unidade = buscarUnidadePorId(contrato.unidadeId)
   const patrimonio = buscarPatrimonioPorId(contrato.patrimonioId)
   const unidadeNome = unidade?.nome || unidade?.codigoInterno || ''
   const patrimonioNome = patrimonio?.nome || ''
-  if (unidadeNome && patrimonioNome) return `${unidadeNome} - ${patrimonioNome}`
-  return unidadeNome || patrimonioNome || '-'
+  const label = unidadeNome && patrimonioNome
+    ? `${unidadeNome} - ${patrimonioNome}`
+    : unidadeNome || patrimonioNome || '-'
+  return { label, patrimonioNome }
 }
 
 export default function LocatarioListPage() {
@@ -49,10 +53,20 @@ export default function LocatarioListPage() {
         const matchesSituacao = !situacaoFiltro || item.situacao === situacaoFiltro
         return matchesSearch && matchesSituacao
       })
-      // Ordem alfabética por nome: antes vinha na ordem de cadastro (aleatória
-      // para quem está procurando um locatário específico na lista).
-      .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto, 'pt-BR'))
-      .map((item) => ({ ...item, unidadePatrimonio: unidadePatrimonioLabel(item.id) }))
+      .map((item) => {
+        const { label, patrimonioNome } = unidadePatrimonioInfo(item.id)
+        return { ...item, unidadePatrimonio: label, patrimonioNome }
+      })
+      // Ordem alfabética por patrimônio (antes vinha na ordem de cadastro,
+      // aleatória). Locatários sem patrimônio vinculado (sem contrato ativo)
+      // ficam por último; dentro do mesmo patrimônio, ordena por nome.
+      .sort((a, b) => {
+        if (!a.patrimonioNome && b.patrimonioNome) return 1
+        if (a.patrimonioNome && !b.patrimonioNome) return -1
+        const porPatrimonio = a.patrimonioNome.localeCompare(b.patrimonioNome, 'pt-BR')
+        if (porPatrimonio !== 0) return porPatrimonio
+        return a.nomeCompleto.localeCompare(b.nomeCompleto, 'pt-BR')
+      })
   }, [locatarios, search, situacaoFiltro])
 
   const handleInativar = (locatario) => {

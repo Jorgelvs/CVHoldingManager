@@ -15,6 +15,7 @@ import { inicializarContas } from './modules/financeiro/services/contaService.js
 import { inicializarImobiliarias } from './modules/imobiliarias/services/imobiliariaService.js'
 import { obterConfiguracoes } from './modules/configuracoes/services/configuracaoService.js'
 import { getRepositoryRuntimeState } from './utils/localRepository.js'
+import { bootstrapPersistence } from './infrastructure/persistence/persistenceGateway.js'
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const FinanceiroDashboardPage = lazy(() => import('./modules/financeiro/pages/FinanceiroDashboardPage.jsx'))
@@ -131,7 +132,16 @@ function aplicarAriaLabelsCampos() {
   })
 }
 
-function AppShell({ isMobileNav, persistenceState }) {
+// Traduz códigos técnicos de erro de sincronização para uma mensagem que
+// explica o que aconteceu de fato, em vez de só mostrar o código bruto.
+function descreverErroPersistencia(erro) {
+  if (erro === 'CONFLICT_DETECTED') {
+    return 'os dados foram alterados em outra aba, dispositivo ou sessão enquanto esta tela estava aberta. Clique em "Tentar novamente" para buscar a versão mais recente.'
+  }
+  return erro
+}
+
+function AppShell({ isMobileNav, persistenceState, onRetryPersistence, retryingPersistence }) {
   return (
     <div className={`app-root ${isMobileNav ? 'app-root-mobile' : ''}`}>
       {isMobileNav ? null : <Sidebar />}
@@ -139,8 +149,17 @@ function AppShell({ isMobileNav, persistenceState }) {
         <Header />
         <main className="content-area">
           {persistenceState.mode === 'supabase' && persistenceState.error ? (
-            <div className="alert-box alert-error" style={{ marginBottom: 12 }}>
-              Modo Supabase ativo, mas ocorreu erro de conexao: {persistenceState.error}
+            <div className="alert-box alert-error" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span>Modo Supabase ativo, mas ocorreu erro de sincronização: {descreverErroPersistencia(persistenceState.error)}</span>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={onRetryPersistence}
+                disabled={retryingPersistence}
+                style={{ marginLeft: 'auto' }}
+              >
+                {retryingPersistence ? 'Verificando...' : 'Tentar novamente'}
+              </button>
             </div>
           ) : null}
           <Suspense fallback={<AppRouteFallback />}>
@@ -212,11 +231,24 @@ function AppShell({ isMobileNav, persistenceState }) {
 export default function App() {
   const location = useLocation()
   const { authRequired, isAuthenticated, recoveryRequired } = useAuth()
+  // getRepositoryRuntimeState() só reflete o estado atual quando o
+  // componente re-renderiza — sem isto, um erro de sincronização (ex.:
+  // CONFLICT_DETECTED) ficava preso na tela para sempre, mesmo depois de
+  // resolvido, porque nada forçava um novo render após tentar de novo.
+  const [persistenceTick, setPersistenceTick] = useState(0)
+  const [retryingPersistence, setRetryingPersistence] = useState(false)
   const persistenceState = getRepositoryRuntimeState()
   const [isMobileNav, setIsMobileNav] = useState(() => {
     if (typeof window === 'undefined') return false
     return window.matchMedia('(max-width: 768px)').matches
   })
+
+  const handleRetryPersistence = async () => {
+    setRetryingPersistence(true)
+    await bootstrapPersistence()
+    setRetryingPersistence(false)
+    setPersistenceTick((tick) => tick + 1)
+  }
 
   useEffect(() => {
     if (authRequired && !isAuthenticated) {
@@ -277,7 +309,12 @@ export default function App() {
 
   return (
     <AuthGuard>
-      <AppShell isMobileNav={isMobileNav} persistenceState={persistenceState} />
+      <AppShell
+        isMobileNav={isMobileNav}
+        persistenceState={persistenceState}
+        onRetryPersistence={handleRetryPersistence}
+        retryingPersistence={retryingPersistence}
+      />
     </AuthGuard>
   )
 }

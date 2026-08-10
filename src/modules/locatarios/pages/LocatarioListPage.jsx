@@ -1,11 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listarLocatarios, atualizarLocatario, excluirLocatario } from '../services/locatarioService.js'
-import { locatarioTemContratos } from '../../contratos/services/contratoService.js'
+import { locatarioTemContratos, contratoAtivoPorLocatario } from '../../contratos/services/contratoService.js'
+import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
+import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { situacoesLocatario } from '../constants/locatarioConstants.js'
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
 import ExportButtons from '../../reports/components/ExportButtons.jsx'
+
+// Unidade/patrimônio vinculados são derivados do contrato ATIVO do
+// locatário (não há vínculo direto locatário->unidade, só via contrato).
+// Sem contrato ativo, não há como saber onde ele está hoje.
+function unidadePatrimonioLabel(locatarioId) {
+  const contrato = contratoAtivoPorLocatario(locatarioId)
+  if (!contrato) return '-'
+  const unidade = buscarUnidadePorId(contrato.unidadeId)
+  const patrimonio = buscarPatrimonioPorId(contrato.patrimonioId)
+  const unidadeNome = unidade?.nome || unidade?.codigoInterno || ''
+  const patrimonioNome = patrimonio?.nome || ''
+  if (unidadeNome && patrimonioNome) return `${unidadeNome} - ${patrimonioNome}`
+  return unidadeNome || patrimonioNome || '-'
+}
 
 export default function LocatarioListPage() {
   const [locatarios, setLocatarios] = useState([])
@@ -21,17 +37,22 @@ export default function LocatarioListPage() {
   const atualizarLista = () => setLocatarios(listarLocatarios())
 
   const filtrados = useMemo(() => {
-    return locatarios.filter((item) => {
-      const termo = search.trim().toLowerCase()
-      const matchesSearch =
-        !termo ||
-        item.nomeCompleto.toLowerCase().includes(termo) ||
-        item.cpf.toLowerCase().includes(termo) ||
-        item.telefone.toLowerCase().includes(termo) ||
-        item.whatsapp.toLowerCase().includes(termo)
-      const matchesSituacao = !situacaoFiltro || item.situacao === situacaoFiltro
-      return matchesSearch && matchesSituacao
-    })
+    return locatarios
+      .filter((item) => {
+        const termo = search.trim().toLowerCase()
+        const matchesSearch =
+          !termo ||
+          item.nomeCompleto.toLowerCase().includes(termo) ||
+          item.cpf.toLowerCase().includes(termo) ||
+          item.telefone.toLowerCase().includes(termo) ||
+          item.whatsapp.toLowerCase().includes(termo)
+        const matchesSituacao = !situacaoFiltro || item.situacao === situacaoFiltro
+        return matchesSearch && matchesSituacao
+      })
+      // Ordem alfabética por nome: antes vinha na ordem de cadastro (aleatória
+      // para quem está procurando um locatário específico na lista).
+      .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto, 'pt-BR'))
+      .map((item) => ({ ...item, unidadePatrimonio: unidadePatrimonioLabel(item.id) }))
   }, [locatarios, search, situacaoFiltro])
 
   const handleInativar = (locatario) => {
@@ -72,9 +93,8 @@ export default function LocatarioListPage() {
             filename="locatarios"
             columns={[
               { key: 'nomeCompleto', label: 'Nome' },
-              { key: 'cpf', label: 'CPF' },
+              { key: 'unidadePatrimonio', label: 'Unidade / Patrimônio' },
               { key: 'telefone', label: 'Telefone' },
-              { key: 'whatsapp', label: 'WhatsApp' },
               { key: 'situacao', label: 'Situação' },
             ]}
             rows={filtrados.map((item) => ({ ...item }))}
@@ -127,9 +147,8 @@ export default function LocatarioListPage() {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>CPF</th>
+                <th>Unidade / Patrimônio</th>
                 <th>Telefone</th>
-                <th>WhatsApp</th>
                 <th>Situação</th>
                 <th>Ações</th>
               </tr>
@@ -140,9 +159,8 @@ export default function LocatarioListPage() {
                 return (
                   <tr key={item.id}>
                     <td>{item.nomeCompleto}</td>
-                    <td>{item.cpf || '-'}</td>
-                    <td>{item.telefone || '-'}</td>
-                    <td>{item.whatsapp || '-'}</td>
+                    <td>{item.unidadePatrimonio}</td>
+                    <td>{item.telefone || item.whatsapp || '-'}</td>
                     <td>{item.situacao}</td>
                     <td className="table-actions">
                       <Link className="button button-secondary" to={`/locatarios/${item.id}`}>

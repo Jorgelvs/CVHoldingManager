@@ -66,22 +66,31 @@ export default function ContratoListPage() {
   }, [alertaFiltro, contratos])
 
   const filtrados = useMemo(() => {
-    return contratos.filter((item) => {
-      const termo = search.trim().toLowerCase()
-      const locatario = buscarLocatarioPorId(item.locatarioId)
-      const unidade = buscarUnidadePorId(item.unidadeId)
-      const patrimonio = buscarPatrimonioPorId(item.patrimonioId)
-      const matchesSearch =
-        !termo ||
-        item.codigoInterno.toLowerCase().includes(termo) ||
-        locatario?.nomeCompleto.toLowerCase().includes(termo) ||
-        unidade?.nome.toLowerCase().includes(termo) ||
-        patrimonio?.nome.toLowerCase().includes(termo)
-      const matchesSituacao = !situacaoFiltro || item.situacao === situacaoFiltro
-      const matchesPatrimonio = !patrimonioFiltro || item.patrimonioId === patrimonioFiltro
-      const matchesAlerta = !contratosFiltradosPorAlerta || contratosFiltradosPorAlerta.has(item.id)
-      return matchesSearch && matchesSituacao && matchesPatrimonio && matchesAlerta
-    })
+    return contratos
+      .filter((item) => {
+        const termo = search.trim().toLowerCase()
+        const locatario = buscarLocatarioPorId(item.locatarioId)
+        const unidade = buscarUnidadePorId(item.unidadeId)
+        const patrimonio = buscarPatrimonioPorId(item.patrimonioId)
+        const matchesSearch =
+          !termo ||
+          item.codigoInterno.toLowerCase().includes(termo) ||
+          locatario?.nomeCompleto.toLowerCase().includes(termo) ||
+          unidade?.nome.toLowerCase().includes(termo) ||
+          patrimonio?.nome.toLowerCase().includes(termo)
+        const matchesSituacao = !situacaoFiltro || item.situacao === situacaoFiltro
+        const matchesPatrimonio = !patrimonioFiltro || item.patrimonioId === patrimonioFiltro
+        const matchesAlerta = !contratosFiltradosPorAlerta || contratosFiltradosPorAlerta.has(item.id)
+        return matchesSearch && matchesSituacao && matchesPatrimonio && matchesAlerta
+      })
+      // Ordem crescente por nome da unidade (antes vinha na ordem de
+      // cadastro). "numeric: true" faz "Kit 2" vir antes de "Kit 12" em vez
+      // de comparar caractere a caractere.
+      .sort((a, b) => {
+        const unidadeA = buscarUnidadePorId(a.unidadeId)?.nome || ''
+        const unidadeB = buscarUnidadePorId(b.unidadeId)?.nome || ''
+        return unidadeA.localeCompare(unidadeB, 'pt-BR', { numeric: true, sensitivity: 'base' })
+      })
   }, [contratos, search, situacaoFiltro, patrimonioFiltro, contratosFiltradosPorAlerta])
 
   const paginados = useMemo(() => filtrados.slice(0, itensPorPagina), [filtrados, itensPorPagina])

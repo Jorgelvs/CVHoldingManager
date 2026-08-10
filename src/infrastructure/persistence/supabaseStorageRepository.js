@@ -135,7 +135,41 @@ export async function upsertStorageRow(storageKey, payload, options = {}) {
     }
 
     if (!Array.isArray(updated) || updated.length === 0) {
-      return { error: 'CONFLICT_DETECTED', conflict: true }
+      // Sem updateError mas também sem linha retornada pelo .select() do
+      // UPDATE: isso é ambíguo. Pode ser um conflito real (row_version
+      // mudou entre o SELECT e o UPDATE, então o WHERE não bateu em
+      // nenhuma linha) — mas também pode ser uma política de RLS que
+      // permite o UPDATE em si, mas bloqueia o retorno da linha atualizada
+      // via SELECT (comportamento conhecido do PostgREST/Supabase quando a
+      // policy de leitura é mais restritiva que a de escrita). Nesse
+      // segundo caso a gravação NA VERDADE FUNCIONOU, mas o app reportava
+      // "CONFLICT_DETECTED" mesmo assim — foi o que causou o erro
+      // aparecer repetidamente em salvamentos que, na lista, mostravam o
+      // registro salvo normalmente. Para não confundir os dois casos, faz
+      // uma segunda leitura independente (fora da cadeia do UPDATE) e
+      // decide com base no hash real que ficou gravado.
+      const { data: confirmRow, error: confirmError } = await getStorageTable(client)
+        .select('payload_hash,row_version')
+        .eq('owner_id', scope.ownerId)
+        .eq('environment_scope', scope.environmentScope)
+        .eq('storage_key', storageKey)
+        .maybeSingle()
+
+      if (!confirmError && confirmRow?.payload_hash === payloadHash) {
+        // O UPDATE realmente aplicou o novo valor — só não veio de volta
+        // no .select() encadeado. Trata como sucesso.
+        return {
+          error: null,
+          payloadHash,
+          rowVersion: Number(confirmRow.row_version || 0),
+        }
+      }
+
+      return {
+        error: 'CONFLICT_DETECTED',
+        conflict: true,
+        remoteHash: confirmRow?.payload_hash,
+      }
     }
 
     return {

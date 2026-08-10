@@ -92,6 +92,12 @@ export function contratoAtivoPorUnidade(unidadeId) {
   ) || null
 }
 
+export function contratoAtivoPorLocatario(locatarioId) {
+  return listarContratos().find(
+    (item) => item.locatarioId === locatarioId && item.situacao === 'Ativo',
+  ) || null
+}
+
 export function locatarioTemContratos(locatarioId) {
   return listarContratos().some((item) => item.locatarioId === locatarioId)
 }

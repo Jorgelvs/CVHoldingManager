@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidadesPorPatrimonio, buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
-import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
+import { listarLocatarios, buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
+import { contratoAtivoPorUnidade, contratoAtivoPorLocatario } from '../../contratos/services/contratoService.js'
 import { listarCategorias, listarSubcategoriasDetalhadas, categoriaTemSubcategorias, adicionarSubcategoriaPersonalizada, buscarSubcategoriaDetalhe } from '../services/categoriaFinanceiraService.js'
 import { listarContas } from '../services/contaService.js'
 import AdicionarSubcategoriaDialog from './AdicionarSubcategoriaDialog.jsx'
 import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
 import CurrencyInput from '../../../components/CurrencyInput.jsx'
+import SearchableSelect from '../../../components/SearchableSelect.jsx'
 
 const TIPO_MANUTENCAO_AREA_COMUM = 'area_comum'
 const TIPO_MANUTENCAO_UNIDADE_ESPECIFICA = 'unidade_especifica'
@@ -59,6 +61,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
 
   const patrimonios = useMemo(() => listarPatrimonios(), [])
   const contas = useMemo(() => listarContas(), [])
+  const locatarios = useMemo(() => listarLocatarios(), [])
   const unidades = useMemo(() => {
     if (!data.patrimonioId) return []
     return listarUnidadesPorPatrimonio(data.patrimonioId)
@@ -217,6 +220,39 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
     if (unidade && unidade.patrimonioId !== data.patrimonioId) {
       setAlert({ type: 'error', text: 'A unidade não pertence ao patrimônio selecionado.' })
     }
+  }
+
+  // Caminho inverso do handleUnidadeChange: o usuário pode preencher por
+  // unidade OU por locatário — ao escolher o locatário, deriva a unidade
+  // (e o patrimônio) a partir do contrato ativo dele, em vez de exigir que
+  // a unidade seja selecionada primeiro.
+  const handleLocatarioChange = (value) => {
+    if (!value) {
+      setData((current) => ({ ...current, locatarioId: null }))
+      return
+    }
+
+    const contrato = contratoAtivoPorLocatario(value)
+    if (!contrato) {
+      setData((current) => ({ ...current, locatarioId: value }))
+      setAlert({ type: 'error', text: 'Este locatário não possui contrato ativo — vincule a unidade manualmente, se necessário.' })
+      return
+    }
+
+    const unidade = buscarUnidadePorId(contrato.unidadeId)
+    const ehReceitaAluguel = data.tipo === 'receita' && data.categoria === 'Aluguel'
+    const dataVencimentoContrato = ehReceitaAluguel
+      ? montarDataVencimentoPorDia(data.dataCompetencia, contrato.diaVencimento)
+      : ''
+
+    setData((current) => ({
+      ...current,
+      locatarioId: value,
+      unidadeId: contrato.unidadeId,
+      patrimonioId: unidade?.patrimonioId || current.patrimonioId,
+      contratoId: contrato.id,
+      dataVencimento: dataVencimentoContrato || current.dataVencimento,
+    }))
   }
 
   const handleCategoriaChange = (value) => {
@@ -422,6 +458,24 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
                 Manutenção de área comum usa a regra de rateio do patrimônio: {patrimonioSelecionado?.configuracoes?.regraRateio || 'Não se aplica'}.
               </small>
             ) : null}
+          </div>
+          <div className="form-field">
+            <label>Locatário</label>
+            <SearchableSelect
+              value={data.locatarioId || ''}
+              onChange={handleLocatarioChange}
+              options={locatarios.map((item) => ({
+                id: item.id,
+                label: item.nomeCompleto,
+                sublabel: item.cpf || item.telefone || '',
+              }))}
+              placeholder="Digite o nome do locatário"
+              emptyMessage="Nenhum locatário encontrado"
+              disabled={isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM}
+            />
+            <small className="field-help">
+              Pode preencher por unidade ou por locatário — o outro campo é preenchido automaticamente pelo contrato ativo.
+            </small>
           </div>
           <div className="form-field">
             <label className="required-label">Categoria</label>

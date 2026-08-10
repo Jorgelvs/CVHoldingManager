@@ -273,16 +273,36 @@ export function writeRepositoryValue(storageKey, value) {
     const expectedHash = runtime.cache.get(storageKey)?.payloadHash ?? null
     const result = await upsertStorageRow(storageKey, value, { expectedHash })
     if (result.error) {
-      runtime.error = result.error
+      runtime.error = result.debug ? `${result.error} [${result.debug}]` : result.error
       if (result.conflict) {
         logOnce(`conflict:${storageKey}`, 'Conflito de concorrencia detectado no Supabase.', {
           storageKey,
           scope: getSupabaseDataScope(),
         })
+        // Reparo de cache: se o servidor informou seu hash/row_version
+        // reais junto do conflito, atualiza o cache local com esses
+        // valores (mantendo o payload local como estava). Sem isso, a
+        // PRÓXIMA tentativa de gravação nesta mesma chave reenviaria o
+        // mesmo expectedHash desatualizado e cairia no mesmo conflito de
+        // novo, mesmo que o problema original já tenha se resolvido —
+        // criando um loop de falso-positivo que só se quebrava com um
+        // bootstrap completo (logout/login). Isso explica reports do tipo
+        // "saí e voltei a entrar e o erro persiste": o bootstrap só ajuda
+        // se ele mesmo não recriar o mesmo descompasso.
+        if (result.remoteHash) {
+          const previous = runtime.cache.get(storageKey)
+          runtime.cache.set(storageKey, {
+            payload: previous?.payload ?? value,
+            payloadHash: result.remoteHash,
+            rowVersion: Number(result.remoteRowVersion ?? previous?.rowVersion ?? 0),
+            updatedAt: previous?.updatedAt || new Date().toISOString(),
+          })
+        }
       }
       logOnce(`upsert:${storageKey}`, 'Falha ao sincronizar chave no Supabase.', {
         storageKey,
         error: result.error,
+        debug: result.debug,
       })
       return
     }
@@ -322,7 +342,19 @@ export function removeRepositoryValue(storageKey) {
   enqueueWrite(async () => {
     const result = await upsertStorageRow(storageKey, null, { expectedHash: currentHash })
     if (result.error) {
-      runtime.error = result.error
+      runtime.error = result.debug ? `${result.error} [${result.debug}]` : result.error
+      // Mesmo reparo de cache aplicado em writeRepositoryValue: sem isto,
+      // uma remoção que colide também deixa o cache com hash desatualizado
+      // e trava futuras gravações/remoções nesta chave no mesmo loop de
+      // falso-positivo.
+      if (result.conflict && result.remoteHash) {
+        runtime.cache.set(storageKey, {
+          payload: runtime.cache.get(storageKey)?.payload ?? null,
+          payloadHash: result.remoteHash,
+          rowVersion: Number(result.remoteRowVersion ?? 0),
+          updatedAt: new Date().toISOString(),
+        })
+      }
       logOnce(`remove:${storageKey}`, 'Falha ao limpar chave no Supabase.', {
         storageKey,
         error: result.error,

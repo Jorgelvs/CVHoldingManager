@@ -193,6 +193,19 @@ export async function bootstrapPersistence() {
   return { ...runtime }
 }
 
+// runtime.error é um sinalizador ÚNICO e GLOBAL (não por chave/operação).
+// Isso significa que, depois de UM conflito qualquer (ex.: aba duplicada),
+// ele ficava "sujo" indefinidamente — e qualquer tela que checasse
+// getRuntimePersistenceState().error logo após salvar (para confirmar se a
+// gravação deu certo) via um erro de uma gravação completamente diferente,
+// já resolvida, e reportava falha mesmo quando o salvamento atual funcionou
+// (o registro aparecia normalmente na lista). Chamar isto ANTES de iniciar
+// uma nova gravação garante que a checagem posterior reflita só o que
+// aconteceu nesta operação.
+export function clearPersistenceErrorFlag() {
+  runtime.error = ''
+}
+
 export function getRuntimePersistenceState() {
   return {
     mode: runtime.mode,

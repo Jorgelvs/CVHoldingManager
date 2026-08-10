@@ -1,4 +1,5 @@
 import {
+  clearPersistenceErrorFlag,
   getRuntimePersistenceState,
   hasRepositoryValue,
   readRepositoryValue,
@@ -73,4 +74,8 @@ export function getRepositoryRuntimeState() {
 
 export async function waitForRepositoryFlush() {
   await waitForPendingPersistenceWrites()
+}
+
+export function clearRepositoryErrorFlag() {
+  clearPersistenceErrorFlag()
 }

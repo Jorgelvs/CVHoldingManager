@@ -2,13 +2,20 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import ImobiliariaForm from '../components/ImobiliariaForm.jsx'
 import { criarImobiliaria, atualizarImobiliaria, buscarImobiliariaPorId } from '../services/imobiliariaService.js'
-import { waitForRepositoryFlush, getRepositoryRuntimeState } from '../../../utils/localRepository.js'
+import { waitForRepositoryFlush, getRepositoryRuntimeState, clearRepositoryErrorFlag } from '../../../utils/localRepository.js'
 
 // A gravação real no Supabase acontece em segundo plano (fire-and-forget);
 // sem esperar e checar o resultado aqui, a tela navegava para a lista como
 // se tivesse salvo mesmo quando a gravação falhava (ex.: CONFLICT_DETECTED
 // por causa de outra aba/sessão aberta) — daí a sensação de "não está
 // salvando" sem nenhum aviso.
+//
+// clearRepositoryErrorFlag() é chamado ANTES de iniciar a gravação porque
+// o sinalizador de erro é global (não por chave/operação): sem limpar antes,
+// um conflito antigo de QUALQUER gravação anterior nesta sessão continuava
+// aparecendo como "falha" mesmo em salvamentos novos que na verdade deram
+// certo (o registro salvava normalmente, mas a tela avisava erro do mesmo
+// jeito).
 async function confirmarGravacao() {
   await waitForRepositoryFlush()
   const state = getRepositoryRuntimeState()
@@ -35,6 +42,8 @@ export default function ImobiliariaFormPage() {
   }, [id, navigate])
 
   const handleSave = async (data) => {
+    clearRepositoryErrorFlag()
+
     if (id) {
       const updated = atualizarImobiliaria(id, data)
       if (updated?.error) return updated

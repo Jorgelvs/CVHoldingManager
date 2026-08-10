@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LancamentoForm from '../components/LancamentoForm.jsx'
 import { buscarLancamentoPorId, criarLancamento, atualizarLancamento } from '../services/financeiroService.js'
-import { waitForRepositoryFlush, getRepositoryRuntimeState } from '../../../utils/localRepository.js'
+import { waitForRepositoryFlush, getRepositoryRuntimeState, clearRepositoryErrorFlag } from '../../../utils/localRepository.js'
 
 // A gravação real no Supabase acontece em segundo plano (fire-and-forget);
 // sem esperar e checar o resultado aqui, a tela navegava como se tivesse
@@ -10,6 +10,11 @@ import { waitForRepositoryFlush, getRepositoryRuntimeState } from '../../../util
 // de outra aba/sessão aberta), dando a impressão de "não está salvando"
 // sem nenhum aviso — e em alguns casos, dependendo da tela seguinte, com
 // uma renderização quebrada logo em seguida.
+//
+// clearRepositoryErrorFlag() é chamado antes de gravar porque o
+// sinalizador de erro é global: sem limpar antes, um conflito antigo de
+// QUALQUER gravação anterior na sessão continuava sendo reportado como
+// falha em salvamentos novos que, na prática, deram certo.
 async function confirmarGravacao() {
   await waitForRepositoryFlush()
   const state = getRepositoryRuntimeState()
@@ -37,6 +42,8 @@ export default function LancamentoFormPage() {
   }, [id, navigate])
 
   const handleSave = async (dados) => {
+    clearRepositoryErrorFlag()
+
     if (id) {
       atualizarLancamento(id, dados)
       const erro = await confirmarGravacao()

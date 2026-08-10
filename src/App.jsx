@@ -16,6 +16,7 @@ import { inicializarImobiliarias } from './modules/imobiliarias/services/imobili
 import { obterConfiguracoes } from './modules/configuracoes/services/configuracaoService.js'
 import { getRepositoryRuntimeState } from './utils/localRepository.js'
 import { bootstrapPersistence } from './infrastructure/persistence/persistenceGateway.js'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const FinanceiroDashboardPage = lazy(() => import('./modules/financeiro/pages/FinanceiroDashboardPage.jsx'))
@@ -141,7 +142,7 @@ function descreverErroPersistencia(erro) {
   return erro
 }
 
-function AppShell({ isMobileNav, persistenceState, onRetryPersistence, retryingPersistence }) {
+function AppShell({ isMobileNav, persistenceState, onRetryPersistence, retryingPersistence, routeKey }) {
   return (
     <div className={`app-root ${isMobileNav ? 'app-root-mobile' : ''}`}>
       {isMobileNav ? null : <Sidebar />}
@@ -162,6 +163,10 @@ function AppShell({ isMobileNav, persistenceState, onRetryPersistence, retryingP
               </button>
             </div>
           ) : null}
+          {/* key={routeKey} garante que, ao navegar para outra tela, o
+              boundary "esquece" um erro anterior em vez de continuar preso
+              na tela de erro para sempre. */}
+          <ErrorBoundary key={routeKey}>
           <Suspense fallback={<AppRouteFallback />}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -221,6 +226,7 @@ function AppShell({ isMobileNav, persistenceState, onRetryPersistence, retryingP
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       {isMobileNav ? <MobileBottomNav /> : null}
@@ -314,6 +320,7 @@ export default function App() {
         persistenceState={persistenceState}
         onRetryPersistence={handleRetryPersistence}
         retryingPersistence={retryingPersistence}
+        routeKey={location.pathname}
       />
     </AuthGuard>
   )

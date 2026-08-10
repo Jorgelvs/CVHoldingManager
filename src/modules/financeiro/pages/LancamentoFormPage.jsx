@@ -2,6 +2,22 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LancamentoForm from '../components/LancamentoForm.jsx'
 import { buscarLancamentoPorId, criarLancamento, atualizarLancamento } from '../services/financeiroService.js'
+import { waitForRepositoryFlush, getRepositoryRuntimeState } from '../../../utils/localRepository.js'
+
+// A gravação real no Supabase acontece em segundo plano (fire-and-forget);
+// sem esperar e checar o resultado aqui, a tela navegava como se tivesse
+// salvo mesmo quando a gravação falhava (ex.: CONFLICT_DETECTED por causa
+// de outra aba/sessão aberta), dando a impressão de "não está salvando"
+// sem nenhum aviso — e em alguns casos, dependendo da tela seguinte, com
+// uma renderização quebrada logo em seguida.
+async function confirmarGravacao() {
+  await waitForRepositoryFlush()
+  const state = getRepositoryRuntimeState()
+  if (state.mode === 'supabase' && state.error) {
+    return `Falha ao confirmar a gravação (${state.error}). Clique em "Tentar novamente" no aviso do topo da página e salve de novo.`
+  }
+  return null
+}
 
 export default function LancamentoFormPage() {
   const { id, tipo } = useParams()
@@ -20,15 +36,20 @@ export default function LancamentoFormPage() {
     }
   }, [id, navigate])
 
-  const handleSave = (dados) => {
+  const handleSave = async (dados) => {
     if (id) {
       atualizarLancamento(id, dados)
+      const erro = await confirmarGravacao()
+      if (erro) return { error: erro }
       navigate(`/financeiro/${id}`)
-      return
+      return null
     }
 
     const created = criarLancamento(dados)
+    const erro = await confirmarGravacao()
+    if (erro) return { error: erro }
     navigate(`/financeiro/${created.id}`)
+    return null
   }
 
   const universalState = location.state?.universalEntry

@@ -304,7 +304,6 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
 
   const validar = () => {
     const errors = {}
-    if (!data.descricao.trim()) errors.descricao = 'Descrição obrigatória.'
     if (!data.valor || Number(data.valor) <= 0) errors.valor = 'Valor deve ser maior que zero.'
     if (!data.patrimonioId) errors.patrimonioId = 'Patrimônio obrigatório.'
     if (!data.categoria) errors.categoria = 'Categoria obrigatória.'
@@ -333,8 +332,11 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
     return errors
   }
 
-  const handleSubmit = (event) => {
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (event) => {
     event.preventDefault()
+    if (submitting) return
     setAlert(null)
     const errors = validar()
     if (Object.keys(errors).length > 0) {
@@ -361,7 +363,16 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       dataVencimento: data.dataVencimento || null,
       dataPagamento: data.dataPagamento || null,
     }
-    onSave(payload)
+
+    setSubmitting(true)
+    try {
+      const resultado = await onSave(payload)
+      if (resultado?.error) {
+        setAlert({ type: 'error', text: resultado.error })
+      }
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleAdicionarSubcategoria = (nome) => {
@@ -534,10 +545,10 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             </select>
           </div>
           <div className="form-field form-field-full">
-            <label className="required-label">Descrição</label>
+            <label>Descrição</label>
             <input
               type="text"
-              value={data.descricao}
+              value={data.descricao || ''}
               onChange={(event) => handleFieldChange('descricao', event.target.value)}
             />
           </div>
@@ -590,8 +601,8 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
         <button type="button" className="button button-secondary" onClick={() => navigate(-1)}>
           Voltar
         </button>
-        <button type="submit" className="button button-primary">
-          {submitLabel}
+        <button type="submit" className="button button-primary" disabled={submitting}>
+          {submitting ? 'Salvando...' : submitLabel}
         </button>
       </div>
     </form>

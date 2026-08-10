@@ -28,16 +28,25 @@ export default function ImobiliariaForm({ initialData = null, onSave, headerLabe
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    const resultado = onSave({
-      ...form,
-      nome: form.nome.trim(),
-      percentualComissao: form.percentualComissao,
-    })
+  const [submitting, setSubmitting] = useState(false)
 
-    if (resultado?.error) {
-      setSubmitMessage({ type: 'error', text: resultado.error })
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (submitting) return
+    setSubmitting(true)
+    setSubmitMessage(null)
+    try {
+      const resultado = await onSave({
+        ...form,
+        nome: form.nome.trim(),
+        percentualComissao: form.percentualComissao,
+      })
+
+      if (resultado?.error) {
+        setSubmitMessage({ type: 'error', text: resultado.error })
+      }
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -115,8 +124,8 @@ export default function ImobiliariaForm({ initialData = null, onSave, headerLabe
         <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
           Voltar
         </button>
-        <button className="button button-primary" type="submit">
-          Salvar imobiliária
+        <button className="button button-primary" type="submit" disabled={submitting}>
+          {submitting ? 'Salvando...' : 'Salvar imobiliária'}
         </button>
       </div>
     </form>

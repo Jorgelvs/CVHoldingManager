@@ -37,7 +37,13 @@ export default function ContratoFormPage() {
     if (created?.error) {
       return created
     }
-    navigate(`/contratos/${created.id}`)
+    // Sinaliza que a tela de resumo foi aberta logo apos um cadastro novo
+    // (nao ao visualizar um contrato ja existente vindo da lista). A tela
+    // de resumo usa essa marcacao para o botao "Voltar" ir direto para um
+    // novo cadastro, em vez de usar o historico do navegador (que exigia
+    // dois cliques em "Voltar" para chegar la: primeiro caia de volta no
+    // formulario recem-preenchido, so depois na lista).
+    navigate(`/contratos/${created.id}`, { state: { justCreated: true } })
     return created
   }
 

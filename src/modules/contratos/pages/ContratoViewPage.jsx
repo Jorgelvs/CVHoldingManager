@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { buscarContratoPorId, alterarSituacaoContrato } from '../services/contratoService.js'
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
@@ -12,6 +12,8 @@ import { formatarData, formatarMoeda } from '../../patrimonios/utils/patrimonioU
 export default function ContratoViewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const veioDeCadastroNovo = Boolean(location.state?.justCreated)
   const [contrato, setContrato] = useState(null)
   const [mensagem, setMensagem] = useState(null)
   const [confirm, setConfirm] = useState(null)
@@ -117,9 +119,20 @@ export default function ContratoViewPage() {
           <Link className="button button-secondary" to={`/auditoria?modulo=Contratos&registroId=${contrato.id}`}>
             Ver histórico
           </Link>
-          <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
-            Voltar
-          </button>
+          {veioDeCadastroNovo ? (
+            <>
+              <button className="button button-secondary" type="button" onClick={() => navigate('/contratos')}>
+                Ver lista de contratos
+              </button>
+              <button className="button button-primary" type="button" onClick={() => navigate('/contratos/novo')}>
+                Cadastrar novo contrato
+              </button>
+            </>
+          ) : (
+            <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
+              Voltar
+            </button>
+          )}
         </div>
       </div>
 

@@ -64,8 +64,11 @@ export default function ContratoViewPage() {
         mensagemAcao = 'Reajuste marcado como resolvido.'
         break
       case 'renovar':
-        resultado = renovarContrato(contrato)
-        mensagemAcao = 'Contrato renovado com novo prazo.'
+        // Pedido do usuário: renovar sempre por 12 meses a partir de hoje,
+        // em vez de reaproveitar o prazoMeses original do contrato (que
+        // pode ser qualquer valor, ex.: 11 meses num contrato anterior).
+        resultado = renovarContrato(contrato, 12)
+        mensagemAcao = 'Contrato renovado por mais 12 meses.'
         break
       case 'encerrar':
         resultado = alterarSituacaoContrato(contrato.id, 'Encerrado')
@@ -108,6 +111,13 @@ export default function ContratoViewPage() {
   const documentoContrato = buscarDocumentosFiltrados({ contratoId: contrato.id, categoria: 'Contratos' })[0] || null
   const reajusteEstimado = obterReajusteEstimado(contrato)
   const exibeAcoesReajuste = contrato.situacao === 'Ativo' && contrato.reajusteTipo && contrato.reajusteTipo !== 'Sem reajuste'
+  // Não existe uma situação "Vencido" separada — um contrato permanece
+  // "Ativo" indefinidamente mesmo depois que a data de fim passa (situação
+  // é um campo manual, não recalculado automaticamente). Este cálculo só
+  // detecta o vencimento para destacar visualmente o botão "Renovar" nesses
+  // casos, sem mudar o dado em si.
+  const hojeIso = new Date().toISOString().slice(0, 10)
+  const contratoVencido = contrato.situacao === 'Ativo' && Boolean(contrato.dataFim) && contrato.dataFim < hojeIso
 
   return (
     <div className="page-content">
@@ -141,6 +151,12 @@ export default function ContratoViewPage() {
       {mensagem ? (
         <div className={`alert-box ${mensagem.type === 'success' ? 'alert-success' : 'alert-error'}`}>
           {mensagem.text}
+        </div>
+      ) : null}
+
+      {contratoVencido ? (
+        <div className="alert-box alert-error">
+          Este contrato venceu em {formatarData(contrato.dataFim)}. Use o botão "Renovar contrato" abaixo para atualizar o prazo por mais 12 meses.
         </div>
       ) : null}
 
@@ -289,8 +305,12 @@ export default function ContratoViewPage() {
           ) : null}
           {contrato.situacao === 'Ativo' ? (
             <>
-              <button className="button button-secondary" type="button" onClick={() => handleAction('renovar')}>
-                Renovar contrato
+              <button
+                className={contratoVencido ? 'button button-primary' : 'button button-secondary'}
+                type="button"
+                onClick={() => handleAction('renovar')}
+              >
+                Renovar contrato{contratoVencido ? ' (vencido)' : ''}
               </button>
               <button className="button button-danger" type="button" onClick={() => handleAction('encerrar')}>
                 Encerrar contrato
@@ -358,7 +378,7 @@ export default function ContratoViewPage() {
             ? 'Confirma adiar o próximo reajuste em 30 dias?'
             : confirm?.acao === 'resolver'
             ? 'Confirma marcar o reajuste como resolvido?'
-            : 'Confirma renovar o contrato para um novo prazo?'
+            : 'Confirma renovar o contrato por mais 12 meses a partir de hoje? A data de início e a data de fim serão atualizadas automaticamente.'
         }
         confirmLabel={confirm?.acao === 'encerrar' ? 'Encerrar' : confirm?.acao === 'aplicar' ? 'Aplicar' : 'Confirmar'}
         cancelLabel="Cancelar"

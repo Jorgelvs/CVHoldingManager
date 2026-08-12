@@ -5,6 +5,7 @@ import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { buscarImobiliariaPorId } from '../../imobiliarias/services/imobiliariaService.js'
+import { buscarDocumentosFiltrados } from '../../documentos/services/documentoService.js'
 import { aplicarReajuste, adiarReajuste, marcarReajusteResolvido, renovarContrato, obterReajusteEstimado } from '../services/reajusteService.js'
 import ConfirmDialog from '../../patrimonios/components/ConfirmDialog.jsx'
 import { formatarData, formatarMoeda } from '../../patrimonios/utils/patrimonioUtils.js'
@@ -104,6 +105,7 @@ export default function ContratoViewPage() {
   const unidade = buscarUnidadePorId(contrato.unidadeId)
   const patrimonio = buscarPatrimonioPorId(contrato.patrimonioId)
   const imobiliaria = contrato.imobiliariaId ? buscarImobiliariaPorId(contrato.imobiliariaId) : null
+  const documentoContrato = buscarDocumentosFiltrados({ contratoId: contrato.id, categoria: 'Contratos' })[0] || null
   const reajusteEstimado = obterReajusteEstimado(contrato)
   const exibeAcoesReajuste = contrato.situacao === 'Ativo' && contrato.reajusteTipo && contrato.reajusteTipo !== 'Sem reajuste'
 
@@ -161,6 +163,22 @@ export default function ContratoViewPage() {
             <dt>Patrimônio</dt><dd>{patrimonio?.nome || 'Não informado'}</dd>
             <dt>Imobiliária</dt><dd>{imobiliaria ? `${imobiliaria.nome} (${Number(imobiliaria.percentualComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}%)` : 'Sem imobiliária'}</dd>
           </dl>
+        </div>
+
+        <div className="summary-card">
+          <h2>Documento do contrato</h2>
+          {documentoContrato?.arquivo?.url ? (
+            <p>
+              <a href={documentoContrato.arquivo.url} target="_blank" rel="noopener noreferrer" download={documentoContrato.arquivo.filename}>
+                {documentoContrato.arquivo.filename || 'Baixar arquivo'}
+              </a>
+            </p>
+          ) : (
+            <p>
+              Nenhum arquivo anexado.{' '}
+              <Link to={`/contratos/${contrato.id}/editar`}>Anexar agora</Link>
+            </p>
+          )}
         </div>
 
         <div className="summary-card">

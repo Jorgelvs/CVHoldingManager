@@ -7,9 +7,27 @@ import { listarImobiliariasAtivas } from '../../imobiliarias/services/imobiliari
 import { contratoAtivoPorUnidade, validarContrato } from '../services/contratoService.js'
 import { reajusteTipos, indicesReajuste, periodicidadesReajuste, situacoesContrato } from '../constants/contratoConstants.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
-import { obterParametrosContratos } from '../../configuracoes/services/configuracaoService.js'
+import { obterParametrosContratos, obterParametrosDocumentos } from '../../configuracoes/services/configuracaoService.js'
+import { buscarDocumentosFiltrados } from '../../documentos/services/documentoService.js'
 import SearchableSelect from '../../../components/SearchableSelect.jsx'
 import CurrencyInput from '../../../components/CurrencyInput.jsx'
+
+// Mesma validação usada em Documentos (DocumentoFormPage.jsx) — reaproveitada
+// aqui porque o upload do arquivo do contrato agora acontece direto nesta
+// tela, em vez de exigir uma segunda etapa em Documentos.
+function validarArquivoContrato(file, parametrosDocumentos) {
+  const tiposPermitidos = parametrosDocumentos?.tiposArquivoPermitidos || []
+  const tamanhoMaximo = Number(parametrosDocumentos?.tamanhoMaximoBytes || 0)
+
+  if (!file) return ''
+  if (tiposPermitidos.length && !tiposPermitidos.includes(file.type)) {
+    return 'Tipo de arquivo não permitido.'
+  }
+  if (tamanhoMaximo > 0 && file.size > tamanhoMaximo) {
+    return `Tamanho máximo permitido é ${Math.round(tamanhoMaximo / 1024 / 1024)} MB.`
+  }
+  return ''
+}
 
 // Antes o usuário preenchia "Prazo (meses)" manualmente mesmo já tendo
 // informado data de início e data de fim — um campo redundante que podia
@@ -59,10 +77,17 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   const [unidades, setUnidades] = useState([])
   const [imobiliarias, setImobiliarias] = useState([])
   const [defaultsAplicados, setDefaultsAplicados] = useState(false)
+  // Arquivo do contrato: mantido separado de "form" porque não é um campo
+  // do contrato em si, e sim de um registro em Documentos (categoria
+  // "Contratos") que é criado/atualizado junto ao salvar o contrato.
+  const [arquivoContrato, setArquivoContrato] = useState(null)
+  const [arquivoErro, setArquivoErro] = useState('')
+  const [documentoExistente, setDocumentoExistente] = useState(null)
 
   const patrimoniosPorId = React.useMemo(() => new Map(patrimonios.map((item) => [item.id, item])), [patrimonios])
 
   const parametrosContratos = React.useMemo(() => obterParametrosContratos(), [])
+  const parametrosDocumentos = React.useMemo(() => obterParametrosDocumentos(), [])
   const opcoesIndiceReajuste = React.useMemo(
     () => (parametrosContratos?.indicesReajustePermitidos?.length ? parametrosContratos.indicesReajustePermitidos : indicesReajuste),
     [parametrosContratos],
@@ -95,6 +120,36 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       setDefaultsAplicados(false)
     }
   }, [initialData])
+
+  // Ao editar um contrato que já existe, busca o documento (categoria
+  // "Contratos") já vinculado a ele, se houver, para mostrar na tela em vez
+  // de fazer o usuário procurar em Documentos.
+  useEffect(() => {
+    if (!initialData?.id) {
+      setDocumentoExistente(null)
+      return
+    }
+    const vinculado = buscarDocumentosFiltrados({ contratoId: initialData.id, categoria: 'Contratos' })[0] || null
+    setDocumentoExistente(vinculado)
+  }, [initialData?.id])
+
+  const handleArquivoContratoChange = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const erro = validarArquivoContrato(file, parametrosDocumentos)
+    if (erro) {
+      setArquivoErro(erro)
+      return
+    }
+    const blob = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'))
+      reader.readAsDataURL(file)
+    })
+    setArquivoContrato({ url: blob, filename: file.name, tipo: file.type, tamanho: file.size })
+    setArquivoErro('')
+  }
 
   useEffect(() => {
     if (initialData || defaultsAplicados) return
@@ -171,6 +226,9 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       prazoMeses: form.dataInicio && form.dataFim
         ? calcularPrazoMeses(form.dataInicio, form.dataFim)
         : form.prazoMeses,
+      // Não é um campo do contrato — a página de formulário (ContratoFormPage)
+      // extrai isto e cria/atualiza o registro em Documentos separadamente.
+      documentoArquivo: arquivoContrato,
     })
 
     if (response?.error) {
@@ -360,6 +418,26 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
           <label className="form-field">
             <span>Prazo de alerta (dias)</span>
             <input type="number" min="1" value={form.prazoAlertaReajusteDias || ''} onChange={(event) => updateField('prazoAlertaReajusteDias', event.target.value)} />
+          </label>
+        </div>
+      </FormSection>
+
+      <FormSection title="Documento do contrato" description="Anexe o arquivo assinado do contrato (fica salvo em Documentos, categoria 'Contratos').">
+        <div className="form-grid">
+          <label className="form-field">
+            <span>Arquivo do contrato</span>
+            <input type="file" accept={(parametrosDocumentos?.tiposArquivoPermitidos || []).join(',')} onChange={handleArquivoContratoChange} />
+            {arquivoErro ? <span className="field-error">{arquivoErro}</span> : null}
+            {arquivoContrato ? (
+              <span className="field-hint">Novo arquivo selecionado: {arquivoContrato.filename} ({Math.round(arquivoContrato.tamanho / 1024)} KB)</span>
+            ) : documentoExistente ? (
+              <span className="field-hint">
+                Já existe um arquivo salvo: {documentoExistente.arquivo?.filename || documentoExistente.nome}. Escolher outro arquivo o substitui.{' '}
+                <Link to="/documentos" target="_blank" rel="noopener noreferrer">Ver em Documentos</Link>
+              </span>
+            ) : (
+              <span className="field-hint">Nenhum arquivo anexado ainda. Outros tipos de documento (escritura, seguro, vistoria etc.) continuam sendo cadastrados em Documentos.</span>
+            )}
           </label>
         </div>
       </FormSection>

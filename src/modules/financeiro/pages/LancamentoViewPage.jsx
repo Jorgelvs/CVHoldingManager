@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, Link } from 'react-router-dom'
 import { buscarLancamentoPorId } from '../services/financeiroService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
@@ -12,6 +12,8 @@ import Modal from '../../../components/Modal.jsx'
 export default function LancamentoViewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const veioDeCadastroNovo = Boolean(location.state?.justCreated)
   const [lancamento, setLancamento] = useState(null)
   const [baixas, setBaixas] = useState([])
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -94,7 +96,14 @@ export default function LancamentoViewPage() {
         <div className="details-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link className="button button-secondary" to={`/auditoria?modulo=Financeiro&registroId=${lancamento.id}`}>Histórico</Link>
           <Link className="button button-secondary" to={`/financeiro/${lancamento.id}/editar`}>Editar</Link>
-          <button type="button" className="button button-secondary" onClick={() => navigate(-1)}>Voltar</button>
+          {veioDeCadastroNovo ? (
+            <>
+              <button type="button" className="button button-secondary" onClick={() => navigate('/financeiro/lancamentos')}>Ver lançamentos</button>
+              <button type="button" className="button button-primary" onClick={() => navigate('/financeiro/novo')}>Cadastrar novo lançamento</button>
+            </>
+          ) : (
+            <button type="button" className="button button-secondary" onClick={() => navigate(-1)}>Voltar</button>
+          )}
         </div>
       </div>
 

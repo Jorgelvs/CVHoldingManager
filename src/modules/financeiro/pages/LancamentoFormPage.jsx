@@ -55,7 +55,11 @@ export default function LancamentoFormPage() {
     const created = criarLancamento(dados)
     const erro = await confirmarGravacao()
     if (erro) return { error: erro }
-    navigate(`/financeiro/${created.id}`)
+    // Sinaliza que a tela de resumo foi aberta logo apos um cadastro novo
+    // (mesmo padrao aplicado em Contratos): o botao "Voltar" nessa tela
+    // usava o historico do navegador e caia de volta no formulario recem-
+    // preenchido, exigindo dois cliques para chegar a um lancamento novo.
+    navigate(`/financeiro/${created.id}`, { state: { justCreated: true } })
     return null
   }
 

@@ -1949,6 +1949,15 @@ button.button-danger {
 
 .data-table-fixed {
   width: 100%;
+  /* Soma das min-width das colunas abaixo (220+88+120+140+100+92+120+120+
+     92+220 = 1312px). Sem isto, "table-layout: fixed" ignora o min-width
+     de cada <th> individualmente e so respeita os "width" em %, espremendo
+     TODAS as colunas para caber em 100% do espaço disponivel -- foi o que
+     deixava quase todo o conteudo cortado com "..." (inclusive cabeçalhos
+     como "Natureza" virando "Natur"). Com este min-width, em telas
+     estreitas a tabela agora rola horizontalmente (table-wrapper-tight ja
+     tem overflow-x: auto) em vez de espremer o texto até ficar ilegível. */
+  min-width: 1312px;
   table-layout: fixed;
   border-collapse: collapse;
   border: none;
@@ -1962,16 +1971,19 @@ button.button-danger {
   vertical-align: middle;
 }
 
-.col-lancamento-descricao { width: 28%; min-width: 220px; }
-.col-lancamento-natureza { width: 10%; min-width: 88px; }
-.col-lancamento-categoria { width: 14%; min-width: 120px; }
-.col-lancamento-patrimonio { width: 16%; min-width: 140px; }
-.col-lancamento-unidade { width: 12%; min-width: 100px; }
-.col-lancamento-valor { width: 10%; min-width: 92px; }
-.col-lancamento-conta { width: 12%; min-width: 120px; }
-.col-lancamento-data { width: 12%; min-width: 120px; }
-.col-lancamento-status { width: 10%; min-width: 92px; }
-.col-lancamento-acoes { width: 16%; min-width: 220px; }
+/* As porcentagens abaixo somavam 140% (nao 100%) antes desta correção --
+   outra causa do espremimento excessivo das colunas. Rebalanceadas para
+   somar 100%, mantendo a proporção relativa original entre elas. */
+.col-lancamento-descricao { width: 20%; min-width: 220px; }
+.col-lancamento-natureza { width: 7%; min-width: 88px; }
+.col-lancamento-categoria { width: 10%; min-width: 120px; }
+.col-lancamento-patrimonio { width: 11%; min-width: 140px; }
+.col-lancamento-unidade { width: 9%; min-width: 100px; }
+.col-lancamento-valor { width: 7%; min-width: 92px; }
+.col-lancamento-conta { width: 9%; min-width: 120px; }
+.col-lancamento-data { width: 9%; min-width: 120px; }
+.col-lancamento-status { width: 7%; min-width: 92px; }
+.col-lancamento-acoes { width: 11%; min-width: 220px; }
 
 .data-table th,
 .data-table td {

@@ -36,6 +36,11 @@ export default function AdicionarSubcategoriaDialog({ open, tipo, categoria, ini
             value={nome}
             onChange={(event) => setNome(event.target.value)}
             placeholder="Digite o nome da subcategoria"
+            // Sem isto, o Safari (e outros navegadores) sugere textos já
+            // digitados antes em outros campos do site como se fosse uma
+            // lista de opções do app — confuso aqui, já que o campo é para
+            // NOME LIVRE de uma subcategoria nova, não uma busca.
+            autoComplete="off"
           />
           {error ? <span className="field-error">{error}</span> : null}
         </div>

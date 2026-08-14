@@ -33,12 +33,17 @@ function competenciaMes(item) {
   return raw ? String(raw).slice(0, 7) : ''
 }
 
-// Cor da célula da unidade: se algum lançamento do mês está atrasado, prioriza o
-// alerta (vermelho) mesmo que outro já tenha sido pago; se todos os lançamentos do
-// mês foram pagos, fica "em dia"; caso contrário (sem lançamento ainda, ou pendente
-// dentro do prazo), fica "ocupada" (verde claro neutro).
-function statusUnidade(temContratoAtivo, lancamentosDoMes) {
-  if (!temContratoAtivo) return 'desocupada'
+// Cor da célula da unidade: considera ocupada tanto quem tem contrato ativo quanto
+// quem foi marcada manualmente como "Ocupada" na própria Unidade (situacao) — cobre
+// o caso comum de já ter mudado o locatário mas o contrato ainda estar incompleto no
+// sistema (ex.: falta cadastrar o nome do inquilino). Se algum lançamento do mês está
+// atrasado, prioriza o alerta (vermelho) mesmo que outro já tenha sido pago; se todos
+// os lançamentos do mês foram pagos, fica "em dia"; caso contrário (sem lançamento
+// ainda, ou pendente dentro do prazo, ou ocupada sem contrato lançado), fica "ocupada"
+// (verde claro neutro).
+function statusUnidade(unidade, contrato, lancamentosDoMes) {
+  const ocupada = Boolean(contrato) || unidade.situacao === 'Ocupada'
+  if (!ocupada) return 'desocupada'
   if (lancamentosDoMes.length === 0) return 'ocupada'
   const efetivos = lancamentosDoMes.map(getStatusEfetivo)
   if (efetivos.includes('atrasado')) return 'atrasado'
@@ -96,7 +101,7 @@ export default function PainelOcupacaoPage() {
         return {
           unidade,
           contrato,
-          status: statusUnidade(Boolean(contrato), lancamentosUnidade),
+          status: statusUnidade(unidade, contrato, lancamentosUnidade),
         }
       })
 
@@ -168,7 +173,11 @@ export default function PainelOcupacaoPage() {
                   >
                     <span className="painel-unidade-nome">{unidade.nome || unidade.codigoInterno}</span>
                     <span className="painel-unidade-detalhe">
-                      {contrato ? `${formatarMoeda(contrato.valorAluguel)}${contrato.diaVencimento ? ` · dia ${contrato.diaVencimento}` : ''}` : 'Desocupada'}
+                      {contrato
+                        ? `${formatarMoeda(contrato.valorAluguel)}${contrato.diaVencimento ? ` · dia ${contrato.diaVencimento}` : ''}`
+                        : status === 'ocupada'
+                          ? 'Ocupada · contrato pendente'
+                          : 'Desocupada'}
                     </span>
                   </Link>
                 ))}

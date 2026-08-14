@@ -24,11 +24,31 @@ const filtroPadrao = {
   periodoFim: '',
 }
 
+// Documentos da categoria "Contratos" (o arquivo anexado direto no cadastro
+// do contrato, ver ContratoForm.jsx) ficam agrupados por situação do
+// contrato vinculado — "Vigente" (Ativo) ou "Cancelados" — pra funcionar como
+// um repositório de consulta rápida por pasta, como pedido pelo usuário.
+function pastaContrato(contrato) {
+  if (!contrato) return ''
+  if (contrato.situacao === 'Ativo') return 'vigente'
+  if (contrato.situacao === 'Cancelado') return 'cancelados'
+  return 'outras'
+}
+
+function labelPastaContrato(contrato) {
+  const pasta = pastaContrato(contrato)
+  if (pasta === 'vigente') return 'Vigente'
+  if (pasta === 'cancelados') return 'Cancelados'
+  if (pasta === 'outras') return contrato.situacao
+  return '-'
+}
+
 export default function DocumentosPage() {
   const location = useLocation()
   const [documentos, setDocumentos] = useState([])
   const [filtros, setFiltros] = useState(filtroPadrao)
   const [alertaFiltro, setAlertaFiltro] = useState('')
+  const [pastaContratoFiltro, setPastaContratoFiltro] = useState('')
   const [aviso, setAviso] = useState('')
   const [previewDocumento, setPreviewDocumento] = useState(null)
 
@@ -63,12 +83,19 @@ export default function DocumentosPage() {
     [parametrosDocumentos],
   )
 
+  const contratosPorId = useMemo(() => new Map(contratos.map((item) => [item.id, item])), [contratos])
+
   const filtrados = useMemo(() => {
-    const base = buscarDocumentosFiltrados(filtros)
-    if (alertaFiltro !== 'vencendo') return base
-    const idsVencendo = new Set(listarDocumentosVencendoPrazo().map((item) => item.id))
-    return base.filter((item) => idsVencendo.has(item.id))
-  }, [filtros, documentos, alertaFiltro])
+    let base = buscarDocumentosFiltrados(filtros)
+    if (alertaFiltro === 'vencendo') {
+      const idsVencendo = new Set(listarDocumentosVencendoPrazo().map((item) => item.id))
+      base = base.filter((item) => idsVencendo.has(item.id))
+    }
+    if (pastaContratoFiltro) {
+      base = base.filter((item) => pastaContrato(contratosPorId.get(item.contratoId)) === pastaContratoFiltro)
+    }
+    return base
+  }, [filtros, documentos, alertaFiltro, pastaContratoFiltro, contratosPorId])
 
   const paginados = useMemo(() => filtrados.slice(0, itensPorPagina), [filtrados, itensPorPagina])
 
@@ -93,6 +120,7 @@ export default function DocumentosPage() {
   const handleClearFilters = () => {
     setFiltros(filtroPadrao)
     setAlertaFiltro('')
+    setPastaContratoFiltro('')
   }
 
   const getPatrimonioNome = (id) => patrimonios.find((item) => item.id === id)?.nome || '-'
@@ -161,6 +189,14 @@ export default function DocumentosPage() {
           </select>
         </div>
         <div className="filter-group">
+          <label>Pasta do contrato</label>
+          <select value={pastaContratoFiltro} onChange={(event) => setPastaContratoFiltro(event.target.value)}>
+            <option value="">Todas</option>
+            <option value="vigente">Vigente</option>
+            <option value="cancelados">Cancelados</option>
+          </select>
+        </div>
+        <div className="filter-group">
           <label>Período início</label>
           <input type="date" value={filtros.periodoInicio} onChange={(event) => handleFilterChange('periodoInicio', event.target.value)} />
         </div>
@@ -197,6 +233,7 @@ export default function DocumentosPage() {
                   <th>Patrimônio</th>
                   <th>Unidade</th>
                   <th>Contrato</th>
+                  <th>Pasta</th>
                   <th>Lançamento</th>
                   <th>Ações</th>
                 </tr>
@@ -212,6 +249,7 @@ export default function DocumentosPage() {
                     <td>{getPatrimonioNome(documento.patrimonioId)}</td>
                     <td>{getUnidadeNome(documento.unidadeId)}</td>
                     <td>{getContratoCodigo(documento.contratoId)}</td>
+                    <td>{documento.contratoId ? labelPastaContrato(contratosPorId.get(documento.contratoId)) : '-'}</td>
                     <td>{getLancamentoDescricao(documento.lancamentoId)}</td>
                     <td className="table-actions">
                       <button className="button button-secondary" type="button" onClick={() => handlePreview(documento)}>

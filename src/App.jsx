@@ -183,7 +183,9 @@ function AppShell({ isMobileNav, persistenceState, onRetryPersistence, retryingP
               <Route path="/patrimonios/:patrimonioId/unidades" element={<UnidadeListPage />} />
               <Route path="/patrimonios/:patrimonioId/unidades/nova" element={<UnidadeFormPage />} />
               <Route path="/locatarios" element={<LocatarioListPage />} />
-              <Route path="/locatarios/novo" element={<LocatarioFormPage />} />
+              {/* Locatários passam a ser cadastrados junto do contrato (ver ContratoForm.jsx);
+                  este link antigo redireciona em vez de sumir, pra não quebrar favoritos/atalhos. */}
+              <Route path="/locatarios/novo" element={<Navigate to="/contratos/novo" replace />} />
               <Route path="/locatarios/:id" element={<LocatarioViewPage />} />
               <Route path="/locatarios/:id/editar" element={<LocatarioFormPage />} />
               <Route path="/contratos" element={<ContratoListPage />} />

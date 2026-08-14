@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
+import { listarLocatarios, buscarLocatarioPorId, cpfUnicoDisponivel } from '../../locatarios/services/locatarioService.js'
 import { listarPatrimonios, buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades, buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { listarImobiliariasAtivas } from '../../imobiliarias/services/imobiliariaService.js'
@@ -40,6 +40,36 @@ function calcularPrazoMeses(dataInicio, dataFim) {
   const meses = (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth())
   const ajusteDia = fim.getDate() < inicio.getDate() ? -1 : 0
   return Math.max(0, meses + ajusteDia)
+}
+
+// Contratos são administrados pela imobiliária/gestão — os dados pessoais do
+// locatário passam a ser cadastrados aqui mesmo, junto do contrato, em vez de
+// exigir um cadastro de Locatário separado antes. Se a pessoa já existe (ex.:
+// renovação, ou já loca outra unidade), o campo de busca abaixo reaproveita o
+// cadastro; se não, cria um locatário novo automaticamente ao salvar.
+const defaultLocatarioForm = {
+  nomeCompleto: '',
+  cpf: '',
+  rg: '',
+  dataNascimento: '',
+  telefone: '',
+  whatsapp: '',
+  email: '',
+  nomePagador: '',
+  cpfPagador: '',
+  telefonePagador: '',
+  observacoes: '',
+  situacao: 'Ativo',
+}
+
+function validarEmailLocatario(email) {
+  if (!email) return true
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function validarCpfFormatoLocatario(cpf) {
+  if (!cpf) return true
+  return /^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$/.test(cpf.replace(/\s+/g, ''))
 }
 
 const defaultForm = {
@@ -83,6 +113,12 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   const [arquivoContrato, setArquivoContrato] = useState(null)
   const [arquivoErro, setArquivoErro] = useState('')
   const [documentoExistente, setDocumentoExistente] = useState(null)
+  // Locatário embutido no form do contrato (ver comentário acima de
+  // defaultLocatarioForm). locatarioSelecionadoId vazio = vai criar um
+  // locatário novo ao salvar; preenchido = vai atualizar o cadastro existente.
+  const [locatarioSelecionadoId, setLocatarioSelecionadoId] = useState('')
+  const [locatarioForm, setLocatarioForm] = useState(defaultLocatarioForm)
+  const [locatarioErrors, setLocatarioErrors] = useState({})
 
   const patrimoniosPorId = React.useMemo(() => new Map(patrimonios.map((item) => [item.id, item])), [patrimonios])
 
@@ -115,11 +151,60 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
         ...initialData,
       })
       setDefaultsAplicados(true)
+      // buscarLocatarioPorId (não a lista em estado) porque, quando este
+      // efeito roda, "locatarios" ainda pode não ter sido carregado —
+      // buscarLocatarioPorId lê direto do repositório, sem essa corrida.
+      const locatarioVinculado = initialData.locatarioId ? buscarLocatarioPorId(initialData.locatarioId) : null
+      if (locatarioVinculado) {
+        setLocatarioSelecionadoId(locatarioVinculado.id)
+        setLocatarioForm({ ...defaultLocatarioForm, ...locatarioVinculado })
+      } else {
+        setLocatarioSelecionadoId('')
+        setLocatarioForm(defaultLocatarioForm)
+      }
     } else {
       setForm(defaultForm)
       setDefaultsAplicados(false)
+      setLocatarioSelecionadoId('')
+      setLocatarioForm(defaultLocatarioForm)
     }
   }, [initialData])
+
+  const updateLocatarioField = (key, value) => {
+    setLocatarioForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleSelecionarLocatarioExistente = (id) => {
+    setLocatarioSelecionadoId(id)
+    if (!id) return
+    const encontrado = locatarios.find((item) => item.id === id)
+    if (encontrado) {
+      setLocatarioForm({ ...defaultLocatarioForm, ...encontrado })
+      setLocatarioErrors({})
+    }
+  }
+
+  const handleUsarNovoLocatario = () => {
+    setLocatarioSelecionadoId('')
+    setLocatarioForm(defaultLocatarioForm)
+    setLocatarioErrors({})
+  }
+
+  const validarLocatarioEmbutido = () => {
+    const nextErrors = {}
+    if (!locatarioForm.nomeCompleto.trim()) {
+      nextErrors.nomeCompleto = 'Nome do locatário obrigatório.'
+    }
+    if (locatarioForm.cpf && !validarCpfFormatoLocatario(locatarioForm.cpf)) {
+      nextErrors.cpf = 'CPF inválido.'
+    } else if (locatarioForm.cpf && !cpfUnicoDisponivel(locatarioForm.cpf, locatarioSelecionadoId || null)) {
+      nextErrors.cpf = 'CPF já está em uso por outro locatário.'
+    }
+    if (locatarioForm.email && !validarEmailLocatario(locatarioForm.email)) {
+      nextErrors.email = 'E-mail inválido.'
+    }
+    return nextErrors
+  }
 
   // Ao editar um contrato que já existe, busca o documento (categoria
   // "Contratos") já vinculado a ele, se houver, para mostrar na tela em vez
@@ -200,14 +285,20 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
 
   const validate = () => {
     const validationErrors = validarContrato(form)
+    // locatarioId ainda não existe neste ponto quando é um cadastro novo (só
+    // é criado/resolvido no submit, em ContratoFormPage) — validado à parte
+    // logo abaixo, via validarLocatarioEmbutido().
+    delete validationErrors.locatarioId
     if (form.situacao === 'Ativo' && form.unidadeId) {
       const conflito = contratoAtivoPorUnidade(form.unidadeId)
       if (conflito && (!form.id || conflito.id !== form.id)) {
         validationErrors.unidadeId = `Já existe contrato ativo ${conflito.codigoInterno} nesta unidade.`
       }
     }
+    const locatarioValidationErrors = validarLocatarioEmbutido()
     setErrors(validationErrors)
-    return Object.keys(validationErrors).length === 0
+    setLocatarioErrors(locatarioValidationErrors)
+    return Object.keys(validationErrors).length === 0 && Object.keys(locatarioValidationErrors).length === 0
   }
 
   const handleSubmit = (event) => {
@@ -229,6 +320,16 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       // Não é um campo do contrato — a página de formulário (ContratoFormPage)
       // extrai isto e cria/atualiza o registro em Documentos separadamente.
       documentoArquivo: arquivoContrato,
+      // Idem: dados do locatário embutido. ContratoFormPage resolve (cria ou
+      // atualiza) o locatário primeiro e só então salva o contrato com o
+      // locatarioId já definido.
+      locatarioSelecionadoId,
+      locatarioData: {
+        ...locatarioForm,
+        nomeCompleto: locatarioForm.nomeCompleto.trim(),
+        cpf: locatarioForm.cpf.trim(),
+        email: locatarioForm.email.trim(),
+      },
     })
 
     if (response?.error) {
@@ -246,7 +347,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       <div className="form-header">
         <div>
           <h1>{headerLabel}</h1>
-          <p className="page-subtitle">Cadastre ou atualize um contrato sem vincular o locatário diretamente à unidade.</p>
+          <p className="page-subtitle">Cadastre o contrato e os dados do locatário em uma única tela.</p>
         </div>
       </div>
 
@@ -279,24 +380,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             {errors.patrimonioId ? <span className="field-error">{errors.patrimonioId}</span> : null}
           </label>
           <label className="form-field">
-            <span>Locatário *</span>
-            <SearchableSelect
-              value={form.locatarioId}
-              onChange={(id) => updateField('locatarioId', id)}
-              options={locatarios.map((item) => ({
-                id: item.id,
-                label: item.nomeCompleto,
-                sublabel: item.cpf || item.telefone || '',
-              }))}
-              placeholder="Digite o nome do locatário"
-              emptyMessage="Nenhum locatário encontrado"
-            />
-            {errors.locatarioId ? <span className="field-error">{errors.locatarioId}</span> : null}
-            <span className="field-hint">
-              Não encontrou? <Link to="/locatarios/novo" target="_blank" rel="noopener noreferrer">Cadastrar novo locatário</Link> (abre em nova aba)
-            </span>
-          </label>
-          <label className="form-field">
             <span>Imobiliária responsável</span>
             <select value={form.imobiliariaId} onChange={(event) => updateField('imobiliariaId', event.target.value)}>
               <option value="">Nenhuma (sem comissão)</option>
@@ -313,6 +396,91 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             ) : null}
           </label>
         </div>
+      </FormSection>
+
+      <FormSection title="Locatário" description="Dados pessoais de quem está locando — cadastrados aqui mesmo, junto do contrato.">
+        <div className="form-grid">
+          <label className="form-field form-field-full">
+            <span>Já é seu locatário?</span>
+            <SearchableSelect
+              value={locatarioSelecionadoId}
+              onChange={handleSelecionarLocatarioExistente}
+              options={locatarios.map((item) => ({
+                id: item.id,
+                label: item.nomeCompleto,
+                sublabel: item.cpf || item.telefone || '',
+              }))}
+              placeholder="Busque por nome ou CPF para reaproveitar um cadastro existente"
+              emptyMessage="Nenhum locatário encontrado"
+            />
+            {locatarioSelecionadoId ? (
+              <span className="field-hint">
+                Reaproveitando cadastro existente — qualquer alteração abaixo atualiza esse locatário.{' '}
+                <button type="button" className="small-link-button" onClick={handleUsarNovoLocatario}>Cadastrar um novo em vez deste</button>
+              </span>
+            ) : (
+              <span className="field-hint">Não achou? Preencha os campos abaixo — um novo cadastro de locatário é criado junto ao salvar o contrato.</span>
+            )}
+          </label>
+        </div>
+        <div className="form-grid">
+          <label className="form-field">
+            <span>Nome completo *</span>
+            <input value={locatarioForm.nomeCompleto} onChange={(event) => updateLocatarioField('nomeCompleto', event.target.value)} />
+            {locatarioErrors.nomeCompleto ? <span className="field-error">{locatarioErrors.nomeCompleto}</span> : null}
+          </label>
+          <label className="form-field">
+            <span>CPF</span>
+            <input value={locatarioForm.cpf} onChange={(event) => updateLocatarioField('cpf', event.target.value)} />
+            {locatarioErrors.cpf ? <span className="field-error">{locatarioErrors.cpf}</span> : null}
+          </label>
+          <label className="form-field">
+            <span>RG</span>
+            <input value={locatarioForm.rg} onChange={(event) => updateLocatarioField('rg', event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>Data de nascimento</span>
+            <input type="date" value={locatarioForm.dataNascimento} onChange={(event) => updateLocatarioField('dataNascimento', event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>Telefone</span>
+            <input value={locatarioForm.telefone} onChange={(event) => updateLocatarioField('telefone', event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>WhatsApp</span>
+            <input value={locatarioForm.whatsapp} onChange={(event) => updateLocatarioField('whatsapp', event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>E-mail</span>
+            <input value={locatarioForm.email} onChange={(event) => updateLocatarioField('email', event.target.value)} />
+            {locatarioErrors.email ? <span className="field-error">{locatarioErrors.email}</span> : null}
+          </label>
+          <label className="form-field">
+            <span>Situação do locatário</span>
+            <select value={locatarioForm.situacao} onChange={(event) => updateLocatarioField('situacao', event.target.value)}>
+              <option value="Ativo">Ativo</option>
+              <option value="Inativo">Inativo</option>
+            </select>
+          </label>
+        </div>
+        <div className="form-grid" style={{ marginTop: 8 }}>
+          <label className="form-field">
+            <span>Nome do pagador (se diferente do locatário)</span>
+            <input value={locatarioForm.nomePagador} onChange={(event) => updateLocatarioField('nomePagador', event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>CPF do pagador</span>
+            <input value={locatarioForm.cpfPagador} onChange={(event) => updateLocatarioField('cpfPagador', event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>Telefone do pagador</span>
+            <input value={locatarioForm.telefonePagador} onChange={(event) => updateLocatarioField('telefonePagador', event.target.value)} />
+          </label>
+        </div>
+        <label className="form-field form-field-full" style={{ marginTop: 8 }}>
+          <span>Observações sobre o locatário</span>
+          <textarea value={locatarioForm.observacoes} onChange={(event) => updateLocatarioField('observacoes', event.target.value)} />
+        </label>
       </FormSection>
 
       <FormSection title="Vigência" description="Período do contrato.">

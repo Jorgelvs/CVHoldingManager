@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import ContratoForm from '../components/ContratoForm.jsx'
 import { criarContrato, atualizarContrato, buscarContratoPorId } from '../services/contratoService.js'
 import { criarDocumento, atualizarDocumento, buscarDocumentosFiltrados } from '../../documentos/services/documentoService.js'
+import { criarLocatario, atualizarLocatario } from '../../locatarios/services/locatarioService.js'
 
 // O upload do arquivo do contrato agora acontece direto na tela de
 // cadastro/edição de Contrato (pedido do usuário: "upload de contrato na
@@ -52,9 +53,25 @@ export default function ContratoFormPage() {
   }, [id, navigate])
 
   const handleSave = (data) => {
-    // documentoArquivo não é um campo do contrato — vem do novo bloco de
-    // upload em ContratoForm.jsx e é tratado separadamente abaixo.
-    const { documentoArquivo, ...contratoData } = data
+    // documentoArquivo e os dados de locatário não são campos do contrato —
+    // vêm dos blocos embutidos em ContratoForm.jsx e são tratados aqui antes
+    // de salvar o contrato em si.
+    const { documentoArquivo, locatarioData, locatarioSelecionadoId, ...contratoData } = data
+
+    // Resolve o locatário primeiro: atualiza o existente (se reaproveitado)
+    // ou cria um novo (contratos são administrados pela imobiliária, então o
+    // cadastro de locatário nasce junto do contrato, não antes dele). Só
+    // então o contrato é salvo, já com locatarioId definido.
+    if (locatarioSelecionadoId) {
+      const locatarioAtualizado = atualizarLocatario(locatarioSelecionadoId, locatarioData)
+      if (!locatarioAtualizado) {
+        return { error: 'Não foi possível salvar os dados do locatário selecionado.' }
+      }
+      contratoData.locatarioId = locatarioAtualizado.id
+    } else {
+      const locatarioCriado = criarLocatario(locatarioData)
+      contratoData.locatarioId = locatarioCriado.id
+    }
 
     if (id) {
       const updated = atualizarContrato(id, contratoData)

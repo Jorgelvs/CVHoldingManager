@@ -117,11 +117,12 @@ export default function LocatarioListPage() {
             ]}
             rows={filtrados.map((item) => ({ ...item }))}
           />
-          <Link to="/locatarios/novo" className="button button-primary">
-            Novo locatário
-          </Link>
         </div>
       </div>
+      <p className="hint" style={{ marginTop: -8, marginBottom: 12 }}>
+        Locatários são cadastrados junto com o contrato — vá em{' '}
+        <Link to="/contratos/novo">Novo contrato</Link> para adicionar um novo locatário.
+      </p>
 
       <div className="filters-panel">
         <div className="filter-group">
@@ -155,9 +156,9 @@ export default function LocatarioListPage() {
       {filtrados.length === 0 ? (
         <EmptyState
           title="Nenhum locatário encontrado"
-          description="Cadastre um locatário para começar a gestão de contratos."
-          actionLabel="Cadastrar locatário"
-          actionLink="/locatarios/novo"
+          description="Locatários são cadastrados junto com o contrato — cadastre um novo contrato para começar."
+          actionLabel="Cadastrar contrato"
+          actionLink="/contratos/novo"
         />
       ) : (
         <div className="table-wrapper">

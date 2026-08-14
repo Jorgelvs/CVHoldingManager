@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
@@ -55,6 +55,27 @@ const LABEL_STATUS = {
 
 export default function PainelOcupacaoPage() {
   const [mesRef, setMesRef] = useState(mesAtualIso())
+  const [reloadTick, setReloadTick] = useState(0)
+
+  // O Painel virou a tela inicial ('/'), a primeira a montar depois do login.
+  // Nesse momento, os dados às vezes ainda não terminaram de chegar do Supabase:
+  // o bootstrapPersistence() disparado pelo listener de auth roda "fire and
+  // forget" (não é aguardado) e não existe hoje nenhum evento global avisando
+  // quando essa sincronização inicial termina. Sem isto, a leitura local
+  // (listarPatrimonios/listarUnidades/listarLancamentos) podia capturar o
+  // cache ainda vazio e nunca mais recalcular. Repete a leitura algumas vezes
+  // logo após montar — é barato (é tudo leitura local em memória) — e também
+  // recarrega quando unidades mudam em outra tela.
+  useEffect(() => {
+    const tentativas = [900, 2200, 4500]
+    const timers = tentativas.map((atraso) => setTimeout(() => setReloadTick((tick) => tick + 1), atraso))
+    const onUnidadesUpdated = () => setReloadTick((tick) => tick + 1)
+    window.addEventListener('cvholding_unidades_updated', onUnidadesUpdated)
+    return () => {
+      timers.forEach(clearTimeout)
+      window.removeEventListener('cvholding_unidades_updated', onUnidadesUpdated)
+    }
+  }, [])
 
   const dados = useMemo(() => {
     const patrimonios = listarPatrimonios()
@@ -97,7 +118,7 @@ export default function PainelOcupacaoPage() {
 
       return { patrimonio, unidades: unidadesComStatus, recebido, aReceber, atrasado }
     })
-  }, [mesRef])
+  }, [mesRef, reloadTick])
 
   return (
     <div className="page-content page-content-tight">
@@ -123,8 +144,11 @@ export default function PainelOcupacaoPage() {
       {dados.length === 0 ? (
         <div className="empty-state">
           <h2>Nenhum patrimônio cadastrado.</h2>
-          <p>Cadastre um patrimônio e suas unidades para ver o painel de ocupação.</p>
-          <Link className="button button-primary" to="/patrimonios/novo">Cadastrar patrimônio</Link>
+          <p>Cadastre um patrimônio e suas unidades para ver o painel de ocupação. Se você já tem patrimônios cadastrados e eles não apareceram, os dados podem ainda estar sincronizando — toque em recarregar.</p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link className="button button-primary" to="/patrimonios/novo">Cadastrar patrimônio</Link>
+            <button type="button" className="button button-secondary" onClick={() => setReloadTick((tick) => tick + 1)}>Recarregar</button>
+          </div>
         </div>
       ) : (
         dados.map(({ patrimonio, unidades, recebido, aReceber, atrasado }) => (

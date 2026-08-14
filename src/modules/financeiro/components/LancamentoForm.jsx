@@ -72,6 +72,10 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
   )
   const isMaintenanceExpense = data.tipo === 'despesa' && data.categoria === 'Manutenção'
   const requiresUnitForMaintenance = isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+  // Faxina é responsabilidade interna do inquilino: o custo só pode ser
+  // lançado no patrimônio (área comum/condomínio), nunca vinculado a uma
+  // unidade específica (kitnet/casa).
+  const isFaxinaExpense = data.tipo === 'despesa' && data.categoria === 'Faxina'
   const shouldShowSubcategoriaField = Boolean(data.categoria) && (subcategories.length > 0 || data.categoria === 'Manutenção' || Boolean(suggestedSubcategoria))
 
   const aplicarDefaultsFinanceiros = (current) => {
@@ -159,6 +163,18 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       unidadeId: unidade.id,
     }))
   }, [data.unidadeId, data.patrimonioId])
+
+  // Remove qualquer vínculo com unidade em lançamentos de Faxina, mesmo os
+  // já salvos anteriormente com esse vínculo (ex.: ao abrir para editar).
+  useEffect(() => {
+    if (!isFaxinaExpense || !data.unidadeId) return
+    setData((current) => ({
+      ...current,
+      unidadeId: '',
+      contratoId: null,
+      locatarioId: null,
+    }))
+  }, [isFaxinaExpense, data.unidadeId])
 
   const handleFieldChange = (field, value) => {
     if (field === 'subcategoria') {
@@ -351,13 +367,13 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       subcategoriaId: data.subcategoriaId || null,
       subcategoriaLabel: data.subcategoriaLabel || data.subcategoria || null,
       tipoManutencao: isMaintenanceExpense ? data.tipoManutencao : null,
-      unidadeId: isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+      unidadeId: isFaxinaExpense || (isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA)
         ? null
         : (data.unidadeId || null),
-      contratoId: isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+      contratoId: isFaxinaExpense || (isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA)
         ? null
         : (data.contratoId || null),
-      locatarioId: isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA
+      locatarioId: isFaxinaExpense || (isMaintenanceExpense && data.tipoManutencao !== TIPO_MANUTENCAO_UNIDADE_ESPECIFICA)
         ? null
         : (data.locatarioId || null),
       dataVencimento: data.dataVencimento || null,
@@ -455,7 +471,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             <select
               value={data.unidadeId || ''}
               onChange={(event) => handleUnidadeChange(event.target.value)}
-              disabled={isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM}
+              disabled={(isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM) || isFaxinaExpense}
             >
               <option value="">Sem unidade</option>
               {unidades.map((item) => (
@@ -467,6 +483,11 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             {isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM ? (
               <small className="field-help">
                 Manutenção de área comum usa a regra de rateio do patrimônio: {patrimonioSelecionado?.configuracoes?.regraRateio || 'Não se aplica'}.
+              </small>
+            ) : null}
+            {isFaxinaExpense ? (
+              <small className="field-help">
+                Faxina é lançada no patrimônio (área comum/condomínio), não em uma unidade específica — a limpeza interna da kitnet/casa é responsabilidade do inquilino.
               </small>
             ) : null}
           </div>

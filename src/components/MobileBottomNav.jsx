@@ -16,6 +16,7 @@ const QUERY_ROUTES = [
 ]
 
 const MORE_ROUTES = [
+  '/dashboard',
   '/documentos',
   '/financeiro/rateios',
   '/financeiro/caucoes',
@@ -158,6 +159,9 @@ export default function MobileBottomNav() {
 
       <Modal open={openMais} title="Mais" onClose={() => setOpenMais(false)}>
         <div className="mobile-nav-sheet-list" role="menu" aria-label="Mais atalhos">
+          <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/dashboard') }}>
+            Dashboard
+          </button>
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/documentos') }}>
             Documentos
           </button>

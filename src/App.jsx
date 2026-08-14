@@ -19,6 +19,7 @@ import { bootstrapPersistence } from './infrastructure/persistence/persistenceGa
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
+const PainelOcupacaoPage = lazy(() => import('./modules/dashboard/pages/PainelOcupacaoPage.jsx'))
 const FinanceiroDashboardPage = lazy(() => import('./modules/financeiro/pages/FinanceiroDashboardPage.jsx'))
 const LancamentoListPage = lazy(() => import('./modules/financeiro/pages/LancamentoListPage.jsx'))
 const LancamentoFormPage = lazy(() => import('./modules/financeiro/pages/LancamentoFormPage.jsx'))
@@ -169,7 +170,8 @@ function AppShell({ isMobileNav, persistenceState, onRetryPersistence, retryingP
           <ErrorBoundary key={routeKey}>
           <Suspense fallback={<AppRouteFallback />}>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<PainelOcupacaoPage />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/patrimonios" element={<PatrimonioListPage />} />
               <Route path="/patrimonios/novo" element={<PatrimonioFormPage />} />
               <Route path="/patrimonios/:id" element={<PatrimonioDetalhesPage />} />

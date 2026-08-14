@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Gauge, Building, Users, FileText, DollarSign, BarChart2, Settings, Archive, History, Bell, Database, LogOut } from 'lucide-react'
+import { Gauge, LayoutGrid, Building, Users, FileText, DollarSign, BarChart2, Settings, Archive, History, Bell, Database, LogOut } from 'lucide-react'
 import { contarNotificacoesNaoLidas } from '../modules/notificacoes/services/notificacaoService.js'
 import { useAuth } from '../modules/auth/context/AuthContext.jsx'
 import Modal from './Modal.jsx'
 
 const items = [
-  { to: '/', label: 'Dashboard', icon: <Gauge size={18} /> },
+  { to: '/', label: 'Painel', icon: <LayoutGrid size={18} /> },
+  { to: '/dashboard', label: 'Dashboard', icon: <Gauge size={18} /> },
   { to: '/patrimonios', label: 'Patrimônio', icon: <Archive size={18} /> },
   { to: '/unidades', label: 'Unidades', icon: <Building size={18} /> },
   { to: '/locatarios', label: 'Locatários', icon: <Users size={18} /> },

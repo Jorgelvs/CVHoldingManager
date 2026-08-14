@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ChevronDown } from 'lucide-react'
 import { listarUnidades, alterarSituacaoUnidade, listarUnidadesPorPatrimonio } from '../services/unidadeService.js'
 import { tiposUnidade, finalidadesUnidade, situacoesUnidade } from '../constants/unidadeConstants.js'
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
@@ -8,6 +9,16 @@ import ExportButtons from '../../reports/components/ExportButtons.jsx'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
+
+// Usado para casar com as variantes de cor já existentes em .status-badge-*
+// (ex.: "Em implantação" -> "em-implantacao").
+function situacaoClasse(situacao) {
+  return (situacao || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '-')
+}
 
 export default function UnidadeListPage() {
   const { patrimonioId } = useParams()
@@ -200,31 +211,39 @@ export default function UnidadeListPage() {
           actionLink={patrimonioId ? `/patrimonios/${patrimonioId}/unidades/nova` : '/unidades/nova'}
         />
       ) : (
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Código</th>
-                <th>Patrimônio</th>
-                <th>Tipo</th>
-                <th>Finalidade</th>
-                <th>Situação</th>
-                <th>Inquilino atual</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.nome}</td>
-                  <td>{item.codigoInterno}</td>
-                  <td>{patrimoniosPorId.get(item.patrimonioId)?.nome || '-'}</td>
-                  <td>{item.tipo}</td>
-                  <td>{item.finalidade}</td>
-                  <td>{item.situacao}</td>
-                  <td>{inquilinoAtualDaUnidade(item.id)?.nomeCompleto || '—'}</td>
-                  <td className="table-actions">
+        <div className="collapsible-list">
+          {filtrados.map((item) => {
+            const inquilino = inquilinoAtualDaUnidade(item.id)
+            return (
+              <details className="collapsible-card" key={item.id}>
+                <summary>
+                  <span className="collapsible-card-title">
+                    <span className="name">{item.nome}</span>
+                    <span className="meta">{item.codigoInterno}</span>
+                    <span className={`status-badge status-badge-${situacaoClasse(item.situacao)}`}>{item.situacao}</span>
+                  </span>
+                  <span className="collapsible-card-chevron"><ChevronDown size={18} /></span>
+                </summary>
+                <div className="collapsible-card-body">
+                  <dl className="collapsible-card-fields">
+                    <div>
+                      <dt>Patrimônio</dt>
+                      <dd>{patrimoniosPorId.get(item.patrimonioId)?.nome || '-'}</dd>
+                    </div>
+                    <div>
+                      <dt>Tipo</dt>
+                      <dd>{item.tipo}</dd>
+                    </div>
+                    <div>
+                      <dt>Finalidade</dt>
+                      <dd>{item.finalidade}</dd>
+                    </div>
+                    <div>
+                      <dt>Inquilino atual</dt>
+                      <dd>{inquilino?.nomeCompleto || '—'}</dd>
+                    </div>
+                  </dl>
+                  <div className="collapsible-card-actions">
                     <Link
                       className="button button-secondary"
                       to={`/unidades/${item.id}`}
@@ -239,7 +258,7 @@ export default function UnidadeListPage() {
                     >
                       Editar
                     </Link>
-                    {!inquilinoAtualDaUnidade(item.id) ? (
+                    {!inquilino ? (
                       <Link className="button button-secondary" to={`/contratos/novo?unidadeId=${item.id}`}>
                         Vincular locatário
                       </Link>
@@ -265,11 +284,11 @@ export default function UnidadeListPage() {
                         </option>
                       ))}
                     </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </details>
+            )
+          })}
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { ChevronDown } from 'lucide-react'
 import { listarContratos, alterarSituacaoContrato, excluirContrato } from '../services/contratoService.js'
 import { situacoesContrato } from '../constants/contratoConstants.js'
 import EmptyState from '../../patrimonios/components/EmptyState.jsx'
@@ -10,6 +11,16 @@ import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioServ
 import ExportButtons from '../../reports/components/ExportButtons.jsx'
 import { listarContratosVencendoPrazo, listarReajustesPendentes } from '../services/reajusteService.js'
 import { obterPreferenciasInterface } from '../../configuracoes/services/configuracaoService.js'
+
+// Usado para casar com as variantes de cor já existentes em .status-badge-*
+// (ex.: "Ativo" -> "ativo", "Cancelado" -> "cancelado").
+function situacaoClasse(situacao) {
+  return (situacao || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '-')
+}
 
 export default function ContratoListPage() {
   const location = useLocation()
@@ -208,63 +219,64 @@ export default function ContratoListPage() {
           actionLink="/contratos/novo"
         />
       ) : (
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Locatário</th>
-                <th>Unidade</th>
-                <th>Patrimônio</th>
-                <th>Situação</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginados.map((item) => {
-                const locatario = buscarLocatarioPorId(item.locatarioId)
-                const unidade = buscarUnidadePorId(item.unidadeId)
-                const patrimonio = buscarPatrimonioPorId(item.patrimonioId)
-                return (
-                  <tr key={item.id}>
-                    <td>{item.codigoInterno}</td>
-                    <td>{locatario?.nomeCompleto || 'N/A'}</td>
-                    <td>{unidade?.nome || 'N/A'}</td>
-                    <td>{patrimonio?.nome || 'N/A'}</td>
-                    <td>{item.situacao}</td>
-                    <td className="table-actions">
-                      <Link className="button button-secondary" to={`/contratos/${item.id}`}>
-                        Visualizar
-                      </Link>
-                      <Link className="button button-secondary" to={`/contratos/${item.id}/editar`}>
-                        Editar
-                      </Link>
-                      {item.situacao === 'Rascunho' ? (
-                        <button className="button button-primary" type="button" onClick={() => handleAction(item, 'Ativo')}>
-                          Ativar
-                        </button>
-                      ) : null}
-                      {item.situacao === 'Ativo' ? (
-                        <button className="button button-secondary" type="button" onClick={() => handleAction(item, 'Encerrado')}>
-                          Encerrar
-                        </button>
-                      ) : null}
-                      {['Rascunho', 'Ativo'].includes(item.situacao) ? (
-                        <button className="button button-danger" type="button" onClick={() => handleAction(item, 'Cancelado')}>
-                          Cancelar
-                        </button>
-                      ) : null}
-                      {item.situacao !== 'Ativo' ? (
-                        <button className="button button-danger" type="button" onClick={() => handleAction(item, 'excluir')}>
-                          Excluir
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="collapsible-list">
+          {paginados.map((item) => {
+            const locatario = buscarLocatarioPorId(item.locatarioId)
+            const unidade = buscarUnidadePorId(item.unidadeId)
+            const patrimonio = buscarPatrimonioPorId(item.patrimonioId)
+            return (
+              <details className="collapsible-card" key={item.id}>
+                <summary>
+                  <span className="collapsible-card-title">
+                    <span className="name">{item.codigoInterno}</span>
+                    <span className="meta">{locatario?.nomeCompleto || 'N/A'}</span>
+                    <span className={`status-badge status-badge-${situacaoClasse(item.situacao)}`}>{item.situacao}</span>
+                  </span>
+                  <span className="collapsible-card-chevron"><ChevronDown size={18} /></span>
+                </summary>
+                <div className="collapsible-card-body">
+                  <dl className="collapsible-card-fields">
+                    <div>
+                      <dt>Unidade</dt>
+                      <dd>{unidade?.nome || 'N/A'}</dd>
+                    </div>
+                    <div>
+                      <dt>Patrimônio</dt>
+                      <dd>{patrimonio?.nome || 'N/A'}</dd>
+                    </div>
+                  </dl>
+                  <div className="collapsible-card-actions">
+                    <Link className="button button-secondary" to={`/contratos/${item.id}`}>
+                      Visualizar
+                    </Link>
+                    <Link className="button button-secondary" to={`/contratos/${item.id}/editar`}>
+                      Editar
+                    </Link>
+                    {item.situacao === 'Rascunho' ? (
+                      <button className="button button-primary" type="button" onClick={() => handleAction(item, 'Ativo')}>
+                        Ativar
+                      </button>
+                    ) : null}
+                    {item.situacao === 'Ativo' ? (
+                      <button className="button button-secondary" type="button" onClick={() => handleAction(item, 'Encerrado')}>
+                        Encerrar
+                      </button>
+                    ) : null}
+                    {['Rascunho', 'Ativo'].includes(item.situacao) ? (
+                      <button className="button button-danger" type="button" onClick={() => handleAction(item, 'Cancelado')}>
+                        Cancelar
+                      </button>
+                    ) : null}
+                    {item.situacao !== 'Ativo' ? (
+                      <button className="button button-danger" type="button" onClick={() => handleAction(item, 'excluir')}>
+                        Excluir
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </details>
+            )
+          })}
         </div>
       )}
 

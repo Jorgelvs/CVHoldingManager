@@ -545,6 +545,7 @@ code {
 .filters-panel,
 .patrimonios-grid,
 .summary-grid,
+.dashboard-grid,
 .config-grid,
 .summary-details {
   display: grid;
@@ -2700,6 +2701,138 @@ button.button-danger {
   border-radius: 3px;
   display: inline-block;
   border: 1px solid var(--border);
+}
+
+/* ===== Listas em caixinha colapsável (Unidades, Contratos) =====
+   Antes: tabela densa com 6-8 colunas + coluna de ações com vários botões
+   empilhados, ocupando muito espaço vertical. Agora: uma caixinha por linha
+   mostrando só o essencial (nome/código + situação); clicar expande os
+   detalhes e as ações. Usa <details>/<summary> nativo — não precisa de
+   estado em React por linha. */
+.collapsible-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.collapsible-card {
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-md, 10px);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.collapsible-card > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.collapsible-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.collapsible-card-title .name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapsible-card-title .meta {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+.collapsible-card-chevron {
+  flex-shrink: 0;
+  color: var(--text);
+  opacity: 0.7;
+  display: flex;
+  transition: transform 0.15s ease;
+}
+
+.collapsible-card[open] .collapsible-card-chevron {
+  transform: rotate(180deg);
+}
+
+.collapsible-card-body {
+  padding: 4px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.collapsible-card-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 16px;
+  margin: 12px 0;
+  padding: 0;
+}
+
+.collapsible-card-fields dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  opacity: 0.75;
+  margin: 0 0 2px;
+}
+
+.collapsible-card-fields dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.collapsible-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-badge-ocupada {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.status-badge-disponivel,
+.status-badge-encerrado {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border-color: #93c5fd;
+}
+
+.status-badge-em-manutencao {
+  background: #ffedd5;
+  color: #9a3412;
+  border-color: #fdba74;
+}
+
+.status-badge-desativada,
+.status-badge-rascunho {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.status-badge-cancelado {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
 }
 
 @media (max-width: 640px) {

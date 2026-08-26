@@ -4,8 +4,18 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
 import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
+import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { listarLancamentos } from '../../financeiro/services/financeiroService.js'
 import { getStatusEfetivo, calcularAtrasados, formatarMoeda } from '../../financeiro/utils/financeiroUtils.js'
+
+// Nome curto (primeiro + último nome) para caber no espaço apertado da
+// célula da unidade no Painel.
+function nomeCurto(nomeCompleto) {
+  if (!nomeCompleto) return ''
+  const partes = nomeCompleto.trim().split(/\s+/)
+  if (partes.length <= 1) return partes[0] || ''
+  return `${partes[0]} ${partes[partes.length - 1]}`
+}
 
 const MESES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
@@ -97,10 +107,12 @@ export default function PainelOcupacaoPage() {
 
       const unidadesComStatus = unidades.map((unidade) => {
         const contrato = contratoAtivoPorUnidade(unidade.id)
+        const inquilino = contrato ? buscarLocatarioPorId(contrato.locatarioId) : null
         const lancamentosUnidade = lancamentosDoMes.filter((item) => item.unidadeId === unidade.id)
         return {
           unidade,
           contrato,
+          inquilino,
           status: statusUnidade(unidade, contrato, lancamentosUnidade),
         }
       })
@@ -164,14 +176,17 @@ export default function PainelOcupacaoPage() {
               <p className="hint">Nenhuma unidade cadastrada neste patrimônio.</p>
             ) : (
               <div className="painel-unidades-grid">
-                {unidades.map(({ unidade, contrato, status }) => (
+                {unidades.map(({ unidade, contrato, inquilino, status }) => (
                   <Link
                     key={unidade.id}
                     to={`/unidades/${unidade.id}`}
                     className={`painel-unidade-cell painel-status-${status}`}
-                    title={LABEL_STATUS[status]}
+                    title={inquilino?.nomeCompleto ? `${LABEL_STATUS[status]} · ${inquilino.nomeCompleto}` : LABEL_STATUS[status]}
                   >
                     <span className="painel-unidade-nome">{unidade.nome || unidade.codigoInterno}</span>
+                    {inquilino?.nomeCompleto ? (
+                      <span className="painel-unidade-inquilino">{nomeCurto(inquilino.nomeCompleto)}</span>
+                    ) : null}
                     <span className="painel-unidade-detalhe">
                       {contrato
                         ? `${formatarMoeda(contrato.valorAluguel)}${contrato.diaVencimento ? ` · dia ${contrato.diaVencimento}` : ''}`

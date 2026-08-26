@@ -2602,6 +2602,15 @@ button.button-danger {
   opacity: 0.85;
 }
 
+.painel-unidade-inquilino {
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.95;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .painel-status-desocupada {
   background: var(--bg);
   border-color: var(--border);
@@ -2612,7 +2621,8 @@ button.button-danger {
   border-color: #b7d9a0;
   color: #274a13;
 }
-.painel-status-ocupada .painel-unidade-detalhe {
+.painel-status-ocupada .painel-unidade-detalhe,
+.painel-status-ocupada .painel-unidade-inquilino {
   color: #274a13;
 }
 
@@ -2621,7 +2631,8 @@ button.button-danger {
   border-color: #3f7d3b;
   color: #fff;
 }
-.painel-status-em-dia .painel-unidade-detalhe {
+.painel-status-em-dia .painel-unidade-detalhe,
+.painel-status-em-dia .painel-unidade-inquilino {
   color: #eaf5e9;
 }
 
@@ -2630,7 +2641,8 @@ button.button-danger {
   border-color: #c53a2d;
   color: #fff;
 }
-.painel-status-atrasado .painel-unidade-detalhe {
+.painel-status-atrasado .painel-unidade-detalhe,
+.painel-status-atrasado .painel-unidade-inquilino {
   color: #fbe2df;
 }
 

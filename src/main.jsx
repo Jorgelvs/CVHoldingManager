@@ -23,3 +23,12 @@ async function startApplication() {
 }
 
 startApplication()
+
+// Registra o service worker que torna o app instalavel (Adicionar a tela
+// inicial / Instalar app) no Chrome/Android. Nao interfere no funcionamento
+// se o navegador nao suportar.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}

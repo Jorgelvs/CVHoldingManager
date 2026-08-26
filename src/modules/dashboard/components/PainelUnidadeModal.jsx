@@ -378,7 +378,9 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
             </div>
           ) : (
             <p>
-              {formatarMoeda(contrato.valorAluguel)} · dia {contrato.diaVencimento || '-'} · {contrato.dataInicio || '-'} até {contrato.dataFim || 'sem fim'} · {contrato.situacao}
+              Aluguel {formatarMoeda(contrato.valorAluguel)}
+              {Number(contrato.valorCondominio || 0) > 0 ? ` + condomínio ${formatarMoeda(contrato.valorCondominio)} = ${formatarMoeda(Number(contrato.valorAluguel || 0) + Number(contrato.valorCondominio || 0))}` : ''}
+              {' '}· dia {contrato.diaVencimento || '-'} · {contrato.dataInicio || '-'} até {contrato.dataFim || 'sem fim'} · {contrato.situacao}
             </p>
           )}
 

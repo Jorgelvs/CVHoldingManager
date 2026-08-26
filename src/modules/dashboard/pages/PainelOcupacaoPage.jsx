@@ -193,7 +193,7 @@ export default function PainelOcupacaoPage() {
                     ) : null}
                     <span className="painel-unidade-detalhe">
                       {contrato
-                        ? `${formatarMoeda(contrato.valorAluguel)}${contrato.diaVencimento ? ` · dia ${contrato.diaVencimento}` : ''}`
+                        ? `${formatarMoeda(Number(contrato.valorAluguel || 0) + Number(contrato.valorCondominio || 0))}${contrato.diaVencimento ? ` · dia ${contrato.diaVencimento}` : ''}`
                         : status === 'ocupada'
                           ? 'Ocupada · contrato pendente'
                           : 'Desocupada'}

@@ -434,6 +434,24 @@ code {
 .header-inner { width: 100%; max-width: 1126px; margin: 0 auto; padding: 14px 20px; box-sizing: border-box; }
 .header-inner h1 { margin: 0; font-size: 20px; color: var(--text-h); }
 
+.header-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.header-back-button:hover {
+  background: var(--border);
+}
+
 .content-area { width: 100%; min-width: 0; flex: 1 1 auto; padding: 28px; max-width: 1126px; margin: 0 auto; box-sizing: border-box; }
 .page-center { display:flex; align-items:center; justify-content:center; height:calc(100vh - 72px); }
 

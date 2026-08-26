@@ -109,6 +109,20 @@ export function getDashboardData(periodo = {}, contaId = '') {
   const despesasPeriodo = lancamentosPeriodo.filter((item) => item.tipo === 'despesa' && item.status !== 'cancelado' && isOperational(item)).reduce((sum, item) => sum + Number(item.valor || 0), 0)
   const resultadoPeriodo = receitasPeriodo - despesasPeriodo
 
+  // Resultado acumulado do ano selecionado, de janeiro até o mês escolhido no
+  // filtro de período (inclusive) — substitui o antigo card "Total financeiro
+  // da Holding" (saldo de caixa) por uma visão de resultado operacional anual.
+  const inicioAnoSelecionado = `${periodoAtual.ano}-01-01`
+  const lancamentosAnoAcumulado = lancamentos.filter((item) => {
+    if (item.status === 'cancelado') return false
+    if (contaId && item.contaFinanceiraId !== contaId) return false
+    const dataConsiderada = getDataConsiderada(item) || ''
+    return Boolean(dataConsiderada) && dataConsiderada >= inicioAnoSelecionado && dataConsiderada <= periodoFim
+  })
+  const receitasAnoAcumulado = lancamentosAnoAcumulado.filter((item) => item.tipo === 'receita' && isOperational(item)).reduce((sum, item) => sum + Number(item.valor || 0), 0)
+  const despesasAnoAcumulado = lancamentosAnoAcumulado.filter((item) => item.tipo === 'despesa' && isOperational(item)).reduce((sum, item) => sum + Number(item.valor || 0), 0)
+  const resultadoAnualAcumulado = receitasAnoAcumulado - despesasAnoAcumulado
+
   const contasFiltradas = contaId ? contas.filter((conta) => conta.id === contaId) : contas
   const totalFinanceiro = contasFiltradas.reduce((sum, conta) => sum + Number(calcularSaldo(conta.id) || 0), 0)
   const disponibilidadeImediata = contasFiltradas.filter((conta) => {
@@ -243,6 +257,7 @@ export function getDashboardData(periodo = {}, contaId = '') {
       despesas: despesasPeriodo,
       resultado: resultadoPeriodo,
       resultadoLiquido: resultadoLiquidoPeriodo,
+      resultadoAnualAcumulado,
       saldoDisponivel: disponibilidadeImediata,
       totalFinanceiro,
       investimentos: totalInvestido,

@@ -93,27 +93,29 @@ export default function Dashboard() {
       footer: 'Abrir lançamentos',
     },
     {
-      title: 'Resultado do período',
-      value: formatarValor(dashboard.indicadores.resultado),
-      subtitle: 'Receitas menos despesas',
+      title: 'Comissão Imobiliária',
+      value: formatarValor(dashboard.comissoes.total),
+      subtitle: dashboard.comissoes.porImobiliaria.length > 0
+        ? `Devida a ${dashboard.comissoes.porImobiliaria.length} imobiliária(s) no período`
+        : 'Nenhuma comissão de imobiliária no período',
+      to: '/financeiro/comissoes',
+      footer: 'Ver o que foi pago a cada imobiliária',
+    },
+    {
+      title: 'Resultado líquido do período',
+      value: formatarValor(dashboard.indicadores.resultadoLiquido),
+      subtitle: dashboard.comissoes.total > 0
+        ? `Receitas menos despesas e ${formatarValor(dashboard.comissoes.total)} de comissão`
+        : 'Receitas menos despesas (sem comissão no período)',
       to: `/financeiro/lancamentos?${lancamentosQuery}`,
       footer: 'Abrir lançamentos',
     },
     {
-      title: 'Resultado líquido (após comissão)',
-      value: formatarValor(dashboard.indicadores.resultadoLiquido),
-      subtitle: dashboard.comissoes.total > 0
-        ? `Resultado menos ${formatarValor(dashboard.comissoes.total)} de comissão do período`
-        : 'Nenhuma comissão de imobiliária no período',
-      to: '/financeiro/comissoes',
-      footer: 'Ver comissões',
-    },
-    {
-      title: 'Total financeiro da Holding',
-      value: formatarValor(dashboard.indicadores.totalFinanceiro),
-      subtitle: 'Saldo real das contas ativas (só reflete despesas/comissões já pagas)',
-      to: '/financeiro/contas',
-      footer: 'Abrir contas',
+      title: 'Resultado anual acumulado da Holding',
+      value: formatarValor(dashboard.indicadores.resultadoAnualAcumulado),
+      subtitle: `Receitas menos despesas de jan/${periodo.ano} até o mês selecionado`,
+      to: '/relatorios',
+      footer: 'Ver relatórios',
     },
   ]
 
@@ -344,29 +346,6 @@ export default function Dashboard() {
           <DashboardCard className="compact-card" title="Desocupadas" value={dashboard.ocupacao.desocupadas} subtitle="Sem contrato ativo" to="/unidades" />
           <DashboardCard className="compact-card" title="Percentual de ocupação" value={`${dashboard.ocupacao.percentual.toFixed(1)}%`} subtitle="Base nas unidades cadastradas" to="/unidades" />
         </div>
-      </div>
-
-      <div className="summary-card compact-card compact-section-card">
-        <div className="section-header">
-          <strong>Comissão por imobiliária</strong>
-          <Link className="button button-secondary" to="/financeiro/comissoes">Ver detalhes</Link>
-        </div>
-        {dashboard.comissoes.porImobiliaria.length === 0 ? (
-          <p>Nenhuma comissão de imobiliária no período.</p>
-        ) : (
-          <div className="summary-grid compact-summary-grid">
-            {dashboard.comissoes.porImobiliaria.map((item) => (
-              <DashboardCard
-                key={item.imobiliariaId}
-                className="compact-card"
-                title={item.imobiliariaNome}
-                value={formatarValor(item.totalComissao)}
-                subtitle={`${item.percentualComissao}% sobre ${formatarValor(item.totalBase)} de base`}
-                to="/financeiro/comissoes"
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="summary-card compact-card compact-section-card">

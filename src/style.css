@@ -2586,6 +2586,14 @@ button.button-danger {
   text-decoration: none;
   color: var(--text-h);
   transition: filter 0.15s ease;
+  /* Reset de <button>: o card virou um botão (abre o modal de ações
+     rápidas em vez de navegar), então precisa perder a aparência padrão
+     de botão do navegador e manter o mesmo visual de antes. */
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
 }
 
 .painel-unidade-cell:hover {

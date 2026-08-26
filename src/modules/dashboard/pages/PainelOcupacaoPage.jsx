@@ -7,6 +7,7 @@ import { contratoAtivoPorUnidade } from '../../contratos/services/contratoServic
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { listarLancamentos } from '../../financeiro/services/financeiroService.js'
 import { getStatusEfetivo, calcularAtrasados, formatarMoeda } from '../../financeiro/utils/financeiroUtils.js'
+import PainelUnidadeModal from '../components/PainelUnidadeModal.jsx'
 
 // Nome curto (primeiro + último nome) para caber no espaço apertado da
 // célula da unidade no Painel.
@@ -71,6 +72,7 @@ const LABEL_STATUS = {
 export default function PainelOcupacaoPage() {
   const [mesRef, setMesRef] = useState(mesAtualIso())
   const [reloadTick, setReloadTick] = useState(0)
+  const [unidadeSelecionada, setUnidadeSelecionada] = useState(null)
 
   // O Painel virou a tela inicial ('/'), a primeira a montar depois do login.
   // Nesse momento, os dados às vezes ainda não terminaram de chegar do Supabase:
@@ -113,6 +115,7 @@ export default function PainelOcupacaoPage() {
           unidade,
           contrato,
           inquilino,
+          lancamentos: lancamentosUnidade,
           status: statusUnidade(unidade, contrato, lancamentosUnidade),
         }
       })
@@ -176,10 +179,11 @@ export default function PainelOcupacaoPage() {
               <p className="hint">Nenhuma unidade cadastrada neste patrimônio.</p>
             ) : (
               <div className="painel-unidades-grid">
-                {unidades.map(({ unidade, contrato, inquilino, status }) => (
-                  <Link
+                {unidades.map(({ unidade, contrato, inquilino, lancamentos, status }) => (
+                  <button
                     key={unidade.id}
-                    to={`/unidades/${unidade.id}`}
+                    type="button"
+                    onClick={() => setUnidadeSelecionada({ unidade, contrato, inquilino, lancamentos })}
                     className={`painel-unidade-cell painel-status-${status}`}
                     title={inquilino?.nomeCompleto ? `${LABEL_STATUS[status]} · ${inquilino.nomeCompleto}` : LABEL_STATUS[status]}
                   >
@@ -194,7 +198,7 @@ export default function PainelOcupacaoPage() {
                           ? 'Ocupada · contrato pendente'
                           : 'Desocupada'}
                     </span>
-                  </Link>
+                  </button>
                 ))}
               </div>
             )}
@@ -224,6 +228,14 @@ export default function PainelOcupacaoPage() {
         <span className="painel-legenda-item"><span className="painel-legenda-swatch painel-status-em-dia" /> Em dia</span>
         <span className="painel-legenda-item"><span className="painel-legenda-swatch painel-status-atrasado" /> Atrasado</span>
       </div>
+
+      <PainelUnidadeModal
+        selecionado={unidadeSelecionada}
+        mesRef={mesRef}
+        formatarMesReferencia={formatarMesReferencia}
+        onClose={() => setUnidadeSelecionada(null)}
+        onChanged={() => setReloadTick((tick) => tick + 1)}
+      />
     </div>
   )
 }

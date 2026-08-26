@@ -442,19 +442,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             {locatarioErrors.nomeCompleto ? <span className="field-error">{locatarioErrors.nomeCompleto}</span> : null}
           </label>
           <label className="form-field">
-            <span>CPF</span>
-            <input value={locatarioForm.cpf} onChange={(event) => updateLocatarioField('cpf', event.target.value)} />
-            {locatarioErrors.cpf ? <span className="field-error">{locatarioErrors.cpf}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>RG</span>
-            <input value={locatarioForm.rg} onChange={(event) => updateLocatarioField('rg', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Data de nascimento</span>
-            <input type="date" value={locatarioForm.dataNascimento} onChange={(event) => updateLocatarioField('dataNascimento', event.target.value)} />
-          </label>
-          <label className="form-field">
             <span>Telefone</span>
             <input value={locatarioForm.telefone} onChange={(event) => updateLocatarioField('telefone', event.target.value)} />
           </label>
@@ -462,37 +449,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             <span>WhatsApp</span>
             <input value={locatarioForm.whatsapp} onChange={(event) => updateLocatarioField('whatsapp', event.target.value)} />
           </label>
-          <label className="form-field">
-            <span>E-mail</span>
-            <input value={locatarioForm.email} onChange={(event) => updateLocatarioField('email', event.target.value)} />
-            {locatarioErrors.email ? <span className="field-error">{locatarioErrors.email}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>Situação do locatário</span>
-            <select value={locatarioForm.situacao} onChange={(event) => updateLocatarioField('situacao', event.target.value)}>
-              <option value="Ativo">Ativo</option>
-              <option value="Inativo">Inativo</option>
-            </select>
-          </label>
         </div>
-        <div className="form-grid" style={{ marginTop: 8 }}>
-          <label className="form-field">
-            <span>Nome do pagador (se diferente do locatário)</span>
-            <input value={locatarioForm.nomePagador} onChange={(event) => updateLocatarioField('nomePagador', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>CPF do pagador</span>
-            <input value={locatarioForm.cpfPagador} onChange={(event) => updateLocatarioField('cpfPagador', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Telefone do pagador</span>
-            <input value={locatarioForm.telefonePagador} onChange={(event) => updateLocatarioField('telefonePagador', event.target.value)} />
-          </label>
-        </div>
-        <label className="form-field form-field-full" style={{ marginTop: 8 }}>
-          <span>Observações sobre o locatário</span>
-          <textarea value={locatarioForm.observacoes} onChange={(event) => updateLocatarioField('observacoes', event.target.value)} />
-        </label>
       </FormSection>
 
       <FormSection title="Vigência" description="Período do contrato.">
@@ -520,84 +477,12 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
         ) : null}
       </FormSection>
 
-      <FormSection title="Valores" description="Valores do aluguel, condomínio e caução.">
+      <FormSection title="Valores" description="Valor do aluguel deste contrato.">
         <div className="form-grid">
           <label className="form-field">
             <span>Valor do aluguel</span>
             <CurrencyInput value={form.valorAluguel} onChange={(valor) => updateField('valorAluguel', valor)} />
             {errors.valorAluguel ? <span className="field-error">{errors.valorAluguel}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>Valor do condomínio</span>
-            <CurrencyInput value={form.valorCondominio} onChange={(valor) => updateField('valorCondominio', valor)} />
-            {errors.valorCondominio ? <span className="field-error">{errors.valorCondominio}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>Valor da caução</span>
-            <CurrencyInput value={form.valorCaucao} onChange={(valor) => updateField('valorCaucao', valor)} />
-            {errors.valorCaucao ? <span className="field-error">{errors.valorCaucao}</span> : null}
-          </label>
-        </div>
-      </FormSection>
-
-      <FormSection title="Multa e juros" description="Configuração de penalidades.">
-        <div className="form-grid">
-          <label className="form-field">
-            <span>Percentual de multa</span>
-            <input type="number" min="0" step="0.01" value={form.percentualMulta} onChange={(event) => updateField('percentualMulta', event.target.value)} />
-            {errors.percentualMulta ? <span className="field-error">{errors.percentualMulta}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>Percentual de juros</span>
-            <input type="number" min="0" step="0.01" value={form.percentualJuros} onChange={(event) => updateField('percentualJuros', event.target.value)} />
-            {errors.percentualJuros ? <span className="field-error">{errors.percentualJuros}</span> : null}
-          </label>
-        </div>
-      </FormSection>
-
-      <FormSection title="Reajuste" description="Dados de reajuste do contrato.">
-        <div className="form-grid">
-          <label className="form-field">
-            <span>Tipo de reajuste</span>
-            <select value={form.reajusteTipo} onChange={(event) => updateField('reajusteTipo', event.target.value)}>
-              {reajusteTipos.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {tipo}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Índice de reajuste</span>
-            <select value={form.indiceReajuste} onChange={(event) => updateField('indiceReajuste', event.target.value)}>
-              {opcoesIndiceReajuste.map((indice) => (
-                <option key={indice} value={indice}>
-                  {indice}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Periodicidade</span>
-            <select value={form.periodicidadeReajuste} onChange={(event) => updateField('periodicidadeReajuste', event.target.value)}>
-              {opcoesPeriodicidade.map((periodicidade) => (
-                <option key={periodicidade} value={periodicidade}>
-                  {periodicidade}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Percentual de reajuste</span>
-            <input type="number" min="0" step="0.01" value={form.percentualReajuste} onChange={(event) => updateField('percentualReajuste', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Data base do reajuste</span>
-            <input type="date" value={form.dataBaseReajuste} onChange={(event) => updateField('dataBaseReajuste', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>Prazo de alerta (dias)</span>
-            <input type="number" min="1" value={form.prazoAlertaReajusteDias || ''} onChange={(event) => updateField('prazoAlertaReajusteDias', event.target.value)} />
           </label>
         </div>
       </FormSection>
@@ -622,12 +507,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
         </div>
       </FormSection>
 
-      <FormSection title="Observações" description="Notas gerais do contrato.">
-        <label className="form-field form-field-full">
-          <textarea value={form.observacoes} onChange={(event) => updateField('observacoes', event.target.value)} />
-        </label>
-      </FormSection>
-
       <FormSection title="Situação" description="Defina o estado do contrato.">
         <div className="form-grid">
           <label className="form-field">
@@ -642,6 +521,150 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
           </label>
         </div>
       </FormSection>
+
+      {/* A administração formal do contrato (multa, juros, reajuste,
+          cláusulas, dados completos do locatário) é da imobiliária — o app
+          só precisa do essencial acima no dia a dia. Estes campos continuam
+          existindo e disponíveis aqui, só ficam recolhidos por padrão. */}
+      <details className="collapsible-card">
+        <summary>
+          <span className="collapsible-card-title">
+            <span className="name">Detalhes avançados (opcional)</span>
+          </span>
+        </summary>
+        <div className="collapsible-card-body">
+          <FormSection title="Locatário — dados adicionais" description="CPF, RG, e-mail e dados do pagador, se precisar registrar aqui.">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>CPF</span>
+                <input value={locatarioForm.cpf} onChange={(event) => updateLocatarioField('cpf', event.target.value)} />
+                {locatarioErrors.cpf ? <span className="field-error">{locatarioErrors.cpf}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>RG</span>
+                <input value={locatarioForm.rg} onChange={(event) => updateLocatarioField('rg', event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span>Data de nascimento</span>
+                <input type="date" value={locatarioForm.dataNascimento} onChange={(event) => updateLocatarioField('dataNascimento', event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span>E-mail</span>
+                <input value={locatarioForm.email} onChange={(event) => updateLocatarioField('email', event.target.value)} />
+                {locatarioErrors.email ? <span className="field-error">{locatarioErrors.email}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Situação do locatário</span>
+                <select value={locatarioForm.situacao} onChange={(event) => updateLocatarioField('situacao', event.target.value)}>
+                  <option value="Ativo">Ativo</option>
+                  <option value="Inativo">Inativo</option>
+                </select>
+              </label>
+            </div>
+            <div className="form-grid" style={{ marginTop: 8 }}>
+              <label className="form-field">
+                <span>Nome do pagador (se diferente do locatário)</span>
+                <input value={locatarioForm.nomePagador} onChange={(event) => updateLocatarioField('nomePagador', event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span>CPF do pagador</span>
+                <input value={locatarioForm.cpfPagador} onChange={(event) => updateLocatarioField('cpfPagador', event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span>Telefone do pagador</span>
+                <input value={locatarioForm.telefonePagador} onChange={(event) => updateLocatarioField('telefonePagador', event.target.value)} />
+              </label>
+            </div>
+            <label className="form-field form-field-full" style={{ marginTop: 8 }}>
+              <span>Observações sobre o locatário</span>
+              <textarea value={locatarioForm.observacoes} onChange={(event) => updateLocatarioField('observacoes', event.target.value)} />
+            </label>
+          </FormSection>
+
+          <FormSection title="Valores adicionais" description="Condomínio e caução, se administrados por aqui.">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Valor do condomínio</span>
+                <CurrencyInput value={form.valorCondominio} onChange={(valor) => updateField('valorCondominio', valor)} />
+                {errors.valorCondominio ? <span className="field-error">{errors.valorCondominio}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Valor da caução</span>
+                <CurrencyInput value={form.valorCaucao} onChange={(valor) => updateField('valorCaucao', valor)} />
+                {errors.valorCaucao ? <span className="field-error">{errors.valorCaucao}</span> : null}
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Multa e juros" description="Configuração de penalidades.">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Percentual de multa</span>
+                <input type="number" min="0" step="0.01" value={form.percentualMulta} onChange={(event) => updateField('percentualMulta', event.target.value)} />
+                {errors.percentualMulta ? <span className="field-error">{errors.percentualMulta}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Percentual de juros</span>
+                <input type="number" min="0" step="0.01" value={form.percentualJuros} onChange={(event) => updateField('percentualJuros', event.target.value)} />
+                {errors.percentualJuros ? <span className="field-error">{errors.percentualJuros}</span> : null}
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Reajuste" description="Dados de reajuste do contrato.">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Tipo de reajuste</span>
+                <select value={form.reajusteTipo} onChange={(event) => updateField('reajusteTipo', event.target.value)}>
+                  {reajusteTipos.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {tipo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>Índice de reajuste</span>
+                <select value={form.indiceReajuste} onChange={(event) => updateField('indiceReajuste', event.target.value)}>
+                  {opcoesIndiceReajuste.map((indice) => (
+                    <option key={indice} value={indice}>
+                      {indice}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>Periodicidade</span>
+                <select value={form.periodicidadeReajuste} onChange={(event) => updateField('periodicidadeReajuste', event.target.value)}>
+                  {opcoesPeriodicidade.map((periodicidade) => (
+                    <option key={periodicidade} value={periodicidade}>
+                      {periodicidade}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>Percentual de reajuste</span>
+                <input type="number" min="0" step="0.01" value={form.percentualReajuste} onChange={(event) => updateField('percentualReajuste', event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span>Data base do reajuste</span>
+                <input type="date" value={form.dataBaseReajuste} onChange={(event) => updateField('dataBaseReajuste', event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span>Prazo de alerta (dias)</span>
+                <input type="number" min="1" value={form.prazoAlertaReajusteDias || ''} onChange={(event) => updateField('prazoAlertaReajusteDias', event.target.value)} />
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Observações" description="Notas gerais do contrato.">
+            <label className="form-field form-field-full">
+              <textarea value={form.observacoes} onChange={(event) => updateField('observacoes', event.target.value)} />
+            </label>
+          </FormSection>
+        </div>
+      </details>
 
       <div className="form-actions">
         <button className="button button-secondary" type="button" onClick={() => navigate(-1)} disabled={submitting}>

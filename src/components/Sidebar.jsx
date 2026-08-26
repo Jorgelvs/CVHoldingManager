@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Gauge, LayoutGrid, Building, Users, FileText, DollarSign, BarChart2, Settings, Archive, History, Bell, Database, LogOut } from 'lucide-react'
-import { contarNotificacoesNaoLidas } from '../modules/notificacoes/services/notificacaoService.js'
+import React, { useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { Gauge, LayoutGrid, Building, Users, FileText, DollarSign, BarChart2, Settings, Archive, Database, LogOut } from 'lucide-react'
 import { useAuth } from '../modules/auth/context/AuthContext.jsx'
 import Modal from './Modal.jsx'
 
+// Auditoria e Notificações saíram do menu a pedido do usuário (pouco usadas
+// no dia a dia) — as rotas continuam funcionando normalmente, só não
+// aparecem mais aqui. Dá pra voltar a listar bastando readicionar as linhas.
 const items = [
   { to: '/', label: 'Painel', icon: <LayoutGrid size={18} /> },
   { to: '/dashboard', label: 'Dashboard', icon: <Gauge size={18} /> },
@@ -13,8 +15,6 @@ const items = [
   { to: '/locatarios', label: 'Locatários', icon: <Users size={18} /> },
   { to: '/contratos', label: 'Contratos', icon: <FileText size={18} /> },
   { to: '/documentos', label: 'Documentos', icon: <Archive size={18} /> },
-  { to: '/notificacoes', label: 'Notificacoes', icon: <Bell size={18} /> },
-  { to: '/auditoria', label: 'Auditoria', icon: <History size={18} /> },
   { to: '/backup', label: 'Backup', icon: <Database size={18} /> },
   { to: '/relatorios', label: 'Relatórios', icon: <BarChart2 size={18} /> },
   { to: '/configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
@@ -22,22 +22,8 @@ const items = [
 
 export default function Sidebar() {
   const navigate = useNavigate()
-  const location = useLocation()
-  const [naoLidas, setNaoLidas] = useState(0)
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
   const { authRequired, isAuthenticated, user, authBusy, logout } = useAuth()
-
-  useEffect(() => {
-    const refreshCount = () => {
-      setNaoLidas(contarNotificacoesNaoLidas())
-    }
-
-    refreshCount()
-    window.addEventListener('cvholding_notificacoes_updated', refreshCount)
-    return () => {
-      window.removeEventListener('cvholding_notificacoes_updated', refreshCount)
-    }
-  }, [location.pathname, location.search])
 
   const handleConfirmLogout = async () => {
     if (authBusy) return
@@ -60,22 +46,14 @@ export default function Sidebar() {
     <aside className="app-sidebar">
       <nav>
         <ul>
-          {items.map((it) => {
-            const exibeContador = it.to === '/notificacoes' && naoLidas > 0
-            return (
-              <li key={it.to}>
-                <NavLink to={it.to} end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                  <span className="icon">{it.icon}</span>
-                  <span className="label">{it.label}</span>
-                  {exibeContador ? (
-                    <span className="menu-badge" aria-label={`${naoLidas} notificacoes nao lidas`}>
-                      {naoLidas > 99 ? '99+' : naoLidas}
-                    </span>
-                  ) : null}
-                </NavLink>
-              </li>
-            )
-          })}
+          {items.map((it) => (
+            <li key={it.to}>
+              <NavLink to={it.to} end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                <span className="icon">{it.icon}</span>
+                <span className="label">{it.label}</span>
+              </NavLink>
+            </li>
+          ))}
           <li>
             <div className="nav-link nav-link-section">
               <span className="icon"><DollarSign size={18} /></span>

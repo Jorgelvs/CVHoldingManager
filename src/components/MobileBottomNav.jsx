@@ -15,14 +15,14 @@ const QUERY_ROUTES = [
   '/locatarios',
 ]
 
+// Auditoria e Notificações saíram a pedido do usuário (pouco usadas no dia
+// a dia) — rotas continuam funcionando, só não aparecem mais nos atalhos.
 const MORE_ROUTES = [
   '/dashboard',
   '/documentos',
   '/financeiro/rateios',
   '/financeiro/caucoes',
-  '/notificacoes',
   '/relatorios',
-  '/auditoria',
   '/backup',
   '/configuracoes',
 ]
@@ -171,14 +171,8 @@ export default function MobileBottomNav() {
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/financeiro/caucoes') }}>
             Cauções
           </button>
-          <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/notificacoes') }}>
-            Notificações
-          </button>
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/relatorios') }}>
             Relatórios
-          </button>
-          <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/auditoria') }}>
-            Auditoria
           </button>
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/backup') }}>
             Backup

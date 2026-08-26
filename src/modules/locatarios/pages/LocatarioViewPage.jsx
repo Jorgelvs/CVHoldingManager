@@ -103,6 +103,7 @@ export default function LocatarioViewPage() {
                   <th>Unidade</th>
                   <th>Situação</th>
                   <th>Vigência</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -116,6 +117,10 @@ export default function LocatarioViewPage() {
                       <td>{unidade?.nome || 'N/A'}</td>
                       <td>{contrato.situacao}</td>
                       <td>{contrato.dataInicio || '-'} até {contrato.dataFim || 'sem fim'}</td>
+                      <td className="table-actions">
+                        <Link className="button button-secondary" to={`/contratos/${contrato.id}`}>Visualizar</Link>
+                        <Link className="button button-secondary" to={`/contratos/${contrato.id}/editar`}>Editar</Link>
+                      </td>
                     </tr>
                   )
                 })}

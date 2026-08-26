@@ -8,6 +8,7 @@ import { obterPreferenciasInterface } from '../../configuracoes/services/configu
 export default function ContaListPage() {
   const navigate = useNavigate()
   const [contas, setContas] = useState([])
+  const [paginaAtual, setPaginaAtual] = useState(1)
   const itensPorPagina = Number(obterPreferenciasInterface()?.itensPorPagina || 20)
 
   useEffect(() => {
@@ -16,7 +17,10 @@ export default function ContaListPage() {
   }, [])
 
   const refresh = () => setContas(listarContas())
-  const contasPaginadas = contas.slice(0, itensPorPagina)
+  // Antes sempre cortava em "itensPorPagina" (padrão 20) sem controle pra
+  // ver o restante — contas além do 20º somiam sem aviso.
+  const contasPaginadas = contas.slice(0, itensPorPagina * paginaAtual)
+  const restantesContas = contas.length - contasPaginadas.length
 
   const handleToggle = (conta) => {
     atualizarConta(conta.id, { ativa: !conta.ativa })
@@ -98,6 +102,14 @@ export default function ContaListPage() {
           </table>
         </div>
       )}
+
+      {restantesContas > 0 ? (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <button type="button" className="button button-secondary" onClick={() => setPaginaAtual((atual) => atual + 1)}>
+            Carregar mais ({restantesContas} restantes)
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

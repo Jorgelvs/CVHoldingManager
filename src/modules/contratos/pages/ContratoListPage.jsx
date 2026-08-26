@@ -31,6 +31,7 @@ export default function ContratoListPage() {
   const [alertaFiltro, setAlertaFiltro] = useState('')
   const [confirm, setConfirm] = useState(null)
   const [alert, setAlert] = useState(null)
+  const [paginaAtual, setPaginaAtual] = useState(1)
   const itensPorPagina = Number(obterPreferenciasInterface()?.itensPorPagina || 20)
 
   useEffect(() => {
@@ -104,7 +105,16 @@ export default function ContratoListPage() {
       })
   }, [contratos, search, situacaoFiltro, patrimonioFiltro, contratosFiltradosPorAlerta])
 
-  const paginados = useMemo(() => filtrados.slice(0, itensPorPagina), [filtrados, itensPorPagina])
+  // Antes a lista sempre cortava em "itensPorPagina" (padrão 20) sem
+  // nenhum controle pra ver o restante — contratos além do 20º na
+  // ordenação simplesmente não apareciam em lugar nenhum, sem aviso.
+  // Volta pra página 1 sempre que o filtro muda o conjunto resultante.
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [search, situacaoFiltro, patrimonioFiltro, alertaFiltro])
+
+  const paginados = useMemo(() => filtrados.slice(0, itensPorPagina * paginaAtual), [filtrados, itensPorPagina, paginaAtual])
+  const restantes = filtrados.length - paginados.length
 
   const handleAction = (contrato, action) => {
     setConfirm({ contrato, action })
@@ -279,6 +289,14 @@ export default function ContratoListPage() {
           })}
         </div>
       )}
+
+      {restantes > 0 ? (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <button type="button" className="button button-secondary" onClick={() => setPaginaAtual((atual) => atual + 1)}>
+            Carregar mais ({restantes} restantes)
+          </button>
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(confirm)}

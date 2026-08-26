@@ -51,6 +51,7 @@ export default function DocumentosPage() {
   const [pastaContratoFiltro, setPastaContratoFiltro] = useState('')
   const [aviso, setAviso] = useState('')
   const [previewDocumento, setPreviewDocumento] = useState(null)
+  const [paginaAtual, setPaginaAtual] = useState(1)
 
   useEffect(() => {
     setDocumentos(listarDocumentos())
@@ -97,7 +98,14 @@ export default function DocumentosPage() {
     return base
   }, [filtros, documentos, alertaFiltro, pastaContratoFiltro, contratosPorId])
 
-  const paginados = useMemo(() => filtrados.slice(0, itensPorPagina), [filtrados, itensPorPagina])
+  // Antes a lista sempre cortava em "itensPorPagina" (padrão 20) sem
+  // controle pra ver o restante — documentos além do 20º somiam sem aviso.
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [filtros, alertaFiltro, pastaContratoFiltro])
+
+  const paginados = useMemo(() => filtrados.slice(0, itensPorPagina * paginaAtual), [filtrados, itensPorPagina, paginaAtual])
+  const restantesDocumentos = filtrados.length - paginados.length
 
   const atualizarLista = () => setDocumentos(listarDocumentos())
 
@@ -273,6 +281,14 @@ export default function DocumentosPage() {
               </tbody>
             </table>
           </div>
+
+          {restantesDocumentos > 0 ? (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+              <button type="button" className="button button-secondary" onClick={() => setPaginaAtual((atual) => atual + 1)}>
+                Carregar mais ({restantesDocumentos} restantes)
+              </button>
+            </div>
+          ) : null}
 
           <Modal open={Boolean(previewDocumento)} title={previewDocumento?.nome || 'Visualização do documento'} onClose={() => setPreviewDocumento(null)}>
             {previewDocumento ? (

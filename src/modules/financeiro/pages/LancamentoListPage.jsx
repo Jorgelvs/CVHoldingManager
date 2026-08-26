@@ -24,6 +24,7 @@ export default function LancamentoListPage() {
   const [confirmExcluir, setConfirmExcluir] = useState(null)
   const [confirmCancelar, setConfirmCancelar] = useState(null)
   const [filtrosVisiveis, setFiltrosVisiveis] = useState(false)
+  const [paginaAtual, setPaginaAtual] = useState(1)
 
   const preferenciasInterface = useMemo(() => obterPreferenciasInterface(), [])
   const itensPorPagina = Number(preferenciasInterface?.itensPorPagina || 20)
@@ -65,7 +66,15 @@ export default function LancamentoListPage() {
     return ordenarLancamentos(filtrarLancamentos(lancamentos, filtros))
   }, [lancamentos, filtros])
 
-  const historicoPaginado = useMemo(() => historicoFiltrado.slice(0, itensPorPagina), [historicoFiltrado, itensPorPagina])
+  // Antes a lista sempre cortava em "itensPorPagina" (padrão 20) sem
+  // controle pra ver o restante — lançamentos além do 20º somiam sem
+  // aviso, o que é especialmente grave num módulo que cresce todo mês.
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [filtros])
+
+  const historicoPaginado = useMemo(() => historicoFiltrado.slice(0, itensPorPagina * paginaAtual), [historicoFiltrado, itensPorPagina, paginaAtual])
+  const restantesLancamentos = historicoFiltrado.length - historicoPaginado.length
 
   const patrimonios = useMemo(() => listarPatrimonios(), [])
   const unidades = useMemo(() => listarUnidades(), [])
@@ -249,6 +258,14 @@ export default function LancamentoListPage() {
           </table>
         </div>
       )}
+
+      {restantesLancamentos > 0 ? (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <button type="button" className="button button-secondary" onClick={() => setPaginaAtual((atual) => atual + 1)}>
+            Carregar mais ({restantesLancamentos} restantes)
+          </button>
+        </div>
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(confirmCancelar)}

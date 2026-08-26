@@ -8,7 +8,7 @@ import { situacoesContrato } from '../../contratos/constants/contratoConstants.j
 import { criarLancamento } from '../../financeiro/services/financeiroService.js'
 import { registrarBaixa, calcularSaldoPendente } from '../../financeiro/services/baixaService.js'
 import { listarComissoesDetalhadas } from '../../financeiro/services/comissaoService.js'
-import { getStatusEfetivo, formatarMoeda } from '../../financeiro/utils/financeiroUtils.js'
+import { getStatusEfetivo, formatarMoeda, avaliarDivergenciaDeposito } from '../../financeiro/utils/financeiroUtils.js'
 import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
 
 const LABEL_STATUS_LANCAMENTO = {
@@ -50,12 +50,18 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
   const [novoPagamentoAberto, setNovoPagamentoAberto] = useState(false)
   const [novoPagamentoValor, setNovoPagamentoValor] = useState('')
   const [novoPagamentoJaRecebido, setNovoPagamentoJaRecebido] = useState(true)
+  const [divergenciaPendente, setDivergenciaPendente] = useState(null)
   const [mensagem, setMensagem] = useState(null)
+
+  // Valor esperado do depósito: quando a unidade tem condomínio, o
+  // inquilino costuma depositar aluguel + condomínio juntos, num valor só.
+  const valorEsperadoDeposito = (Number(contrato?.valorAluguel || 0) + Number(contrato?.valorCondominio || 0)) || null
 
   useEffect(() => {
     setEditandoInquilino(false)
     setEditandoContrato(false)
     setNovoPagamentoAberto(false)
+    setDivergenciaPendente(null)
     setMensagem(null)
     setInquilinoForm({
       nomeCompleto: inquilino?.nomeCompleto || '',
@@ -69,7 +75,8 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
       dataFim: contrato?.dataFim || '',
       situacao: contrato?.situacao || '',
     })
-    setNovoPagamentoValor(contrato?.valorAluguel ? String(contrato.valorAluguel) : '')
+    const esperado = (Number(contrato?.valorAluguel || 0) + Number(contrato?.valorCondominio || 0)) || contrato?.valorAluguel
+    setNovoPagamentoValor(esperado ? String(esperado) : '')
   }, [unidade?.id, contrato?.id, inquilino?.id])
 
   const comissaoDoMes = useMemo(() => {
@@ -138,13 +145,27 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
     onChanged()
   }
 
-  const handleLancarPagamento = () => {
+  const handleLancarPagamento = ({ ignorarDivergencia = false } = {}) => {
     if (!unidade) return
     const valorNumero = Number(novoPagamentoValor)
     if (!novoPagamentoValor || Number.isNaN(valorNumero) || valorNumero <= 0) {
       setMensagem({ type: 'error', text: 'Informe um valor válido para o pagamento.' })
       return
     }
+
+    // Muitos inquilinos depositam aluguel + condomínio juntos. Antes de
+    // gravar, avisa (sem bloquear) se o valor digitado não bate com o
+    // esperado do contrato — pede confirmação explícita em vez de assumir
+    // desconto ou multa sozinho.
+    if (!ignorarDivergencia) {
+      const divergencia = avaliarDivergenciaDeposito(valorNumero, contrato)
+      if (divergencia) {
+        setDivergenciaPendente(divergencia)
+        return
+      }
+    }
+    setDivergenciaPendente(null)
+
     const parametrosFinanceiros = obterParametrosFinanceiros()
     const hoje = new Date().toISOString().slice(0, 10)
     criarLancamento({
@@ -198,9 +219,17 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
 
           {novoPagamentoAberto ? (
             <div className="form-grid" style={{ marginTop: 8 }}>
+              {valorEsperadoDeposito ? (
+                <p className="hint form-field-full" style={{ margin: 0 }}>
+                  Valor esperado do depósito (aluguel + condomínio): {formatarMoeda(valorEsperadoDeposito)}
+                </p>
+              ) : null}
               <div className="form-field">
                 <label>Valor recebido</label>
-                <CurrencyInput value={novoPagamentoValor} onChange={setNovoPagamentoValor} />
+                <CurrencyInput
+                  value={novoPagamentoValor}
+                  onChange={(valor) => { setNovoPagamentoValor(valor); setDivergenciaPendente(null) }}
+                />
               </div>
               <div className="form-field">
                 <label>
@@ -213,10 +242,25 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
                   Já foi recebido
                 </label>
               </div>
-              <div className="form-field form-field-full" style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="button button-primary" onClick={handleLancarPagamento}>Salvar</button>
-                <button type="button" className="button button-secondary" onClick={() => setNovoPagamentoAberto(false)}>Cancelar</button>
-              </div>
+
+              {divergenciaPendente ? (
+                <div className="alert-box alert-error form-field-full">
+                  <p style={{ margin: '0 0 8px' }}>
+                    {divergenciaPendente.tipo === 'menor'
+                      ? `O valor informado é ${formatarMoeda(divergenciaPendente.diferenca)} menor que o esperado (${formatarMoeda(divergenciaPendente.esperado)}). Houve algum desconto combinado com o inquilino?`
+                      : `O valor informado é ${formatarMoeda(divergenciaPendente.diferenca)} maior que o esperado (${formatarMoeda(divergenciaPendente.esperado)}). Pode ser multa por atraso ou outro acréscimo?`}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="button button-secondary" onClick={() => setDivergenciaPendente(null)}>Vou ajustar o valor</button>
+                    <button type="button" className="button button-primary" onClick={() => handleLancarPagamento({ ignorarDivergencia: true })}>Confirmar mesmo assim</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="form-field form-field-full" style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="button button-primary" onClick={() => handleLancarPagamento()}>Salvar</button>
+                  <button type="button" className="button button-secondary" onClick={() => { setNovoPagamentoAberto(false); setDivergenciaPendente(null) }}>Cancelar</button>
+                </div>
+              )}
             </div>
           ) : (
             <button type="button" className="button button-secondary" onClick={() => setNovoPagamentoAberto(true)}>

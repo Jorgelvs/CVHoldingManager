@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidadesPorPatrimonio, buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { listarLocatarios, buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
-import { contratoAtivoPorUnidade, contratoAtivoPorLocatario } from '../../contratos/services/contratoService.js'
+import { contratoAtivoPorUnidade, contratoAtivoPorLocatario, buscarContratoPorId } from '../../contratos/services/contratoService.js'
 import { listarCategorias, listarSubcategoriasDetalhadas, categoriaTemSubcategorias, adicionarSubcategoriaPersonalizada, buscarSubcategoriaDetalhe } from '../services/categoriaFinanceiraService.js'
 import { listarContas } from '../services/contaService.js'
 import AdicionarSubcategoriaDialog from './AdicionarSubcategoriaDialog.jsx'
 import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
+import { avaliarDivergenciaDeposito, formatarMoeda } from '../utils/financeiroUtils.js'
 import CurrencyInput from '../../../components/CurrencyInput.jsx'
 import SearchableSelect from '../../../components/SearchableSelect.jsx'
 
@@ -349,8 +350,9 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
   }
 
   const [submitting, setSubmitting] = useState(false)
+  const [divergenciaPendente, setDivergenciaPendente] = useState(null)
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event, opcoes = {}) => {
     event.preventDefault()
     if (submitting) return
     setAlert(null)
@@ -359,6 +361,20 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       setAlert({ type: 'error', text: Object.values(errors)[0] })
       return
     }
+
+    // Muitos inquilinos depositam aluguel + condomínio juntos. Antes de
+    // gravar um recebimento de Aluguel vinculado a contrato, avisa (sem
+    // bloquear) se o valor não bate com o esperado — pede confirmação
+    // explícita em vez de assumir desconto ou multa sozinho.
+    if (!opcoes.ignorarDivergencia && data.tipo === 'receita' && data.categoria === 'Aluguel' && data.contratoId) {
+      const contratoVinculado = buscarContratoPorId(data.contratoId)
+      const divergencia = avaliarDivergenciaDeposito(data.valor, contratoVinculado)
+      if (divergencia) {
+        setDivergenciaPendente(divergencia)
+        return
+      }
+    }
+    setDivergenciaPendente(null)
 
     const payload = {
       ...data,
@@ -618,6 +634,27 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
           </div>
         </div>
       </div>
+
+      {divergenciaPendente ? (
+        <div className="alert-box alert-error">
+          <p style={{ margin: '0 0 8px' }}>
+            {divergenciaPendente.tipo === 'menor'
+              ? `O valor informado é ${formatarMoeda(divergenciaPendente.diferenca)} menor que o esperado (${formatarMoeda(divergenciaPendente.esperado)}, aluguel + condomínio). Houve algum desconto combinado com o inquilino?`
+              : `O valor informado é ${formatarMoeda(divergenciaPendente.diferenca)} maior que o esperado (${formatarMoeda(divergenciaPendente.esperado)}, aluguel + condomínio). Pode ser multa por atraso ou outro acréscimo?`}
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="button button-secondary" onClick={() => setDivergenciaPendente(null)}>Vou ajustar o valor</button>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => handleSubmit({ preventDefault: () => {} }, { ignorarDivergencia: true })}
+            >
+              Confirmar mesmo assim
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="form-actions">
         <button type="button" className="button button-secondary" onClick={() => navigate(-1)}>
           Voltar

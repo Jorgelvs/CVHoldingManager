@@ -9,6 +9,26 @@ export function formatarMoeda(valor) {
   })
 }
 
+// Muitos inquilinos depositam aluguel + condomínio juntos, num valor só.
+// Compara o valor efetivamente depositado com o esperado (aluguel +
+// condomínio do contrato) para avisar quem está registrando o pagamento —
+// nunca bloqueia, só sinaliza pra revisão humana (mesmo padrão de
+// segurança usado no rateio e na Entrada Universal: sempre mostrar o
+// cálculo antes de aceitar, nunca decidir sozinho). Retorna null quando
+// bate certinho (ou quando não há valores de contrato pra comparar).
+export function avaliarDivergenciaDeposito(valorDepositado, contrato) {
+  if (!contrato) return null
+  const esperado = Number(contrato.valorAluguel || 0) + Number(contrato.valorCondominio || 0)
+  if (esperado <= 0) return null
+  const valor = Number(valorDepositado || 0)
+  if (Number.isNaN(valor) || Math.abs(valor - esperado) < 0.01) return null
+  return {
+    esperado,
+    diferenca: Math.abs(valor - esperado),
+    tipo: valor < esperado ? 'menor' : 'maior',
+  }
+}
+
 export function getStatusEfetivo(lancamento) {
   if (!lancamento) return ''
   if (lancamento.status === 'cancelado') return 'cancelado'

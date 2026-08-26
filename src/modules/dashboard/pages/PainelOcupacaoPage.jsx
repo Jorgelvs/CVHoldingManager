@@ -52,13 +52,31 @@ function competenciaMes(item) {
 // os lançamentos do mês foram pagos, fica "em dia"; caso contrário (sem lançamento
 // ainda, ou pendente dentro do prazo, ou ocupada sem contrato lançado), fica "ocupada"
 // (verde claro neutro).
-function statusUnidade(unidade, contrato, lancamentosDoMes) {
+//
+// Corrigido em 26/08/2026: quando não existe NENHUM lançamento cadastrado para a
+// unidade no mês (nem pendente, nem pago), a célula caía sempre em "ocupada" (verde
+// claro neutro) mesmo que o dia de vencimento do contrato já tivesse passado — dando
+// a entender que estava tudo em ordem quando, na prática, o aluguel nem foi lançado
+// nem recebido. Agora, nesse caso, compara o dia de vencimento do contrato com hoje:
+// se já passou, mostra "atrasado" (vermelho); só fica "ocupada" (neutro) se o
+// vencimento deste mês ainda não chegou ou se o contrato não tem dia de vencimento
+// definido.
+function statusUnidade(unidade, contrato, lancamentosDoMes, mesRef) {
   const ocupada = Boolean(contrato) || unidade.situacao === 'Ocupada'
   if (!ocupada) return 'desocupada'
-  if (lancamentosDoMes.length === 0) return 'ocupada'
+
+  const hoje = new Date().toISOString().slice(0, 10)
+  const diaVencimento = contrato?.diaVencimento ? String(contrato.diaVencimento).padStart(2, '0') : null
+  const vencimentoDoMes = diaVencimento ? `${mesRef}-${diaVencimento}` : null
+  const vencimentoJaPassou = Boolean(vencimentoDoMes && vencimentoDoMes < hoje)
+
+  if (lancamentosDoMes.length === 0) {
+    return vencimentoJaPassou ? 'atrasado' : 'ocupada'
+  }
   const efetivos = lancamentosDoMes.map(getStatusEfetivo)
   if (efetivos.includes('atrasado')) return 'atrasado'
   if (efetivos.every((efetivo) => efetivo === 'pago')) return 'em-dia'
+  if (vencimentoJaPassou) return 'atrasado'
   return 'ocupada'
 }
 
@@ -116,7 +134,7 @@ export default function PainelOcupacaoPage() {
           contrato,
           inquilino,
           lancamentos: lancamentosUnidade,
-          status: statusUnidade(unidade, contrato, lancamentosUnidade),
+          status: statusUnidade(unidade, contrato, lancamentosUnidade, mesRef),
         }
       })
 

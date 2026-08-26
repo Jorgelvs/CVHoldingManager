@@ -140,6 +140,10 @@ export default function ContratoListPage() {
     }
     atualizarLista()
     setConfirm(null)
+    // Em listas longas, o card clicado pode estar bem abaixo do alerta (que
+    // sempre aparece no topo) — sem rolar pra cima, a mensagem de erro
+    // passa despercebida e parece que "não fez nada".
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (

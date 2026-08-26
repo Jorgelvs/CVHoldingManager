@@ -129,12 +129,23 @@ export default function PainelOcupacaoPage() {
         const contrato = contratoAtivoPorUnidade(unidade.id)
         const inquilino = contrato ? buscarLocatarioPorId(contrato.locatarioId) : null
         const lancamentosUnidade = lancamentosDoMes.filter((item) => item.unidadeId === unidade.id)
+        const status = statusUnidade(unidade, contrato, lancamentosUnidade, mesRef)
+        // Quando fica "atrasado" sem nenhum lançamento gerado (corrigido em
+        // 26/08/2026 junto com a cor do card), o valor esperado do contrato
+        // (aluguel + condomínio) precisa entrar na soma de "Atrasado" do resumo
+        // do patrimônio — senão o card de baixo continua R$ 0,00 mesmo com
+        // unidades vermelhas no grid, porque calcularAtrasados só soma
+        // lançamentos que existem, e aqui não existe nenhum ainda.
+        const valorAtrasadoSemLancamento = status === 'atrasado' && lancamentosUnidade.length === 0
+          ? Number(contrato?.valorAluguel || 0) + Number(contrato?.valorCondominio || 0)
+          : 0
         return {
           unidade,
           contrato,
           inquilino,
           lancamentos: lancamentosUnidade,
-          status: statusUnidade(unidade, contrato, lancamentosUnidade, mesRef),
+          status,
+          valorAtrasadoSemLancamento,
         }
       })
 
@@ -149,7 +160,8 @@ export default function PainelOcupacaoPage() {
       const recebido = lancamentosPatrimonio
         .filter((item) => getStatusEfetivo(item) === 'pago')
         .reduce((total, item) => total + Number(item.valor || 0), 0)
-      const atrasado = calcularAtrasados(lancamentosPatrimonio)
+      const atrasadoSemLancamento = unidadesComStatus.reduce((total, item) => total + item.valorAtrasadoSemLancamento, 0)
+      const atrasado = calcularAtrasados(lancamentosPatrimonio) + atrasadoSemLancamento
       const aReceber = lancamentosPatrimonio
         .filter((item) => ['pendente', 'parcial'].includes(getStatusEfetivo(item)))
         .reduce((total, item) => total + Number(item.valor || 0), 0)

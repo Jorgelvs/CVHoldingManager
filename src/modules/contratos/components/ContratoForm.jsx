@@ -102,6 +102,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
   const [form, setForm] = useState(defaultForm)
   const [errors, setErrors] = useState({})
   const [submitMessage, setSubmitMessage] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const [locatarios, setLocatarios] = useState([])
   const [patrimonios, setPatrimonios] = useState([])
   const [unidades, setUnidades] = useState([])
@@ -303,10 +304,16 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
 
   const handleSubmit = (event) => {
     event.preventDefault()
+    // Sem esta trava, um segundo clique em "Salvar contrato" (comum quando
+    // o usuário não percebe reação imediata na tela) disparava um segundo
+    // onSave antes da navegação acontecer, criando um contrato duplicado
+    // idêntico ao primeiro.
+    if (submitting) return
     if (!validate()) {
       setSubmitMessage({ type: 'error', text: 'Corrija os erros antes de salvar.' })
       return
     }
+    setSubmitting(true)
     const response = onSave({
       ...form,
       valorAluguel: form.valorAluguel || '0',
@@ -334,10 +341,15 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
 
     if (response?.error) {
       setSubmitMessage({ type: 'error', text: response.error })
+      setSubmitting(false)
       return
     }
 
     setSubmitMessage({ type: 'success', text: 'Contrato salvo com sucesso.' })
+    // Não reseta "submitting" aqui: em caso de sucesso o ContratoFormPage já
+    // navega para outra tela, então o botão fica desabilitado só até o
+    // formulário sumir da tela (evita reabilitar e permitir um novo clique
+    // enquanto a navegação ainda não aconteceu).
   }
 
   const unidadesElegiveis = unidades.filter((unidade) => unidade.situacao !== 'Em implantação' && unidade.situacao !== 'Inativa')
@@ -632,11 +644,11 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       </FormSection>
 
       <div className="form-actions">
-        <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>
+        <button className="button button-secondary" type="button" onClick={() => navigate(-1)} disabled={submitting}>
           Voltar
         </button>
-        <button className="button button-primary" type="submit">
-          Salvar contrato
+        <button className="button button-primary" type="submit" disabled={submitting}>
+          {submitting ? 'Salvando...' : 'Salvar contrato'}
         </button>
       </div>
     </form>

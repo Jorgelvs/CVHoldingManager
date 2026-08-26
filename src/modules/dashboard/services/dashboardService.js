@@ -1,6 +1,7 @@
 import { listarLancamentos } from '../../financeiro/services/financeiroService.js'
 import { getDataConsiderada } from '../../financeiro/utils/financeiroUtils.js'
 import { listarContas, calcularSaldo } from '../../financeiro/services/contaService.js'
+import { calcularResumoComissoesPorImobiliaria } from '../../financeiro/services/comissaoService.js'
 import { listarMovimentos } from '../../financeiro/services/livroCaixaService.js'
 import { listarContratos, contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
 import { listarContratosVencendoPrazo, listarReajustesPendentes } from '../../contratos/services/reajusteService.js'
@@ -214,6 +215,17 @@ export function getDashboardData(periodo = {}, contaId = '') {
     item.resultado = item.receitas - item.despesas
   })
 
+  // Comissão da imobiliária no período: calculada (nunca lançada automaticamente,
+  // mesmo padrão do resto do app) só sobre receitas de Aluguel/Multa de contratos
+  // com imobiliária vinculada. "Total financeiro da Holding" (abaixo) é o saldo
+  // real das contas, que só reflete a comissão quando ela já foi paga (lançamento
+  // de despesa registrado); aqui mostramos separadamente quanto seria devido no
+  // período, pago ou não, para o resultado líquido bater com o que efetivamente
+  // sobra depois de repassar a comissão.
+  const comissoesPorImobiliaria = calcularResumoComissoesPorImobiliaria({ periodoInicio, periodoFim }).filter((item) => item.quantidadeLancamentos > 0)
+  const totalComissaoPeriodo = comissoesPorImobiliaria.reduce((sum, item) => sum + Number(item.totalComissao || 0), 0)
+  const resultadoLiquidoPeriodo = resultadoPeriodo - totalComissaoPeriodo
+
   const receitas12Meses = serieFinanceira12Meses.reduce((sum, mes) => sum + Number(mes.receitas || 0), 0)
   const despesas12Meses = serieFinanceira12Meses.reduce((sum, mes) => sum + Number(mes.despesas || 0), 0)
   const resultado12Meses = receitas12Meses - despesas12Meses
@@ -230,9 +242,14 @@ export function getDashboardData(periodo = {}, contaId = '') {
       receitas: receitasPeriodo,
       despesas: despesasPeriodo,
       resultado: resultadoPeriodo,
+      resultadoLiquido: resultadoLiquidoPeriodo,
       saldoDisponivel: disponibilidadeImediata,
       totalFinanceiro,
       investimentos: totalInvestido,
+    },
+    comissoes: {
+      porImobiliaria: comissoesPorImobiliaria,
+      total: totalComissaoPeriodo,
     },
     comparacao,
     indicadoresGerenciais: {

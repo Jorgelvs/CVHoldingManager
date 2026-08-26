@@ -64,25 +64,32 @@ export default function Dashboard() {
     return <div className="page-center">Carregando dashboard...</div>
   }
 
-  const lancamentosQuery = new URLSearchParams({
+  const lancamentosQueryBase = {
     periodoInicio: dashboard.periodoInicio,
     periodoFim: dashboard.periodoFim,
     ...(contaId ? { contaFinanceiraId: contaId } : {}),
-  }).toString()
+  }
+  const lancamentosQuery = new URLSearchParams(lancamentosQueryBase).toString()
+  // Cada card abre só o que ele mostra: Receitas -> só receitas, Despesas -> só
+  // despesas. Corrigido em 26/08/2026: antes os três cards apontavam para a mesma
+  // query sem filtro de tipo, então "Abrir lançamentos" nas Despesas mostrava
+  // receita e despesa misturadas.
+  const lancamentosQueryReceitas = new URLSearchParams({ ...lancamentosQueryBase, tipo: 'receita' }).toString()
+  const lancamentosQueryDespesas = new URLSearchParams({ ...lancamentosQueryBase, tipo: 'despesa' }).toString()
 
   const cards = [
     {
       title: 'Receitas do período',
       value: formatarValor(dashboard.indicadores.receitas),
       subtitle: 'Receitas operacionais do período',
-      to: `/financeiro/lancamentos?${lancamentosQuery}`,
+      to: `/financeiro/lancamentos?${lancamentosQueryReceitas}`,
       footer: 'Abrir lançamentos',
     },
     {
       title: 'Despesas do período',
       value: formatarValor(dashboard.indicadores.despesas),
       subtitle: 'Despesas operacionais do período',
-      to: `/financeiro/lancamentos?${lancamentosQuery}`,
+      to: `/financeiro/lancamentos?${lancamentosQueryDespesas}`,
       footer: 'Abrir lançamentos',
     },
     {
@@ -93,9 +100,18 @@ export default function Dashboard() {
       footer: 'Abrir lançamentos',
     },
     {
+      title: 'Resultado líquido (após comissão)',
+      value: formatarValor(dashboard.indicadores.resultadoLiquido),
+      subtitle: dashboard.comissoes.total > 0
+        ? `Resultado menos ${formatarValor(dashboard.comissoes.total)} de comissão do período`
+        : 'Nenhuma comissão de imobiliária no período',
+      to: '/financeiro/comissoes',
+      footer: 'Ver comissões',
+    },
+    {
       title: 'Total financeiro da Holding',
       value: formatarValor(dashboard.indicadores.totalFinanceiro),
-      subtitle: 'Soma das contas financeiras ativas',
+      subtitle: 'Saldo real das contas ativas (só reflete despesas/comissões já pagas)',
       to: '/financeiro/contas',
       footer: 'Abrir contas',
     },
@@ -149,12 +165,12 @@ export default function Dashboard() {
     {
       title: 'Receitas do mês',
       value: formatarValor(dashboard.indicadores.receitas),
-      to: `/financeiro/lancamentos?${lancamentosQuery}`,
+      to: `/financeiro/lancamentos?${lancamentosQueryReceitas}`,
     },
     {
       title: 'Despesas do mês',
       value: formatarValor(dashboard.indicadores.despesas),
-      to: `/financeiro/lancamentos?${lancamentosQuery}`,
+      to: `/financeiro/lancamentos?${lancamentosQueryDespesas}`,
     },
     {
       title: 'Resultado do mês',
@@ -328,6 +344,29 @@ export default function Dashboard() {
           <DashboardCard className="compact-card" title="Desocupadas" value={dashboard.ocupacao.desocupadas} subtitle="Sem contrato ativo" to="/unidades" />
           <DashboardCard className="compact-card" title="Percentual de ocupação" value={`${dashboard.ocupacao.percentual.toFixed(1)}%`} subtitle="Base nas unidades cadastradas" to="/unidades" />
         </div>
+      </div>
+
+      <div className="summary-card compact-card compact-section-card">
+        <div className="section-header">
+          <strong>Comissão por imobiliária</strong>
+          <Link className="button button-secondary" to="/financeiro/comissoes">Ver detalhes</Link>
+        </div>
+        {dashboard.comissoes.porImobiliaria.length === 0 ? (
+          <p>Nenhuma comissão de imobiliária no período.</p>
+        ) : (
+          <div className="summary-grid compact-summary-grid">
+            {dashboard.comissoes.porImobiliaria.map((item) => (
+              <DashboardCard
+                key={item.imobiliariaId}
+                className="compact-card"
+                title={item.imobiliariaNome}
+                value={formatarValor(item.totalComissao)}
+                subtitle={`${item.percentualComissao}% sobre ${formatarValor(item.totalBase)} de base`}
+                to="/financeiro/comissoes"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="summary-card compact-card compact-section-card">

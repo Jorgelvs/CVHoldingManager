@@ -311,6 +311,10 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
     if (submitting) return
     if (!validate()) {
       setSubmitMessage({ type: 'error', text: 'Corrija os erros antes de salvar.' })
+      // O formulário é longo e o botão "Salvar" fica no rodapé — sem rolar
+      // pra cima, a mensagem de erro passa despercebida e parece que nada
+      // aconteceu ao clicar em salvar.
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
     setSubmitting(true)
@@ -342,6 +346,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
     if (response?.error) {
       setSubmitMessage({ type: 'error', text: response.error })
       setSubmitting(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 

@@ -15,6 +15,18 @@ import SearchableSelect from '../../../components/SearchableSelect.jsx'
 const TIPO_MANUTENCAO_AREA_COMUM = 'area_comum'
 const TIPO_MANUTENCAO_UNIDADE_ESPECIFICA = 'unidade_especifica'
 
+// Categorias de despesa que, por padrão, são custeadas pelo condomínio (área
+// comum do patrimônio) — usadas só para pré-marcar a caixinha "Coberta pelo
+// condomínio" abaixo; o usuário pode desmarcar caso essa despesa específica
+// não deva entrar nesse cálculo.
+const CATEGORIAS_CONDOMINIO_PADRAO = ['Água', 'Energia', 'Faxina']
+
+function defaultCobertaPeloCondominio(tipo, categoria, tipoManutencao) {
+  if (tipo !== 'despesa') return false
+  if (categoria === 'Manutenção') return tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM
+  return CATEGORIAS_CONDOMINIO_PADRAO.includes(categoria)
+}
+
 function montarDataVencimentoPorDia(anoMes, diaVencimento) {
   if (!anoMes || !diaVencimento) return ''
   const [anoTxt, mesTxt] = String(anoMes).split('-')
@@ -47,6 +59,7 @@ const initialState = {
   locatarioId: null,
   contaFinanceiraId: '',
   observacoes: '',
+  cobertaPeloCondominio: false,
 }
 
 export default function LancamentoForm({ initialData = null, onSave, submitLabel = 'Salvar lançamento' }) {
@@ -196,10 +209,11 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
   }
 
   const handleTipoChange = (value) => {
+    const novaCategoria = listarCategorias(value)[0] || ''
     setData((current) => ({
       ...current,
       tipo: value,
-      categoria: listarCategorias(value)[0] || '',
+      categoria: novaCategoria,
       subcategoria: null,
       subcategoriaId: '',
       subcategoriaLabel: '',
@@ -207,6 +221,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       unidadeId: '',
       contratoId: null,
       locatarioId: null,
+      cobertaPeloCondominio: defaultCobertaPeloCondominio(value, novaCategoria, ''),
     }))
   }
 
@@ -278,6 +293,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
     const dataVencimentoContrato = ehReceitaAluguel
       ? montarDataVencimentoPorDia(data.dataCompetencia, contrato?.diaVencimento)
       : ''
+    const tipoManutencaoMantido = value === 'Manutenção' && data.tipo === 'despesa' ? data.tipoManutencao : ''
 
     setData((current) => ({
       ...current,
@@ -285,11 +301,12 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       subcategoria: null,
       subcategoriaId: '',
       subcategoriaLabel: '',
-      tipoManutencao: value === 'Manutenção' && current.tipo === 'despesa' ? current.tipoManutencao : '',
+      tipoManutencao: tipoManutencaoMantido,
       unidadeId: value === 'Manutenção' && current.tipo === 'despesa' ? current.unidadeId : '',
       contratoId: value === 'Manutenção' && current.tipo === 'despesa' ? current.contratoId : null,
       locatarioId: value === 'Manutenção' && current.tipo === 'despesa' ? current.locatarioId : null,
       dataVencimento: dataVencimentoContrato || current.dataVencimento,
+      cobertaPeloCondominio: defaultCobertaPeloCondominio(current.tipo, value, tipoManutencaoMantido),
     }))
   }
 
@@ -316,6 +333,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
       unidadeId: value === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA ? current.unidadeId : '',
       contratoId: value === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA ? current.contratoId : null,
       locatarioId: value === TIPO_MANUTENCAO_UNIDADE_ESPECIFICA ? current.locatarioId : null,
+      cobertaPeloCondominio: defaultCobertaPeloCondominio(current.tipo, current.categoria, value),
     }))
   }
 
@@ -394,6 +412,7 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
         : (data.locatarioId || null),
       dataVencimento: data.dataVencimento || null,
       dataPagamento: data.dataPagamento || null,
+      cobertaPeloCondominio: data.tipo === 'despesa' ? Boolean(data.cobertaPeloCondominio) : false,
     }
 
     setSubmitting(true)
@@ -507,6 +526,22 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
               </small>
             ) : null}
           </div>
+          {data.tipo === 'despesa' && data.patrimonioId ? (
+            <div className="form-field">
+              <label>&nbsp;</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(data.cobertaPeloCondominio)}
+                  onChange={(event) => handleFieldChange('cobertaPeloCondominio', event.target.checked)}
+                />
+                Coberta pelo condomínio (área comum)
+              </label>
+              <small className="field-help">
+                Marcada, essa despesa entra no relatório de Condomínio (Financeiro &gt; Condomínio) para comparar com a receita de condomínio recebida do patrimônio.
+              </small>
+            </div>
+          ) : null}
           <div className="form-field">
             <label>Locatário</label>
             <SearchableSelect

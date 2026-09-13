@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { codigoUnicoDisponivel, gerarCodigoUnico } from '../services/patrimonioService.js'
+import { gerarCodigoUnico } from '../services/patrimonioService.js'
 import FormSection from './FormSection.jsx'
 import CurrencyInput from '../../../components/CurrencyInput.jsx'
 
+// Cadastro simplificado (13/09/2026): a tela pede só o Nome — o resto tem
+// valor padrão sensato pré-preenchido aqui, editável em "Detalhes avançados"
+// pra quem quiser refinar, mas nunca bloqueia quem só quer digitar o nome e
+// salvar. "Código" deixou de aparecer na tela: é gerado sozinho a partir do
+// nome no momento de salvar (ver handleSubmit) e só existe internamente.
 const defaultForm = {
   nome: '',
   codigo: '',
-  grupoPatrimonial: '',
-  tipo: '',
-  finalidade: '',
-  modeloReceita: '',
-  situacao: '',
+  grupoPatrimonial: 'Residencial',
+  tipo: 'Outro',
+  finalidade: 'Gerador de Receita',
+  modeloReceita: 'Locação Mensal',
+  situacao: 'Ativo',
   observacoes: '',
   endereco: {
     cep: '',
@@ -50,7 +55,6 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
   const [form, setForm] = useState(defaultForm)
   const [errors, setErrors] = useState({})
   const [submitMessage, setSubmitMessage] = useState(null)
-  const [codigoTouched, setCodigoTouched] = useState(false)
 
   useEffect(() => {
     if (initialData) {
@@ -74,13 +78,6 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
       })
     }
   }, [initialData])
-
-  useEffect(() => {
-    if (form.nome && !codigoTouched && !form.codigo) {
-      const codigo = gerarCodigoUnico(form.nome)
-      setForm((current) => ({ ...current, codigo }))
-    }
-  }, [form.nome, codigoTouched])
 
   useEffect(() => {
     const handleBeforeUnload = (event) => {
@@ -137,11 +134,6 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
     if (!form.nome.trim()) {
       nextErrors.nome = 'Nome obrigatório.'
     }
-    if (!form.codigo.trim()) {
-      nextErrors.codigo = 'Código obrigatório.'
-    } else if (!codigoUnicoDisponivel(form.codigo, initialData?.id)) {
-      nextErrors.codigo = 'Código já está em uso.'
-    }
     if (!form.grupoPatrimonial) {
       nextErrors.grupoPatrimonial = 'Tipo do patrimônio obrigatório.'
     }
@@ -189,8 +181,13 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
       setSubmitMessage({ type: 'error', text: 'Corrija os erros antes de salvar.' })
       return
     }
+    // Código não aparece mais na tela — gerado sozinho a partir do nome só na
+    // primeira vez que o patrimônio é salvo (edição mantém o código já
+    // existente, pra não invalidar referências que já usam ele).
+    const codigoFinal = form.codigo.trim() || gerarCodigoUnico(form.nome)
     onSave({
       ...form,
+      codigo: codigoFinal,
       quantidadeUnidades: form.quantidadeUnidades || '0',
       valorAquisicao: form.valorAquisicao || '',
       valorPatrimonial: form.valorPatrimonial || '',
@@ -198,9 +195,6 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
   }
 
   const handleValueChange = (field, value) => {
-    if (field === 'codigo') {
-      setCodigoTouched(true)
-    }
     if (field === 'finalidade') {
       const modelosValidos = options.modelos[value] || []
       setForm((prev) => ({
@@ -228,24 +222,33 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
         </div>
       ) : null}
 
-      <FormSection title="Identificação" description="Dados principais do patrimônio.">
+      <FormSection title="Identificação" description="Como você reconhece este patrimônio no dia a dia.">
         <div className="form-grid">
-          <label className="form-field">
+          <label className="form-field form-field-full">
             <span>Nome *</span>
             <input
               value={form.nome}
               onChange={(event) => handleValueChange('nome', event.target.value)}
+              placeholder="Ex.: Residence Kitnet I"
             />
             {errors.nome ? <span className="field-error">{errors.nome}</span> : null}
           </label>
-          <label className="form-field">
-            <span>Código *</span>
-            <input
-              value={form.codigo}
-              onChange={(event) => handleValueChange('codigo', event.target.value.toUpperCase())}
-            />
-            {errors.codigo ? <span className="field-error">{errors.codigo}</span> : null}
-          </label>
+        </div>
+      </FormSection>
+
+      {/* Cadastro simplificado (13/09/2026): código, classificação, endereço,
+          dados de registro e configurações operacionais têm valor padrão
+          sensato e continuam disponíveis aqui, só ficam recolhidos por
+          padrão — quem só precisa do nome não vê nada disso. */}
+      <details className="collapsible-card">
+        <summary>
+          <span className="collapsible-card-title">
+            <span className="name">Detalhes avançados (opcional)</span>
+          </span>
+        </summary>
+        <div className="collapsible-card-body">
+      <FormSection title="Classificação" description="Dados principais do patrimônio.">
+        <div className="form-grid">
           <label className="form-field">
             <span>Tipo do patrimônio *</span>
             <select value={form.grupoPatrimonial} onChange={(event) => handleValueChange('grupoPatrimonial', event.target.value)}>
@@ -570,6 +573,8 @@ export default function PatrimonioForm({ initialData = null, options, onSave, he
           </label>
         </div>
       </FormSection>
+        </div>
+      </details>
 
       <div className="form-actions">
         <button className="button button-secondary" type="button" onClick={() => navigate(-1)}>

@@ -240,6 +240,15 @@ export function getDashboardData(periodo = {}, contaId = '') {
   const totalComissaoPeriodo = comissoesPorImobiliaria.reduce((sum, item) => sum + Number(item.totalComissao || 0), 0)
   const resultadoLiquidoPeriodo = resultadoPeriodo - totalComissaoPeriodo
 
+  // Mesmas métricas acumuladas de janeiro até o mês selecionado (inclusive) —
+  // cada cartão do Dashboard mostra o mês vigente lado a lado com o
+  // acumulado do ano, pra não dar a impressão de que "período" ora é um mês,
+  // ora é um total acumulado (o que gerava confusão quando um lançamento de
+  // competência antiga aparecia só porque foi pago no mês selecionado).
+  const comissoesPorImobiliariaAnoAcumulado = calcularResumoComissoesPorImobiliaria({ periodoInicio: inicioAnoSelecionado, periodoFim }).filter((item) => item.quantidadeLancamentos > 0)
+  const totalComissaoAnoAcumulado = comissoesPorImobiliariaAnoAcumulado.reduce((sum, item) => sum + Number(item.totalComissao || 0), 0)
+  const resultadoLiquidoAnoAcumulado = resultadoAnualAcumulado - totalComissaoAnoAcumulado
+
   const receitas12Meses = serieFinanceira12Meses.reduce((sum, mes) => sum + Number(mes.receitas || 0), 0)
   const despesas12Meses = serieFinanceira12Meses.reduce((sum, mes) => sum + Number(mes.despesas || 0), 0)
   const resultado12Meses = receitas12Meses - despesas12Meses
@@ -254,9 +263,12 @@ export function getDashboardData(periodo = {}, contaId = '') {
     periodoLabel: `${formatarMesAno(`${periodoAtual.ano}-${normalizarMes(periodoAtual.mes)}`)}`,
     indicadores: {
       receitas: receitasPeriodo,
+      receitasAnoAcumulado,
       despesas: despesasPeriodo,
+      despesasAnoAcumulado,
       resultado: resultadoPeriodo,
       resultadoLiquido: resultadoLiquidoPeriodo,
+      resultadoLiquidoAnoAcumulado,
       resultadoAnualAcumulado,
       saldoDisponivel: disponibilidadeImediata,
       totalFinanceiro,
@@ -265,6 +277,8 @@ export function getDashboardData(periodo = {}, contaId = '') {
     comissoes: {
       porImobiliaria: comissoesPorImobiliaria,
       total: totalComissaoPeriodo,
+      porImobiliariaAnoAcumulado: comissoesPorImobiliariaAnoAcumulado,
+      totalAnoAcumulado: totalComissaoAnoAcumulado,
     },
     comparacao,
     indicadoresGerenciais: {

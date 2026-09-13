@@ -77,45 +77,56 @@ export default function Dashboard() {
   const lancamentosQueryReceitas = new URLSearchParams({ ...lancamentosQueryBase, tipo: 'receita' }).toString()
   const lancamentosQueryDespesas = new URLSearchParams({ ...lancamentosQueryBase, tipo: 'despesa' }).toString()
 
+  // Rótulo do mês vigente (mês/ano escolhidos no filtro de período acima).
+  // Corrigido em 13/09/2026: os cards diziam "do período" mas, como o valor
+  // usa a data em que o lançamento foi efetivamente pago/vencido (não a
+  // competência), um aluguel antigo pago agora aparecia dentro do mês atual
+  // e parecia um acumulado sem período nenhum. Agora cada card mostra as
+  // duas visões lado a lado, sem ambiguidade: o mês vigente e o acumulado
+  // desde janeiro do ano selecionado.
+  const mesVigenteLabel = `Mês vigente (${String(periodo.mes).padStart(2, '0')}/${periodo.ano})`
+  const anoAcumuladoLabel = `Acumulado no ano (jan-${String(periodo.mes).padStart(2, '0')}/${periodo.ano})`
+
   const cards = [
     {
-      title: 'Receitas do período',
-      value: formatarValor(dashboard.indicadores.receitas),
-      subtitle: 'Receitas operacionais do período',
+      title: 'Receitas',
+      rows: [
+        { label: mesVigenteLabel, value: formatarValor(dashboard.indicadores.receitas) },
+        { label: anoAcumuladoLabel, value: formatarValor(dashboard.indicadores.receitasAnoAcumulado) },
+      ],
       to: `/financeiro/lancamentos?${lancamentosQueryReceitas}`,
       footer: 'Abrir lançamentos',
     },
     {
-      title: 'Despesas do período',
-      value: formatarValor(dashboard.indicadores.despesas),
-      subtitle: 'Despesas operacionais do período',
+      title: 'Despesas',
+      rows: [
+        { label: mesVigenteLabel, value: formatarValor(dashboard.indicadores.despesas) },
+        { label: anoAcumuladoLabel, value: formatarValor(dashboard.indicadores.despesasAnoAcumulado) },
+      ],
       to: `/financeiro/lancamentos?${lancamentosQueryDespesas}`,
       footer: 'Abrir lançamentos',
     },
     {
       title: 'Comissão Imobiliária',
-      value: formatarValor(dashboard.comissoes.total),
+      rows: [
+        { label: mesVigenteLabel, value: formatarValor(dashboard.comissoes.total) },
+        { label: anoAcumuladoLabel, value: formatarValor(dashboard.comissoes.totalAnoAcumulado) },
+      ],
       subtitle: dashboard.comissoes.porImobiliaria.length > 0
-        ? `Devida a ${dashboard.comissoes.porImobiliaria.length} imobiliária(s) no período`
-        : 'Nenhuma comissão de imobiliária no período',
+        ? `Devida a ${dashboard.comissoes.porImobiliaria.length} imobiliária(s) no mês vigente`
+        : 'Nenhuma comissão de imobiliária no mês vigente',
       to: '/financeiro/comissoes',
       footer: 'Ver o que foi pago a cada imobiliária',
     },
     {
-      title: 'Resultado líquido do período',
-      value: formatarValor(dashboard.indicadores.resultadoLiquido),
-      subtitle: dashboard.comissoes.total > 0
-        ? `Receitas menos despesas e ${formatarValor(dashboard.comissoes.total)} de comissão`
-        : 'Receitas menos despesas (sem comissão no período)',
+      title: 'Resultado líquido (após comissão)',
+      rows: [
+        { label: mesVigenteLabel, value: formatarValor(dashboard.indicadores.resultadoLiquido) },
+        { label: anoAcumuladoLabel, value: formatarValor(dashboard.indicadores.resultadoLiquidoAnoAcumulado) },
+      ],
+      subtitle: 'Receitas menos despesas e comissão de imobiliária',
       to: `/financeiro/lancamentos?${lancamentosQuery}`,
       footer: 'Abrir lançamentos',
-    },
-    {
-      title: 'Resultado anual acumulado da Holding',
-      value: formatarValor(dashboard.indicadores.resultadoAnualAcumulado),
-      subtitle: `Receitas menos despesas de jan/${periodo.ano} até o mês selecionado`,
-      to: '/relatorios',
-      footer: 'Ver relatórios',
     },
   ]
 
@@ -231,7 +242,7 @@ export default function Dashboard() {
 
       <div className="dashboard-grid dashboard-main-cards">
         {cards.map((card) => (
-          <DashboardCard key={card.title} title={card.title} value={card.value} subtitle={card.subtitle} footer={card.footer} to={card.to} className="compact-card" />
+          <DashboardCard key={card.title} title={card.title} rows={card.rows} value={card.value} subtitle={card.subtitle} footer={card.footer} to={card.to} className="compact-card" />
         ))}
       </div>
 

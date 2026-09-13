@@ -4,16 +4,49 @@ import { verificarCodigoDuplicado } from '../services/unidadeService.js'
 import FormSection from '../../patrimonios/components/FormSection.jsx'
 import { gerarCodigoInternoSugestao } from '../utils/unidadeCodeUtils.js'
 
+// Cadastro simplificado (13/09/2026): a tela pede só Patrimônio e Nome —
+// tipo/finalidade/situação ganham um valor padrão sensato (editável em
+// "Detalhes avançados") e "Código interno" nem aparece mais: é gerado
+// sozinho a partir do patrimônio/tipo/nome no momento de salvar (ver
+// handleSubmit / gerarCodigoInternoFallback).
 const defaultForm = {
   patrimonioId: '',
   codigoInterno: '',
   nome: '',
   tipo: '',
-  finalidade: '',
-  situacao: '',
+  finalidade: 'Locação',
+  situacao: 'Disponível',
   areaUtil: '',
   areaTotal: '',
   observacoes: '',
+}
+
+function normalizarSigla(texto) {
+  return (texto || '')
+    .normalize('NFD')
+    .replace(/[^\w\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((palavra) => palavra[0].toUpperCase())
+    .join('')
+    .slice(0, 3)
+}
+
+// Rede de segurança para quando gerarCodigoInternoSugestao não consegue
+// sugerir nada (ex.: nome sem número no final, tipo fora do mapa conhecido)
+// — garante um código interno único mesmo assim, já que várias telas usam
+// "nome || codigoInterno" como rótulo de exibição.
+function gerarCodigoInternoFallback({ codigoPatrimonio, nome, idAtual }) {
+  const base = (codigoPatrimonio || 'U').trim().toUpperCase()
+  const sigla = normalizarSigla(nome) || 'X'
+  let codigo = `${base}-${sigla}`
+  let contador = 1
+  while (verificarCodigoDuplicado(codigo, idAtual)) {
+    codigo = `${base}-${sigla}${contador}`
+    contador += 1
+  }
+  return codigo
 }
 
 function sugerirTipoPorPatrimonio(patrimonio) {
@@ -99,8 +132,11 @@ export default function UnidadeForm({
     if (isEditingExisting || !patrimonioSelecionado) return
     if (form.tipo) return
 
-    const tipoSugerido = sugerirTipoPorPatrimonio(patrimonioSelecionado)
-    if (!tipoSugerido) return
+    // Cadastro simplificado: "Tipo" não aparece na tela por padrão, então
+    // precisa sempre acabar com algum valor válido — nunca em branco. Usa a
+    // sugestão baseada no patrimônio quando existe; senão cai em "Outro",
+    // que fica disponível para ajuste em "Detalhes avançados".
+    const tipoSugerido = sugerirTipoPorPatrimonio(patrimonioSelecionado) || 'Outro'
 
     setForm((prev) => ({
       ...prev,
@@ -136,7 +172,6 @@ export default function UnidadeForm({
   const validate = () => {
     const nextErrors = {}
     if (!form.patrimonioId) nextErrors.patrimonioId = 'Patrimônio obrigatório.'
-    if (!form.codigoInterno.trim()) nextErrors.codigoInterno = 'Código interno obrigatório.'
     if (!form.nome.trim()) nextErrors.nome = 'Nome obrigatório.'
     if (!form.tipo) nextErrors.tipo = 'Tipo obrigatório.'
     if (!form.finalidade) nextErrors.finalidade = 'Finalidade obrigatória.'
@@ -169,9 +204,14 @@ export default function UnidadeForm({
     setSubmitting(true)
     setSubmitMessage(null)
     try {
+      const codigoInternoFinal = form.codigoInterno.trim() || gerarCodigoInternoFallback({
+        codigoPatrimonio: patrimonioSelecionado?.codigo,
+        nome: form.nome,
+        idAtual: initialData?.id || null,
+      })
       await onSave({
         ...form,
-        codigoInterno: form.codigoInterno.trim(),
+        codigoInterno: codigoInternoFinal,
         areaUtil: form.areaUtil || '',
         areaTotal: form.areaTotal || '',
       })
@@ -224,58 +264,77 @@ export default function UnidadeForm({
             {errors.patrimonioId ? <span className="field-error">{errors.patrimonioId}</span> : null}
           </label>
           <label className="form-field">
-            <span>Código interno *</span>
-            <input
-              value={form.codigoInterno}
-              onChange={(event) => updateField('codigoInterno', event.target.value)}
-            />
-            {codigoSugestao ? <small className="field-hint">Sugestão: {codigoSugestao}</small> : null}
-            {mensagemPatrimonioSemCodigo ? <small className="field-hint field-error">{mensagemPatrimonioSemCodigo}</small> : null}
-            {errors.codigoInterno ? <span className="field-error">{errors.codigoInterno}</span> : null}
-          </label>
-          <label className="form-field">
             <span>Nome *</span>
-            <input value={form.nome} onChange={(event) => updateField('nome', event.target.value)} />
+            <input value={form.nome} onChange={(event) => updateField('nome', event.target.value)} placeholder="Ex.: Kitnet 1" />
             {errors.nome ? <span className="field-error">{errors.nome}</span> : null}
           </label>
-          <label className="form-field">
-            <span>Tipo *</span>
-            <select value={form.tipo} onChange={(event) => updateField('tipo', event.target.value)}>
-              <option value="">Selecione</option>
-              {options.tipos.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            {errors.tipo ? <span className="field-error">{errors.tipo}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>Finalidade *</span>
-            <select value={form.finalidade} onChange={(event) => updateField('finalidade', event.target.value)}>
-              <option value="">Selecione</option>
-              {options.finalidades.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            {errors.finalidade ? <span className="field-error">{errors.finalidade}</span> : null}
-          </label>
-          <label className="form-field">
-            <span>Situação *</span>
-            <select value={form.situacao} onChange={(event) => updateField('situacao', event.target.value)}>
-              <option value="">Selecione</option>
-              {options.situacoes.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            {errors.situacao ? <span className="field-error">{errors.situacao}</span> : null}
-          </label>
-          {!simplified ? (
-            <>
+        </div>
+      </FormSection>
+
+      {/* Cadastro simplificado (13/09/2026): código interno, tipo, finalidade,
+          situação e área têm valor padrão sensato e continuam disponíveis
+          aqui, só ficam recolhidos por padrão. */}
+      <details className="collapsible-card">
+        <summary>
+          <span className="collapsible-card-title">
+            <span className="name">Detalhes avançados (opcional)</span>
+          </span>
+        </summary>
+        <div className="collapsible-card-body">
+          <FormSection title="Classificação" description="Tipo, finalidade e situação da unidade.">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Tipo *</span>
+                <select value={form.tipo} onChange={(event) => updateField('tipo', event.target.value)}>
+                  <option value="">Selecione</option>
+                  {options.tipos.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                {errors.tipo ? <span className="field-error">{errors.tipo}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Finalidade *</span>
+                <select value={form.finalidade} onChange={(event) => updateField('finalidade', event.target.value)}>
+                  <option value="">Selecione</option>
+                  {options.finalidades.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                {errors.finalidade ? <span className="field-error">{errors.finalidade}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Situação *</span>
+                <select value={form.situacao} onChange={(event) => updateField('situacao', event.target.value)}>
+                  <option value="">Selecione</option>
+                  {options.situacoes.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+                {errors.situacao ? <span className="field-error">{errors.situacao}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Código interno</span>
+                <input
+                  value={form.codigoInterno}
+                  onChange={(event) => updateField('codigoInterno', event.target.value)}
+                  placeholder="Gerado automaticamente se deixar em branco"
+                />
+                {codigoSugestao ? <small className="field-hint">Sugestão: {codigoSugestao}</small> : null}
+                {mensagemPatrimonioSemCodigo ? <small className="field-hint">{mensagemPatrimonioSemCodigo}</small> : null}
+                {errors.codigoInterno ? <span className="field-error">{errors.codigoInterno}</span> : null}
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Área" description="Metragem da unidade, se quiser registrar.">
+            <div className="form-grid">
               <label className="form-field">
                 <span>Área útil</span>
                 <input
@@ -298,14 +357,16 @@ export default function UnidadeForm({
                 />
                 {errors.areaTotal ? <span className="field-error">{errors.areaTotal}</span> : null}
               </label>
-            </>
-          ) : null}
-          <label className="form-field form-field-full">
-            <span>Observações</span>
-            <textarea value={form.observacoes} onChange={(event) => updateField('observacoes', event.target.value)} />
-          </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Observações" description="Notas gerais sobre a unidade.">
+            <label className="form-field form-field-full">
+              <textarea value={form.observacoes} onChange={(event) => updateField('observacoes', event.target.value)} />
+            </label>
+          </FormSection>
         </div>
-      </FormSection>
+      </details>
 
       <div className="form-actions">
         <button className="button button-secondary" type="button" onClick={onCancel || handleVoltar}>

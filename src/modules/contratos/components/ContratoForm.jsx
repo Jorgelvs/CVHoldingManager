@@ -396,22 +396,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             <input value={patrimoniosPorId.get(form.patrimonioId)?.nome || ''} readOnly placeholder="Definido automaticamente pela unidade" />
             {errors.patrimonioId ? <span className="field-error">{errors.patrimonioId}</span> : null}
           </label>
-          <label className="form-field">
-            <span>Imobiliária responsável</span>
-            <select value={form.imobiliariaId} onChange={(event) => updateField('imobiliariaId', event.target.value)}>
-              <option value="">Nenhuma (sem comissão)</option>
-              {imobiliarias.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nome} ({Number(item.percentualComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}%)
-                </option>
-              ))}
-            </select>
-            {imobiliariaSelecionada ? (
-              <span className="field-hint">
-                Comissão de {Number(imobiliariaSelecionada.percentualComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}% sobre aluguel e multa deste contrato.
-              </span>
-            ) : null}
-          </label>
         </div>
       </FormSection>
 
@@ -446,14 +430,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             <input value={locatarioForm.nomeCompleto} onChange={(event) => updateLocatarioField('nomeCompleto', event.target.value)} />
             {locatarioErrors.nomeCompleto ? <span className="field-error">{locatarioErrors.nomeCompleto}</span> : null}
           </label>
-          <label className="form-field">
-            <span>Telefone</span>
-            <input value={locatarioForm.telefone} onChange={(event) => updateLocatarioField('telefone', event.target.value)} />
-          </label>
-          <label className="form-field">
-            <span>WhatsApp</span>
-            <input value={locatarioForm.whatsapp} onChange={(event) => updateLocatarioField('whatsapp', event.target.value)} />
-          </label>
         </div>
       </FormSection>
 
@@ -469,11 +445,6 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             <input type="date" value={form.dataFim} onChange={(event) => updateField('dataFim', event.target.value)} />
             {errors.dataFim ? <span className="field-error">{errors.dataFim}</span> : null}
           </label>
-          <label className="form-field">
-            <span>Dia de vencimento do aluguel {form.situacao === 'Ativo' ? '*' : ''}</span>
-            <input type="number" min="1" max="31" value={form.diaVencimento} onChange={(event) => updateField('diaVencimento', event.target.value)} />
-            {errors.diaVencimento ? <span className="field-error">{errors.diaVencimento}</span> : null}
-          </label>
         </div>
         {form.dataInicio && form.dataFim ? (
           <p className="field-hint" style={{ marginTop: 8 }}>
@@ -482,47 +453,17 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
         ) : null}
       </FormSection>
 
-      <FormSection title="Valores" description="Valor do aluguel deste contrato.">
+      <FormSection title="Valores" description="Valores mensais deste contrato.">
         <div className="form-grid">
           <label className="form-field">
             <span>Valor do aluguel</span>
             <CurrencyInput value={form.valorAluguel} onChange={(valor) => updateField('valorAluguel', valor)} />
             {errors.valorAluguel ? <span className="field-error">{errors.valorAluguel}</span> : null}
           </label>
-        </div>
-      </FormSection>
-
-      <FormSection title="Documento do contrato" description="Anexe o arquivo assinado do contrato (fica salvo em Documentos, categoria 'Contratos').">
-        <div className="form-grid">
           <label className="form-field">
-            <span>Arquivo do contrato</span>
-            <input type="file" accept={(parametrosDocumentos?.tiposArquivoPermitidos || []).join(',')} onChange={handleArquivoContratoChange} />
-            {arquivoErro ? <span className="field-error">{arquivoErro}</span> : null}
-            {arquivoContrato ? (
-              <span className="field-hint">Novo arquivo selecionado: {arquivoContrato.filename} ({Math.round(arquivoContrato.tamanho / 1024)} KB)</span>
-            ) : documentoExistente ? (
-              <span className="field-hint">
-                Já existe um arquivo salvo: {documentoExistente.arquivo?.filename || documentoExistente.nome}. Escolher outro arquivo o substitui.{' '}
-                <Link to="/documentos" target="_blank" rel="noopener noreferrer">Ver em Documentos</Link>
-              </span>
-            ) : (
-              <span className="field-hint">Nenhum arquivo anexado ainda. Outros tipos de documento (escritura, seguro, vistoria etc.) continuam sendo cadastrados em Documentos.</span>
-            )}
-          </label>
-        </div>
-      </FormSection>
-
-      <FormSection title="Situação" description="Defina o estado do contrato.">
-        <div className="form-grid">
-          <label className="form-field">
-            <span>Situação</span>
-            <select value={form.situacao} onChange={(event) => updateField('situacao', event.target.value)}>
-              {situacoesContrato.map((situacao) => (
-                <option key={situacao} value={situacao}>
-                  {situacao}
-                </option>
-              ))}
-            </select>
+            <span>Valor do condomínio</span>
+            <CurrencyInput value={form.valorCondominio} onChange={(valor) => updateField('valorCondominio', valor)} />
+            {errors.valorCondominio ? <span className="field-error">{errors.valorCondominio}</span> : null}
           </label>
         </div>
       </FormSection>
@@ -538,8 +479,77 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
           </span>
         </summary>
         <div className="collapsible-card-body">
-          <FormSection title="Locatário — dados adicionais" description="CPF, RG, e-mail e dados do pagador, se precisar registrar aqui.">
+          <FormSection title="Imobiliária responsável" description="Se este contrato é administrado por uma imobiliária, informe aqui para o cálculo automático de comissão.">
             <div className="form-grid">
+              <label className="form-field">
+                <span>Imobiliária responsável</span>
+                <select value={form.imobiliariaId} onChange={(event) => updateField('imobiliariaId', event.target.value)}>
+                  <option value="">Nenhuma (sem comissão)</option>
+                  {imobiliarias.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.nome} ({Number(item.percentualComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}%)
+                    </option>
+                  ))}
+                </select>
+                {imobiliariaSelecionada ? (
+                  <span className="field-hint">
+                    Comissão de {Number(imobiliariaSelecionada.percentualComissao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}% sobre aluguel e multa deste contrato.
+                  </span>
+                ) : null}
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Cobrança e situação" description="Dia de vencimento do aluguel e estado atual do contrato.">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Dia de vencimento do aluguel {form.situacao === 'Ativo' ? '*' : ''}</span>
+                <input type="number" min="1" max="31" value={form.diaVencimento} onChange={(event) => updateField('diaVencimento', event.target.value)} />
+                {errors.diaVencimento ? <span className="field-error">{errors.diaVencimento}</span> : null}
+              </label>
+              <label className="form-field">
+                <span>Situação</span>
+                <select value={form.situacao} onChange={(event) => updateField('situacao', event.target.value)}>
+                  {situacoesContrato.map((situacao) => (
+                    <option key={situacao} value={situacao}>
+                      {situacao}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Documento do contrato" description="Anexe o arquivo assinado do contrato (fica salvo em Documentos, categoria 'Contratos').">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Arquivo do contrato</span>
+                <input type="file" accept={(parametrosDocumentos?.tiposArquivoPermitidos || []).join(',')} onChange={handleArquivoContratoChange} />
+                {arquivoErro ? <span className="field-error">{arquivoErro}</span> : null}
+                {arquivoContrato ? (
+                  <span className="field-hint">Novo arquivo selecionado: {arquivoContrato.filename} ({Math.round(arquivoContrato.tamanho / 1024)} KB)</span>
+                ) : documentoExistente ? (
+                  <span className="field-hint">
+                    Já existe um arquivo salvo: {documentoExistente.arquivo?.filename || documentoExistente.nome}. Escolher outro arquivo o substitui.{' '}
+                    <Link to="/documentos" target="_blank" rel="noopener noreferrer">Ver em Documentos</Link>
+                  </span>
+                ) : (
+                  <span className="field-hint">Nenhum arquivo anexado ainda. Outros tipos de documento (escritura, seguro, vistoria etc.) continuam sendo cadastrados em Documentos.</span>
+                )}
+              </label>
+            </div>
+          </FormSection>
+
+          <FormSection title="Locatário — dados adicionais" description="Telefone, CPF, RG, e-mail e dados do pagador, se precisar registrar aqui.">
+            <div className="form-grid">
+              <label className="form-field">
+                <span>Telefone</span>
+                <input value={locatarioForm.telefone} onChange={(event) => updateLocatarioField('telefone', event.target.value)} />
+              </label>
+              <label className="form-field">
+                <span>WhatsApp</span>
+                <input value={locatarioForm.whatsapp} onChange={(event) => updateLocatarioField('whatsapp', event.target.value)} />
+              </label>
               <label className="form-field">
                 <span>CPF</span>
                 <input value={locatarioForm.cpf} onChange={(event) => updateLocatarioField('cpf', event.target.value)} />
@@ -586,13 +596,8 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
             </label>
           </FormSection>
 
-          <FormSection title="Valores adicionais" description="Condomínio e caução, se administrados por aqui.">
+          <FormSection title="Valores adicionais" description="Caução, se administrada por aqui.">
             <div className="form-grid">
-              <label className="form-field">
-                <span>Valor do condomínio</span>
-                <CurrencyInput value={form.valorCondominio} onChange={(valor) => updateField('valorCondominio', valor)} />
-                {errors.valorCondominio ? <span className="field-error">{errors.valorCondominio}</span> : null}
-              </label>
               <label className="form-field">
                 <span>Valor da caução</span>
                 <CurrencyInput value={form.valorCaucao} onChange={(valor) => updateField('valorCaucao', valor)} />

@@ -28,6 +28,49 @@ function formatarMesAno(value) {
   return `${mes}/${ano}`
 }
 
+// Agrupa despesas por patrimônio e por unidade, somando mês vigente e
+// acumulado do ano num único passe (13/09/2026 — pedido explícito de ver
+// despesa "do patrimônio e por unidade, quando existir", lado a lado com
+// mês/ano, sem gráfico ou percentual, só o valor). Unidades sem nenhuma
+// despesa direta (a maioria: água/energia/faxina são lançadas no
+// patrimônio, não na unidade) simplesmente não aparecem na lista de
+// unidades — daí o "quando existir".
+function agruparDespesasPorPatrimonioEUnidade(lancamentosMes, lancamentosAno, unidades, patrimonios) {
+  const porPatrimonio = new Map()
+  const porUnidade = new Map()
+
+  const acumular = (lista, campo) => {
+    lista.forEach((item) => {
+      if (item.tipo !== 'despesa' || item.status === 'cancelado' || !isOperational(item)) return
+      const valor = Number(item.valor || 0)
+      const unidade = item.unidadeId ? unidades.find((u) => u.id === item.unidadeId) : null
+      const patrimonioId = item.patrimonioId || unidade?.patrimonioId || ''
+
+      if (patrimonioId) {
+        const nome = patrimonios.find((p) => p.id === patrimonioId)?.nome || 'Sem patrimônio'
+        const atual = porPatrimonio.get(patrimonioId) || { patrimonioId, nome, mes: 0, ano: 0 }
+        atual[campo] += valor
+        porPatrimonio.set(patrimonioId, atual)
+      }
+
+      if (unidade) {
+        const patrimonioNome = patrimonios.find((p) => p.id === unidade.patrimonioId)?.nome || ''
+        const atual = porUnidade.get(unidade.id) || { unidadeId: unidade.id, nome: unidade.nome, patrimonioNome, mes: 0, ano: 0 }
+        atual[campo] += valor
+        porUnidade.set(unidade.id, atual)
+      }
+    })
+  }
+
+  acumular(lancamentosMes, 'mes')
+  acumular(lancamentosAno, 'ano')
+
+  return {
+    porPatrimonio: Array.from(porPatrimonio.values()).sort((a, b) => b.ano - a.ano),
+    porUnidade: Array.from(porUnidade.values()).sort((a, b) => b.ano - a.ano),
+  }
+}
+
 function isOperational(lancamento) {
   if (!lancamento) return false
   if (lancamento.status === 'cancelado') return false
@@ -122,6 +165,8 @@ export function getDashboardData(periodo = {}, contaId = '') {
   const receitasAnoAcumulado = lancamentosAnoAcumulado.filter((item) => item.tipo === 'receita' && isOperational(item)).reduce((sum, item) => sum + Number(item.valor || 0), 0)
   const despesasAnoAcumulado = lancamentosAnoAcumulado.filter((item) => item.tipo === 'despesa' && isOperational(item)).reduce((sum, item) => sum + Number(item.valor || 0), 0)
   const resultadoAnualAcumulado = receitasAnoAcumulado - despesasAnoAcumulado
+
+  const despesasDetalhe = agruparDespesasPorPatrimonioEUnidade(lancamentosPeriodo, lancamentosAnoAcumulado, unidades, patrimonios)
 
   const contasFiltradas = contaId ? contas.filter((conta) => conta.id === contaId) : contas
   const totalFinanceiro = contasFiltradas.reduce((sum, conta) => sum + Number(calcularSaldo(conta.id) || 0), 0)
@@ -280,6 +325,7 @@ export function getDashboardData(periodo = {}, contaId = '') {
       porImobiliariaAnoAcumulado: comissoesPorImobiliariaAnoAcumulado,
       totalAnoAcumulado: totalComissaoAnoAcumulado,
     },
+    despesasDetalhe,
     comparacao,
     indicadoresGerenciais: {
       receitas12Meses,

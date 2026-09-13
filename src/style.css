@@ -2111,6 +2111,17 @@ button.button-danger {
   color: #991b1b;
 }
 
+/* Destaca o valor a pagar de cada imobiliária no mês vigente (pedido em
+   13/09/2026) — mesma lógica visual do critical-indicator, mas em tom neutro
+   de "atenção/dinheiro a pagar" em vez de alerta de erro. */
+.summary-card.accent-card {
+  border-left: 4px solid var(--accent);
+}
+
+.summary-card.accent-card strong {
+  color: var(--accent);
+}
+
 .audit-filters {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }

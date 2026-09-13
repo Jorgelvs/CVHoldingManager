@@ -246,6 +246,29 @@ export default function Dashboard() {
         ))}
       </div>
 
+      <div className="summary-card compact-card compact-section-card">
+        <div className="section-header">
+          <strong>Comissão a pagar por imobiliária — {mesVigenteLabel.replace('Mês vigente ', '')}</strong>
+          <Link className="button button-secondary" to="/financeiro/comissoes">Ver detalhes</Link>
+        </div>
+        {dashboard.comissoes.porImobiliaria.length === 0 ? (
+          <p>Nenhuma comissão devida a imobiliárias no mês vigente.</p>
+        ) : (
+          <div className="summary-grid compact-summary-grid">
+            {dashboard.comissoes.porImobiliaria.map((item) => (
+              <DashboardCard
+                key={item.imobiliariaId}
+                className="compact-card accent-card"
+                title={item.imobiliariaNome}
+                value={formatarValor(item.totalComissao)}
+                subtitle={`${item.percentualComissao}% sobre ${formatarValor(item.totalBase)} de aluguel/multa · ${item.quantidadeLancamentos} lançamento(s)`}
+                to="/financeiro/comissoes"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="summary-card compact-card">
         <div className="section-header">
           <strong>Comparação com o mês anterior</strong>

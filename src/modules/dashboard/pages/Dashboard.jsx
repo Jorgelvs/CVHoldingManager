@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import UniversalEntryButton from '../../../components/UniversalEntryButton.jsx'
 import { getDashboardData, formatarValor } from '../services/dashboardService.js'
 
@@ -8,8 +9,8 @@ import { getDashboardData, formatarValor } from '../services/dashboardService.js
 // só o mês vigente (mês corrente, sempre) e o acumulado do ano fiscal
 // (01/01 a 31/12 do ano corrente): Receita, Despesa por patrimônio e por
 // unidade (quando existir), e Comissão a pagar por imobiliária. Consulta
-// de outros meses continua disponível em Financeiro > Lançamentos, que já
-// tem filtro de período completo.
+// de um mês específico (independente do ano fiscal) fica em Financeiro >
+// Dashboard, que tem seletor de mês/ano com os mesmos números.
 export default function Dashboard() {
   const { dashboard, error } = useMemo(() => {
     const hoje = new Date()
@@ -44,7 +45,7 @@ export default function Dashboard() {
     <div className="page-content">
       <div className="page-header">
         <div>
-          <p className="page-subtitle">Mês vigente ({mesLabel}) e acumulado no ano fiscal ({anoLabel}).</p>
+          <p className="page-subtitle">Mês vigente ({mesLabel}) e acumulado no ano fiscal ({anoLabel}). Para consultar outro mês, veja <Link to="/financeiro">Financeiro &gt; Dashboard</Link>.</p>
           <h1>Dashboard</h1>
         </div>
         <UniversalEntryButton />

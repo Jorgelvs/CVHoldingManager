@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { listarAportes, devolverAporte, converterAporte } from '../services/aporteService.js'
+import { listarAportes } from '../services/aporteService.js'
 import { listarContas } from '../services/contaService.js'
 import AporteModal from '../../../components/AporteModal.jsx'
 
@@ -39,7 +39,7 @@ export default function AporteListPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Conta</th>
               <th>Data</th>
               <th>Valor</th>
               <th>Saldo</th>
@@ -51,7 +51,7 @@ export default function AporteListPage() {
           <tbody>
             {aportes.map(a => (
               <tr key={a.id}>
-                <td>{a.id}</td>
+                <td>{contas.find((c) => c.id === a.contaFinanceiraId)?.nome || '-'}</td>
                 <td>{a.data}</td>
                 <td>{Number(a.valorOriginal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td>{Number(a.saldoEmAberto).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
@@ -69,13 +69,6 @@ export default function AporteListPage() {
             ))}
           </tbody>
         </table>
-      </div>
-
-      <div style={{ marginTop: 20 }}>
-        <h3>Contas (IDs para referência)</h3>
-        <ul>
-          {contas.map(c => <li key={c.id}>{c.id} — {c.nome}</li>)}
-        </ul>
       </div>
 
       <AporteModal open={modalOpen} tipo={modalTipo} aporte={selecionado} contas={contas} onClose={() => setModalOpen(false)} onSaved={onSaved} />

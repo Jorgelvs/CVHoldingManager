@@ -17,7 +17,7 @@ export default function FinanceiroDashboardPage() {
 
   const { dashboard, error } = useMemo(() => {
     try {
-      return { dashboard: getDashboardData(periodo, ''), error: '' }
+      return { dashboard: getDashboardData(periodo), error: '' }
     } catch (err) {
       return { dashboard: null, error: err?.message || 'Erro ao carregar os dados do período.' }
     }

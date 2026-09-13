@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from 'react'
-import { listarCaucoes, aplicarCaucao, utilizarCaucao, devolverCaucao } from '../services/caucaoService.js'
+import { listarCaucoes } from '../services/caucaoService.js'
 import { listarContas } from '../services/contaService.js'
+import { buscarContratoPorId } from '../../contratos/services/contratoService.js'
+import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
+import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import CaucaoModal from '../../../components/CaucaoModal.jsx'
+
+function descreverContrato(contratoId) {
+  const contrato = contratoId ? buscarContratoPorId(contratoId) : null
+  if (!contrato) return 'Contrato não encontrado'
+  const unidade = contrato.unidadeId ? buscarUnidadePorId(contrato.unidadeId) : null
+  const locatario = contrato.locatarioId ? buscarLocatarioPorId(contrato.locatarioId) : null
+  const partes = [locatario?.nomeCompleto, unidade?.nome].filter(Boolean)
+  return partes.length > 0 ? partes.join(' — ') : 'Contrato sem inquilino/unidade'
+}
 
 export default function CaucaoListPage() {
   const [caucoes, setCaucoes] = useState([])
@@ -46,7 +58,6 @@ export default function CaucaoListPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Contrato</th>
               <th>Valor</th>
               <th>Saldo</th>
@@ -57,8 +68,7 @@ export default function CaucaoListPage() {
           <tbody>
             {caucoes.map(c => (
               <tr key={c.id}>
-                <td>{c.id}</td>
-                <td>{c.contratoId}</td>
+                <td>{descreverContrato(c.contratoId)}</td>
                 <td>{Number(c.valorRecebido).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td>{Number(c.saldoDisponivel).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                 <td>{c.status}</td>
@@ -71,13 +81,6 @@ export default function CaucaoListPage() {
             ))}
           </tbody>
         </table>
-      </div>
-
-      <div style={{ marginTop: 20 }}>
-        <h3>Contas (IDs)</h3>
-        <ul>
-          {contas.map(c => <li key={c.id}>{c.id} — {c.nome}</li>)}
-        </ul>
       </div>
 
       <CaucaoModal open={modalOpen} tipo={modalTipo} caucao={selecionado} contas={contas} onClose={() => setModalOpen(false)} onSaved={onSaved} />

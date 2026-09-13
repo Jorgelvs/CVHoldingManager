@@ -21,6 +21,7 @@ const MORE_ROUTES = [
   '/dashboard',
   '/documentos',
   '/financeiro/rateios',
+  '/financeiro/aportes',
   '/financeiro/caucoes',
   '/relatorios',
   '/backup',
@@ -167,6 +168,9 @@ export default function MobileBottomNav() {
           </button>
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/financeiro/rateios') }}>
             Rateios
+          </button>
+          <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/financeiro/aportes') }}>
+            Aportes
           </button>
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/financeiro/caucoes') }}>
             Cauções

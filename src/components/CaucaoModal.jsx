@@ -1,7 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
 import { aplicarCaucao, utilizarCaucao, devolverCaucao } from '../modules/financeiro/services/caucaoService.js'
+import { buscarContratoPorId } from '../modules/contratos/services/contratoService.js'
+import { buscarUnidadePorId } from '../modules/unidades/services/unidadeService.js'
+import { buscarLocatarioPorId } from '../modules/locatarios/services/locatarioService.js'
 import CurrencyInput from './CurrencyInput.jsx'
+
+function descreverContrato(contratoId) {
+  const contrato = contratoId ? buscarContratoPorId(contratoId) : null
+  if (!contrato) return 'Contrato não encontrado'
+  const unidade = contrato.unidadeId ? buscarUnidadePorId(contrato.unidadeId) : null
+  const locatario = contrato.locatarioId ? buscarLocatarioPorId(contrato.locatarioId) : null
+  const partes = [locatario?.nomeCompleto, unidade?.nome].filter(Boolean)
+  return partes.length > 0 ? partes.join(' — ') : 'Contrato sem inquilino/unidade'
+}
 
 export default function CaucaoModal({ open, tipo, caucao, contas, onClose, onSaved }) {
   const [valor, setValor] = useState('')
@@ -59,7 +71,7 @@ export default function CaucaoModal({ open, tipo, caucao, contas, onClose, onSav
   return (
     <Modal open={open} title={tipo === 'aplicar' ? 'Aplicar caução' : tipo === 'utilizar' ? 'Utilizar caução' : 'Devolver caução'} onClose={onClose}>
       <div>
-        <p><strong>Contrato:</strong> {caucao.contratoId || '-'}</p>
+        <p><strong>Contrato:</strong> {descreverContrato(caucao.contratoId)}</p>
         <p><strong>Saldo disponível:</strong> {Number(caucao.saldoDisponivel||0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
 
         <form onSubmit={handleSubmit} className="form-stack">

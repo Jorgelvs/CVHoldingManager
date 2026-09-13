@@ -16,9 +16,6 @@ import { buildFirstUnitSuggestion } from '../../unidades/utils/firstUnitAssistan
 const tabItems = [
   { id: 'resumo', label: 'Resumo' },
   { id: 'unidades', label: 'Unidades' },
-  { id: 'financeiro', label: 'Financeiro' },
-  { id: 'manutencoes', label: 'Manutenções' },
-  { id: 'documentos', label: 'Documentos' },
   { id: 'configuracoes', label: 'Configurações' },
 ]
 
@@ -222,12 +219,14 @@ export default function PatrimonioDetalhesPage() {
               >
                 Ver unidades do patrimônio
               </button>
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={() => navigate(`/documentos?patrimonioId=${patrimonio.id}`)}
+              >
+                Ver documentos do patrimônio
+              </button>
             </div>
-          </div>
-        )}
-        {activeTab !== 'resumo' && activeTab !== 'configuracoes' && activeTab !== 'unidades' && (
-          <div className="placeholder-card">
-            <p>Módulo será implementado em uma próxima Sprint.</p>
           </div>
         )}
 

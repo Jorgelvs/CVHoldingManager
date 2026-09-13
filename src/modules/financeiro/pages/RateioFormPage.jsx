@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import RateioForm from '../components/RateioForm.jsx'
-import { criarRateio, atualizarRateio, buscarRateioPorId, calcularRateioPreview, validarRateioDados } from '../services/rateioService.js'
+import { criarRateio, atualizarRateio, buscarRateioPorId, validarRateioDados } from '../services/rateioService.js'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 
 export default function RateioFormPage() {

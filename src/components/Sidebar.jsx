@@ -70,6 +70,16 @@ export default function Sidebar() {
                   <span className="label">Lançamentos</span>
                 </NavLink>
               </li>
+              <li>
+                <NavLink to="/financeiro/aportes" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  <span className="label">Aportes</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/financeiro/caucoes" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                  <span className="label">Cauções</span>
+                </NavLink>
+              </li>
               <li className="sidebar-submenu-divider" />
               <li>
                 <NavLink to="/financeiro/rateios" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>

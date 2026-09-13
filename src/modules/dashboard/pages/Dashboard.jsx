@@ -16,7 +16,7 @@ export default function Dashboard() {
     const hoje = new Date()
     const periodo = { ano: hoje.getFullYear(), mes: hoje.getMonth() + 1 }
     try {
-      return { dashboard: getDashboardData(periodo, ''), error: '' }
+      return { dashboard: getDashboardData(periodo), error: '' }
     } catch (err) {
       return { dashboard: null, error: err?.message || 'Erro ao carregar o dashboard.' }
     }

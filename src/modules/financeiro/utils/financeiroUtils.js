@@ -178,24 +178,3 @@ export function ordenarLancamentos(lancamentos) {
   })
 }
 
-export function agruparPorPatrimonio(lancamentos, unidades) {
-  const porUnidade = lancamentos.filter((item) => item.unidadeId)
-  const porPatrimonio = lancamentos.filter((item) => !item.unidadeId)
-
-  const mapa = {}
-
-  porPatrimonio.forEach((item) => {
-    const chave = item.patrimonioId || 'sem-patrimonio'
-    mapa[chave] = mapa[chave] || []
-    mapa[chave].push(item)
-  })
-
-  porUnidade.forEach((item) => {
-    const unidade = unidades.find((u) => u.id === item.unidadeId)
-    const chave = unidade?.patrimonioId || 'sem-patrimonio'
-    mapa[chave] = mapa[chave] || []
-    mapa[chave].push(item)
-  })
-
-  return mapa
-}

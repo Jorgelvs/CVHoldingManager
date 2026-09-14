@@ -41,6 +41,9 @@ export default function LocatarioViewPage() {
           <p>{locatario.cpf || '-'} • {locatario.telefone || '-'} • {locatario.whatsapp || '-'}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link className="button button-primary" to={`/contratos/novo?locatarioId=${locatario.id}`}>
+            Novo contrato
+          </Link>
           <Link className="button button-secondary" to={`/auditoria?modulo=Locatários&registroId=${locatario.id}`}>
             Ver histórico
           </Link>
@@ -92,6 +95,11 @@ export default function LocatarioViewPage() {
 
       {activeTab === 'contratos' && (
         <div className="table-wrapper">
+          <div style={{ marginBottom: 12 }}>
+            <Link className="button button-primary" to={`/contratos/novo?locatarioId=${locatario.id}`}>
+              Anexar novo contrato
+            </Link>
+          </div>
           {contratos.length === 0 ? (
             <p>Este locatário não possui contratos vinculados.</p>
           ) : (

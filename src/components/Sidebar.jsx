@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Gauge, LayoutGrid, Building, Users, FileText, DollarSign, BarChart2, Settings, Archive, Database, LogOut } from 'lucide-react'
+import { Gauge, LayoutGrid, Building, Users, DollarSign, BarChart2, Settings, Archive, Database, LogOut } from 'lucide-react'
 import { useAuth } from '../modules/auth/context/AuthContext.jsx'
 import Modal from './Modal.jsx'
 
@@ -13,8 +13,6 @@ const items = [
   { to: '/patrimonios', label: 'Patrimônio', icon: <Archive size={18} /> },
   { to: '/unidades', label: 'Unidades', icon: <Building size={18} /> },
   { to: '/locatarios', label: 'Locatários', icon: <Users size={18} /> },
-  { to: '/contratos', label: 'Contratos', icon: <FileText size={18} /> },
-  { to: '/documentos', label: 'Documentos', icon: <Archive size={18} /> },
   { to: '/backup', label: 'Backup', icon: <Database size={18} /> },
   { to: '/relatorios', label: 'Relatórios', icon: <BarChart2 size={18} /> },
   { to: '/configuracoes', label: 'Configurações', icon: <Settings size={18} /> },

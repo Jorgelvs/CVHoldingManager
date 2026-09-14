@@ -39,6 +39,7 @@ export default function ContratoFormPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const presetUnidadeId = searchParams.get('unidadeId') || ''
+  const presetLocatarioId = searchParams.get('locatarioId') || ''
   const [contrato, setContrato] = useState(null)
 
   useEffect(() => {
@@ -107,6 +108,7 @@ export default function ContratoFormPage() {
         headerLabel={id ? 'Editar contrato' : 'Novo contrato'}
         onSave={handleSave}
         presetUnidadeId={presetUnidadeId}
+        presetLocatarioId={presetLocatarioId}
       />
     </div>
   )

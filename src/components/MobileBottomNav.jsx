@@ -143,9 +143,6 @@ export default function MobileBottomNav() {
           <button type="button" className="button button-secondary" onClick={() => { setOpenConsultar(false); navigate('/financeiro/lancamentos?status=atrasado') }}>
             Inadimplência
           </button>
-          <button type="button" className="button button-secondary" onClick={() => { setOpenConsultar(false); navigate('/contratos') }}>
-            Contratos ativos
-          </button>
           <button type="button" className="button button-secondary" onClick={() => { setOpenConsultar(false); navigate('/patrimonios') }}>
             Patrimônios
           </button>
@@ -162,9 +159,6 @@ export default function MobileBottomNav() {
         <div className="mobile-nav-sheet-list" role="menu" aria-label="Mais atalhos">
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/dashboard') }}>
             Dashboard
-          </button>
-          <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/documentos') }}>
-            Documentos
           </button>
           <button type="button" className="button button-secondary" onClick={() => { setOpenMais(false); navigate('/financeiro/rateios') }}>
             Rateios

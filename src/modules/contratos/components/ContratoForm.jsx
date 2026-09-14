@@ -97,7 +97,7 @@ const defaultForm = {
   observacoes: '',
 }
 
-export default function ContratoForm({ initialData = null, headerLabel = 'Contrato', onSave, presetUnidadeId = '' }) {
+export default function ContratoForm({ initialData = null, headerLabel = 'Contrato', onSave, presetUnidadeId = '', presetLocatarioId = '' }) {
   const navigate = useNavigate()
   const [form, setForm] = useState(defaultForm)
   const [errors, setErrors] = useState({})
@@ -267,6 +267,19 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
       }))
     }
   }, [presetUnidadeId, initialData, form.unidadeId])
+
+  // Preenche automaticamente o locatário quando o formulário é aberto a
+  // partir da tela de um locatário específico (botão "Novo contrato" em
+  // Locatários > aba Contratos), evitando que o usuário precise buscar de
+  // novo um locatário que ele já estava vendo.
+  useEffect(() => {
+    if (initialData || !presetLocatarioId || locatarioSelecionadoId) return
+    const locatarioPreset = buscarLocatarioPorId(presetLocatarioId)
+    if (locatarioPreset) {
+      setLocatarioSelecionadoId(locatarioPreset.id)
+      setLocatarioForm({ ...defaultLocatarioForm, ...locatarioPreset })
+    }
+  }, [presetLocatarioId, initialData, locatarioSelecionadoId])
 
   const updateField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }))

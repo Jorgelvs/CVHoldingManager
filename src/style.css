@@ -2709,14 +2709,18 @@ button.button-danger {
   font-size: 0.95rem;
 }
 
+/* Cores alinhadas com a legenda do grid acima: "Recebido" usa o mesmo
+   verde escuro de "Em dia" (pago) e "A receber" usa o mesmo verde claro de
+   "Ocupada" (aluguel do mês ainda não vencido) — pedido do usuário em
+   14/09/2026 para o card não contradizer a cor das células do grid. */
 .painel-resumo-recebido {
-  background: #cfe8bd;
-  color: #274a13;
+  background: #4f9a4a;
+  color: #fff;
 }
 
 .painel-resumo-a-receber {
-  background: var(--code-bg);
-  color: var(--text-h);
+  background: #cfe8bd;
+  color: #274a13;
 }
 
 .painel-resumo-atrasado {

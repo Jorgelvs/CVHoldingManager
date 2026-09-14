@@ -139,6 +139,14 @@ export default function PainelOcupacaoPage() {
         const valorAtrasadoSemLancamento = status === 'atrasado' && lancamentosUnidade.length === 0
           ? Number(contrato?.valorAluguel || 0) + Number(contrato?.valorCondominio || 0)
           : 0
+        // Unidade "ocupada" (verde claro) sem nenhum lançamento ainda gerado
+        // é aluguel do mês que ainda vai vencer — precisa entrar no card "A
+        // receber" de baixo, senão ele fica sempre R$ 0,00 mesmo com várias
+        // unidades verde-claro no grid esperando cobrança (mesmo padrão do
+        // ajuste já feito para "Atrasado" em 26/08/2026).
+        const valorAReceberSemLancamento = status === 'ocupada' && lancamentosUnidade.length === 0
+          ? Number(contrato?.valorAluguel || 0) + Number(contrato?.valorCondominio || 0)
+          : 0
         return {
           unidade,
           contrato,
@@ -146,6 +154,7 @@ export default function PainelOcupacaoPage() {
           lancamentos: lancamentosUnidade,
           status,
           valorAtrasadoSemLancamento,
+          valorAReceberSemLancamento,
         }
       })
 
@@ -162,9 +171,10 @@ export default function PainelOcupacaoPage() {
         .reduce((total, item) => total + Number(item.valor || 0), 0)
       const atrasadoSemLancamento = unidadesComStatus.reduce((total, item) => total + item.valorAtrasadoSemLancamento, 0)
       const atrasado = calcularAtrasados(lancamentosPatrimonio) + atrasadoSemLancamento
+      const aReceberSemLancamento = unidadesComStatus.reduce((total, item) => total + item.valorAReceberSemLancamento, 0)
       const aReceber = lancamentosPatrimonio
         .filter((item) => ['pendente', 'parcial'].includes(getStatusEfetivo(item)))
-        .reduce((total, item) => total + Number(item.valor || 0), 0)
+        .reduce((total, item) => total + Number(item.valor || 0), 0) + aReceberSemLancamento
 
       return { patrimonio, unidades: unidadesComStatus, recebido, aReceber, atrasado }
     })

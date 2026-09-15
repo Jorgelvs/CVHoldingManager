@@ -55,10 +55,16 @@ export default function SearchableSelect({
     setOpen(false)
   }
 
-  const handleFocus = (event) => {
+  // Limpa o texto de busca ao focar (em vez de só selecionar/destacar o texto
+  // atual) para a lista mostrar TODAS as opções assim que o campo abre. Sem
+  // isso, o campo reabria com o texto do item já escolhido ainda no lugar —
+  // como esse texto só bate com a própria opção selecionada, a lista
+  // aparecia com um único resultado (ela mesma), dando a impressão de que
+  // não dava para trocar a escolha sem apagar o texto manualmente primeiro.
+  const handleFocus = () => {
     if (disabled) return
     setOpen(true)
-    event.target.select()
+    setQuery('')
   }
 
   const handleBlur = () => {

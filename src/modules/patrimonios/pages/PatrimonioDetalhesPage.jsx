@@ -112,7 +112,7 @@ export default function PatrimonioDetalhesPage() {
             <h1>{patrimonio.nome}</h1>
             <StatusBadge status={patrimonio.situacao} />
           </div>
-          <p className="details-meta">{patrimonio.codigo} — Tipo: {patrimonio.grupoPatrimonial} • Classificação: {patrimonio.tipo}</p>
+          <p className="details-meta">Tipo: {patrimonio.grupoPatrimonial} • Classificação: {patrimonio.tipo}</p>
           {endereco ? <p className="details-meta">{endereco}</p> : null}
           <p className="details-meta">Situação registral: {patrimonio.situacaoRegistral || 'Não informado'}</p>
         </div>

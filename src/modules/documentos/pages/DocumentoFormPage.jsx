@@ -4,6 +4,7 @@ import { criarDocumento, atualizarDocumento, buscarDocumentoPorId, existeDocumen
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
 import { listarContratos } from '../../contratos/services/contratoService.js'
+import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
 import { listarLancamentos } from '../../financeiro/services/financeiroService.js'
 import { obterParametrosDocumentos, formatarDataConfigurada } from '../../configuracoes/services/configuracaoService.js'
 
@@ -57,6 +58,13 @@ export default function DocumentoFormPage() {
   const patrimonios = useMemo(() => listarPatrimonios(), [])
   const unidades = useMemo(() => listarUnidades(), [])
   const contratos = useMemo(() => listarContratos(), [])
+  const locatarios = useMemo(() => listarLocatarios(), [])
+  const getContratoLabel = (contrato) => {
+    const locatario = locatarios.find((item) => item.id === contrato.locatarioId)
+    const unidade = unidades.find((item) => item.id === contrato.unidadeId)
+    const partes = [locatario?.nomeCompleto, unidade?.nome].filter(Boolean)
+    return partes.length > 0 ? partes.join(' — ') : 'Contrato sem inquilino/unidade'
+  }
   const lancamentos = useMemo(() => listarLancamentos(), [])
 
   useEffect(() => {
@@ -240,7 +248,7 @@ export default function DocumentoFormPage() {
             <select value={form.contratoId} onChange={(event) => handleChange('contratoId', event.target.value)}>
               <option value="">Nenhum</option>
               {contratos.map((item) => (
-                <option key={item.id} value={item.id}>{item.codigoInterno}</option>
+                <option key={item.id} value={item.id}>{getContratoLabel(item)}</option>
               ))}
             </select>
           </div>

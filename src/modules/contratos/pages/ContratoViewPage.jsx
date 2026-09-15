@@ -124,7 +124,7 @@ export default function ContratoViewPage() {
       <div className="page-header">
         <div>
           <p className="page-subtitle">Detalhes do contrato.</p>
-          <h1>{contrato.codigoInterno}</h1>
+          <h1>{locatario?.nomeCompleto || 'Sem locatário'} — {unidade?.nome || 'Sem unidade'}</h1>
           <p>{contrato.situacao}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -164,7 +164,6 @@ export default function ContratoViewPage() {
         <div className="summary-card">
           <h2>Identificação</h2>
           <dl>
-            <dt>Código interno</dt><dd>{contrato.codigoInterno}</dd>
             <dt>Situação</dt><dd>{contrato.situacao}</dd>
             <dt>Criado em</dt><dd>{formatarData(contrato.createdAt)}</dd>
             <dt>Atualizado em</dt><dd>{formatarData(contrato.updatedAt)}</dd>

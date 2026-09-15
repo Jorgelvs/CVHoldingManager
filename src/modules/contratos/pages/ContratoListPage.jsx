@@ -242,8 +242,8 @@ export default function ContratoListPage() {
               <details className="collapsible-card" key={item.id}>
                 <summary>
                   <span className="collapsible-card-title">
-                    <span className="name">{item.codigoInterno}</span>
-                    <span className="meta">{locatario?.nomeCompleto || 'N/A'}</span>
+                    <span className="name">{locatario?.nomeCompleto || 'Sem locatário'}</span>
+                    <span className="meta">{unidade?.nome || 'N/A'}</span>
                     <span className={`status-badge status-badge-${situacaoClasse(item.situacao)}`}>{item.situacao}</span>
                   </span>
                   <span className="collapsible-card-chevron"><ChevronDown size={18} /></span>

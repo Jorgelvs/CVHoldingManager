@@ -13,7 +13,6 @@ export default function PatrimonioCard({ patrimonio, unidadesVinculadas = [], on
       <div className="card-header">
         <div>
           <h3>{patrimonio.nome}</h3>
-          <small>{patrimonio.codigo}</small>
         </div>
         <StatusBadge status={situacao} />
       </div>

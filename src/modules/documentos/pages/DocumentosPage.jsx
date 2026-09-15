@@ -10,6 +10,7 @@ import {
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
 import { listarContratos } from '../../contratos/services/contratoService.js'
+import { listarLocatarios } from '../../locatarios/services/locatarioService.js'
 import { listarLancamentos } from '../../financeiro/services/financeiroService.js'
 import { CATEGORIAS_DOCUMENTOS } from '../constants/documentoConstants.js'
 import { formatarDataConfigurada, obterParametrosDocumentos, obterPreferenciasInterface } from '../../configuracoes/services/configuracaoService.js'
@@ -75,6 +76,7 @@ export default function DocumentosPage() {
   const patrimonios = useMemo(() => listarPatrimonios(), [])
   const unidades = useMemo(() => listarUnidades(), [])
   const contratos = useMemo(() => listarContratos(), [])
+  const locatarios = useMemo(() => listarLocatarios(), [])
   const lancamentos = useMemo(() => listarLancamentos(), [])
   const parametrosDocumentos = useMemo(() => obterParametrosDocumentos(), [])
   const preferenciasInterface = useMemo(() => obterPreferenciasInterface(), [])
@@ -133,7 +135,14 @@ export default function DocumentosPage() {
 
   const getPatrimonioNome = (id) => patrimonios.find((item) => item.id === id)?.nome || '-'
   const getUnidadeNome = (id) => unidades.find((item) => item.id === id)?.nome || '-'
-  const getContratoCodigo = (id) => contratos.find((item) => item.id === id)?.codigoInterno || '-'
+  const getContratoLabel = (id) => {
+    const contrato = contratos.find((item) => item.id === id)
+    if (!contrato) return '-'
+    const locatario = locatarios.find((item) => item.id === contrato.locatarioId)
+    const unidade = unidades.find((item) => item.id === contrato.unidadeId)
+    const partes = [locatario?.nomeCompleto, unidade?.nome].filter(Boolean)
+    return partes.length > 0 ? partes.join(' — ') : '-'
+  }
   const getLancamentoDescricao = (id) => lancamentos.find((item) => item.id === id)?.descricao || '-'
   const formatarTamanho = (bytes) => {
     if (!bytes) return '-'
@@ -192,7 +201,7 @@ export default function DocumentosPage() {
           <select value={filtros.contratoId} onChange={(event) => handleFilterChange('contratoId', event.target.value)}>
             <option value="">Todos</option>
             {contratos.map((item) => (
-              <option key={item.id} value={item.id}>{item.codigoInterno}</option>
+              <option key={item.id} value={item.id}>{getContratoLabel(item.id)}</option>
             ))}
           </select>
         </div>
@@ -256,7 +265,7 @@ export default function DocumentosPage() {
                     <td>{formatarTamanho(documento.tamanho)}</td>
                     <td>{getPatrimonioNome(documento.patrimonioId)}</td>
                     <td>{getUnidadeNome(documento.unidadeId)}</td>
-                    <td>{getContratoCodigo(documento.contratoId)}</td>
+                    <td>{getContratoLabel(documento.contratoId)}</td>
                     <td>{documento.contratoId ? labelPastaContrato(contratosPorId.get(documento.contratoId)) : '-'}</td>
                     <td>{getLancamentoDescricao(documento.lancamentoId)}</td>
                     <td className="table-actions">

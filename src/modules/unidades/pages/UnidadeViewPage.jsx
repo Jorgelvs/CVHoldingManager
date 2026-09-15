@@ -72,7 +72,6 @@ export default function UnidadeViewPage() {
             <h2>Dados principais</h2>
             <dl>
               <dt>Nome</dt><dd>{unidade.nome || 'Não informado'}</dd>
-              <dt>Código interno</dt><dd>{unidade.codigoInterno || 'Não informado'}</dd>
               <dt>Patrimônio</dt><dd>{patrimonio?.nome || 'Não informado'}</dd>
               <dt>Tipo</dt><dd>{unidade.tipo || 'Não informado'}</dd>
               <dt>Finalidade</dt><dd>{unidade.finalidade || 'Não informado'}</dd>
@@ -87,7 +86,7 @@ export default function UnidadeViewPage() {
                   <dt>Inquilino atual</dt>
                   <dd><Link to={`/locatarios/${locatarioAtual.id}`}>{locatarioAtual.nomeCompleto}</Link></dd>
                   <dt>Contrato</dt>
-                  <dd><Link to={`/contratos/${contratoAtual.id}`}>{contratoAtual.codigoInterno || 'Ver contrato'}</Link></dd>
+                  <dd><Link to={`/contratos/${contratoAtual.id}`}>Ver contrato</Link></dd>
                 </dl>
                 <p className="page-subtitle" style={{ marginTop: 8 }}>
                   Veja o histórico completo de inquilinos na aba "Histórico de locação".

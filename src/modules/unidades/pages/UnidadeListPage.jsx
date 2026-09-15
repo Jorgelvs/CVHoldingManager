@@ -219,7 +219,7 @@ export default function UnidadeListPage() {
                 <summary>
                   <span className="collapsible-card-title">
                     <span className="name">{item.nome}</span>
-                    <span className="meta">{item.codigoInterno}</span>
+                    <span className="meta">{patrimoniosPorId.get(item.patrimonioId)?.nome || '-'}</span>
                     <span className={`status-badge status-badge-${situacaoClasse(item.situacao)}`}>{item.situacao}</span>
                   </span>
                   <span className="collapsible-card-chevron"><ChevronDown size={18} /></span>

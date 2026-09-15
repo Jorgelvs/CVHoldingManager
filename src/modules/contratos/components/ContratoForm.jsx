@@ -306,7 +306,8 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
     if (form.situacao === 'Ativo' && form.unidadeId) {
       const conflito = contratoAtivoPorUnidade(form.unidadeId)
       if (conflito && (!form.id || conflito.id !== form.id)) {
-        validationErrors.unidadeId = `Já existe contrato ativo ${conflito.codigoInterno} nesta unidade.`
+        const locatarioConflito = conflito.locatarioId ? buscarLocatarioPorId(conflito.locatarioId) : null
+        validationErrors.unidadeId = `Já existe contrato ativo nesta unidade${locatarioConflito ? ` (${locatarioConflito.nomeCompleto})` : ''}.`
       }
     }
     const locatarioValidationErrors = validarLocatarioEmbutido()
@@ -396,8 +397,8 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
               onChange={handleUnidadeChange}
               options={unidadesElegiveis.map((item) => ({
                 id: item.id,
-                label: `${item.nome} - ${item.codigoInterno}`,
-                sublabel: `${patrimoniosPorId.get(item.patrimonioId)?.nome || 'Patrimônio não identificado'} · ${item.situacao}`,
+                label: `${patrimoniosPorId.get(item.patrimonioId)?.nome || 'Patrimônio não identificado'} - ${item.nome}`,
+                sublabel: item.situacao,
               }))}
               placeholder="Digite o nome ou código da unidade"
               emptyMessage="Nenhuma unidade encontrada"

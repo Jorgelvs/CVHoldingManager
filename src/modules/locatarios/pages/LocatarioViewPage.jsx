@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { buscarLocatarioPorId } from '../services/locatarioService.js'
 import { listarContratosPorLocatario } from '../../contratos/services/contratoService.js'
-import { buscarContratoPorId } from '../../contratos/services/contratoService.js'
+import { alterarSituacaoContrato } from '../../contratos/services/contratoService.js'
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { buscarPatrimonioPorId } from '../../patrimonios/services/patrimonioService.js'
 import { formatarMoeda, formatarData } from '../../patrimonios/utils/patrimonioUtils.js'
@@ -128,6 +128,19 @@ export default function LocatarioViewPage() {
                       <td className="table-actions">
                         <Link className="button button-secondary" to={`/contratos/${contrato.id}`}>Visualizar</Link>
                         <Link className="button button-secondary" to={`/contratos/${contrato.id}/editar`}>Editar</Link>
+                        {contrato.situacao === 'Rascunho' ? (
+                          <button
+                            className="button button-primary"
+                            type="button"
+                            onClick={() => {
+                              const r = alterarSituacaoContrato(contrato.id, 'Ativo')
+                              if (r?.error) window.alert(r.error)
+                              else window.location.reload()
+                            }}
+                          >
+                            Ativar
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   )

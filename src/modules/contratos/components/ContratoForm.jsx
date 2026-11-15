@@ -93,7 +93,9 @@ const defaultForm = {
   dataBaseReajuste: '',
   historicoReajustes: [],
   prazoMeses: '',
-  situacao: 'Rascunho',
+  // Novo contrato já nasce Ativo: como Rascunho a unidade não era vinculada
+  // ao inquilino (Painel e Unidades continuavam sem inquilino).
+  situacao: 'Ativo',
   observacoes: '',
 }
 
@@ -297,8 +299,12 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
     }))
   }
 
+  // Dia de vencimento fica em "avançado": se não preenchido, usa o dia da
+  // data de início (senão o contrato Ativo não passaria na validação).
+  const diaPadrao = form.diaVencimento || (form.dataInicio ? String(Number(form.dataInicio.slice(8, 10))) : '')
+
   const validate = () => {
-    const validationErrors = validarContrato(form)
+    const validationErrors = validarContrato({ ...form, diaVencimento: diaPadrao })
     // locatarioId ainda não existe neste ponto quando é um cadastro novo (só
     // é criado/resolvido no submit, em ContratoFormPage) — validado à parte
     // logo abaixo, via validarLocatarioEmbutido().
@@ -334,6 +340,7 @@ export default function ContratoForm({ initialData = null, headerLabel = 'Contra
     setSubmitting(true)
     const response = onSave({
       ...form,
+      diaVencimento: diaPadrao,
       valorAluguel: form.valorAluguel || '0',
       valorCondominio: form.valorCondominio || '0',
       valorCaucao: form.valorCaucao || '0',

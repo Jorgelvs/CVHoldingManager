@@ -8,6 +8,7 @@ import { buscarImobiliariaPorId } from '../../imobiliarias/services/imobiliariaS
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { listarLancamentos, criarLancamento } from '../../financeiro/services/financeiroService.js'
+import { listarComissoesDetalhadas } from '../../financeiro/services/comissaoService.js'
 import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
 import { getStatusEfetivo, calcularAtrasados, formatarMoeda } from '../../financeiro/utils/financeiroUtils.js'
 import PainelUnidadeModal from '../components/PainelUnidadeModal.jsx'
@@ -130,6 +131,11 @@ export default function PainelOcupacaoPage() {
       (item) => item.tipo === 'receita' && item.status !== 'cancelado' && competenciaMes(item) === mesRef,
     )
 
+    const comissoesMes = listarComissoesDetalhadas({ periodoInicio: `${mesRef}-01`, periodoFim: `${mesRef}-31` })
+    const todosLanc = listarLancamentos()
+    const idsLancamentosUnidade = (lancId) => todosLanc.find((l) => l.id === lancId)?.unidadeId
+      || null
+
     return patrimonios.map((patrimonio) => {
       const unidades = unidadesTodas
         .filter((unidade) => unidade.patrimonioId === patrimonio.id)
@@ -160,9 +166,11 @@ export default function PainelOcupacaoPage() {
           : 0
         // Comissão estimada do mês: aluguel x % da imobiliária do contrato.
         const imobiliaria = contrato?.imobiliariaId ? buscarImobiliariaPorId(contrato.imobiliariaId) : null
-        const comissao = imobiliaria
-          ? Math.round(Number(contrato.valorAluguel || 0) * Number(imobiliaria.percentualComissao || 0)) / 100
-          : 0
+        // Mesma regra da tela Comissões: soma das comissões dos lançamentos
+        // de aluguel/multa da unidade pagos/vencendo no mês.
+        const comissao = comissoesMes
+          .filter((c) => idsLancamentosUnidade(c.lancamentoId) === unidade.id)
+          .reduce((total, c) => total + c.valorComissao, 0)
         return {
           imobiliaria,
           comissao,

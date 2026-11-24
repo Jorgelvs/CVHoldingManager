@@ -128,6 +128,19 @@ export default function LocatarioViewPage() {
                       <td className="table-actions">
                         <Link className="button button-secondary" to={`/contratos/${contrato.id}`}>Visualizar</Link>
                         <Link className="button button-secondary" to={`/contratos/${contrato.id}/editar`}>Editar</Link>
+                        {contrato.situacao === 'Ativo' ? (
+                          <button
+                            className="button button-danger"
+                            type="button"
+                            onClick={() => {
+                              if (!window.confirm('Encerrar este contrato? A unidade ficará disponível e o histórico é mantido.')) return
+                              alterarSituacaoContrato(contrato.id, 'Encerrado')
+                              window.location.reload()
+                            }}
+                          >
+                            Encerrar contrato
+                          </button>
+                        ) : null}
                         {contrato.situacao === 'Rascunho' ? (
                           <button
                             className="button button-primary"

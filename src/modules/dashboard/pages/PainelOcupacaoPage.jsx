@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { listarPatrimonios } from '../../patrimonios/services/patrimonioService.js'
 import { listarUnidades } from '../../unidades/services/unidadeService.js'
-import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
+import { contratoAtivoPorUnidade, listarContratos } from '../../contratos/services/contratoService.js'
+import { buscarImobiliariaPorId } from '../../imobiliarias/services/imobiliariaService.js'
+import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
 import { listarLancamentos } from '../../financeiro/services/financeiroService.js'
 import { getStatusEfetivo, calcularAtrasados, formatarMoeda } from '../../financeiro/utils/financeiroUtils.js'
@@ -80,6 +82,14 @@ function statusUnidade(unidade, contrato, lancamentosDoMes, mesRef) {
   return 'ocupada'
 }
 
+function formatarDataBr(iso) {
+  if (!iso) return ''
+  const [a, m, d] = String(iso).slice(0, 10).split('-')
+  return `${d}/${m}/${a}`
+}
+
+const DIAS_ALERTA_FIM_CONTRATO = 60
+
 const LABEL_STATUS = {
   desocupada: 'Desocupada',
   ocupada: 'Ocupada',
@@ -147,7 +157,14 @@ export default function PainelOcupacaoPage() {
         const valorAReceberSemLancamento = status === 'ocupada' && lancamentosUnidade.length === 0
           ? Number(contrato?.valorAluguel || 0) + Number(contrato?.valorCondominio || 0)
           : 0
+        // Comissão estimada do mês: aluguel x % da imobiliária do contrato.
+        const imobiliaria = contrato?.imobiliariaId ? buscarImobiliariaPorId(contrato.imobiliariaId) : null
+        const comissao = imobiliaria
+          ? Math.round(Number(contrato.valorAluguel || 0) * Number(imobiliaria.percentualComissao || 0)) / 100
+          : 0
         return {
+          imobiliaria,
+          comissao,
           unidade,
           contrato,
           inquilino,
@@ -176,9 +193,37 @@ export default function PainelOcupacaoPage() {
         .filter((item) => ['pendente', 'parcial'].includes(getStatusEfetivo(item)))
         .reduce((total, item) => total + Number(item.valor || 0), 0) + aReceberSemLancamento
 
-      return { patrimonio, unidades: unidadesComStatus, recebido, aReceber, atrasado }
+      const comissao = unidadesComStatus.reduce((total, item) => total + item.comissao, 0)
+
+      return { patrimonio, unidades: unidadesComStatus, recebido, aReceber, atrasado, comissao }
     })
   }, [mesRef, reloadTick])
+
+  const comissaoPorImobiliaria = useMemo(() => {
+    const mapa = new Map()
+    dados.forEach(({ unidades }) => unidades.forEach(({ imobiliaria, comissao }) => {
+      if (!imobiliaria || !comissao) return
+      mapa.set(imobiliaria.nome, (mapa.get(imobiliaria.nome) || 0) + comissao)
+    }))
+    return Array.from(mapa.entries())
+  }, [dados])
+
+  // Alarme: contratos ativos que terminam em até 2 meses (ou já venceram).
+  const alertasContrato = useMemo(() => {
+    const hoje = new Date()
+    return listarContratos()
+      .filter((c) => c.situacao === 'Ativo' && c.dataFim)
+      .map((c) => ({ c, dias: Math.ceil((new Date(`${c.dataFim}T00:00:00`) - hoje) / 86400000) }))
+      .filter(({ dias }) => dias <= DIAS_ALERTA_FIM_CONTRATO)
+      .sort((a, b) => a.dias - b.dias)
+      .map(({ c, dias }) => ({
+        id: c.id,
+        dias,
+        dataFim: c.dataFim,
+        unidade: buscarUnidadePorId(c.unidadeId)?.nome || 'Unidade',
+        inquilino: buscarLocatarioPorId(c.locatarioId)?.nomeCompleto || 'Sem inquilino',
+      }))
+  }, [reloadTick])
 
   return (
     <div className="page-content page-content-tight">
@@ -201,6 +246,37 @@ export default function PainelOcupacaoPage() {
         </div>
       </div>
 
+      <div className="painel-acoes">
+        <Link className="button button-primary" to="/patrimonios/novo">Novo imóvel</Link>
+        <Link className="button button-primary" to="/unidades/nova">Nova unidade</Link>
+        <Link className="button button-secondary" to="/contratos/novo">Novo contrato / inquilino</Link>
+      </div>
+
+      {alertasContrato.length > 0 ? (
+        <div className="summary-card painel-alerta-vencimento">
+          <strong>Contratos terminando em até 2 meses</strong>
+          <ul>
+            {alertasContrato.map((a) => (
+              <li key={a.id}>
+                <Link to={`/contratos/${a.id}`}>{a.unidade} — {a.inquilino}</Link>
+                {': '}
+                {a.dias < 0 ? `venceu em ${formatarDataBr(a.dataFim)}` : `termina em ${formatarDataBr(a.dataFim)} (${a.dias} dias)`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {comissaoPorImobiliaria.length > 0 ? (
+        <div className="summary-card">
+          <strong>Comissão da imobiliária a pagar (estimada, sobre o aluguel)</strong>
+          <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+            {comissaoPorImobiliaria.map(([nome, valor]) => (<li key={nome}>{nome}: {formatarMoeda(valor)}</li>))}
+            <li><strong>Total: {formatarMoeda(comissaoPorImobiliaria.reduce((t, [, v]) => t + v, 0))}</strong></li>
+          </ul>
+        </div>
+      ) : null}
+
       {dados.length === 0 ? (
         <div className="empty-state">
           <h2>Nenhum patrimônio cadastrado.</h2>
@@ -211,7 +287,7 @@ export default function PainelOcupacaoPage() {
           </div>
         </div>
       ) : (
-        dados.map(({ patrimonio, unidades, recebido, aReceber, atrasado }) => (
+        dados.map(({ patrimonio, unidades, recebido, aReceber, atrasado, comissao }) => (
           <div className="painel-patrimonio-card" key={patrimonio.id}>
             <h2 className="painel-patrimonio-titulo">{patrimonio.nome}</h2>
 
@@ -233,7 +309,7 @@ export default function PainelOcupacaoPage() {
                     ) : null}
                     <span className="painel-unidade-detalhe">
                       {contrato
-                        ? `${formatarMoeda(Number(contrato.valorAluguel || 0) + Number(contrato.valorCondominio || 0))}${contrato.diaVencimento ? ` · dia ${contrato.diaVencimento}` : ''}`
+                        ? `${formatarMoeda(Number(contrato.valorAluguel || 0) + Number(contrato.valorCondominio || 0))}${contrato.diaVencimento ? ` · dia ${contrato.diaVencimento}` : ''}${contrato.dataFim ? ` · até ${formatarDataBr(contrato.dataFim)}` : ''}`
                         : status === 'ocupada'
                           ? 'Ocupada · contrato pendente'
                           : 'Desocupada'}
@@ -251,6 +327,10 @@ export default function PainelOcupacaoPage() {
               <div className="painel-resumo-item painel-resumo-a-receber">
                 <span className="painel-resumo-label">A receber</span>
                 <span className="painel-resumo-valor">{formatarMoeda(aReceber)}</span>
+              </div>
+              <div className="painel-resumo-item painel-resumo-comissao">
+                <span className="painel-resumo-label">Comissão</span>
+                <span className="painel-resumo-valor">{formatarMoeda(comissao)}</span>
               </div>
               <div className="painel-resumo-item painel-resumo-atrasado">
                 <span className="painel-resumo-label">Atrasado</span>

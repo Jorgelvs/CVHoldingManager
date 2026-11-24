@@ -2685,7 +2685,7 @@ button.button-danger {
 
 .painel-resumo-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
 }
 
@@ -2897,3 +2897,12 @@ button.button-danger {
   }
 }
 
+
+/* Menu lateral: grupo "Mais" colapsável */
+.sidebar-mais > summary { list-style: none; cursor: pointer; }
+.sidebar-mais > summary::-webkit-details-marker { display: none; }
+.painel-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.painel-alerta-vencimento { border-left: 4px solid #e2a03b; }
+.painel-alerta-vencimento ul { margin: 6px 0 0; padding-left: 18px; }
+.painel-resumo-comissao { background: #efe6fb; color: #3d2a66; }
+@media (max-width: 600px) { .painel-resumo-row { grid-template-columns: repeat(2, 1fr); } }

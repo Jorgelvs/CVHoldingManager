@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import Modal from '../../../components/Modal.jsx'
 import CurrencyInput from '../../../components/CurrencyInput.jsx'
 import { atualizarLocatario } from '../../locatarios/services/locatarioService.js'
-import { atualizarContrato } from '../../contratos/services/contratoService.js'
+import { atualizarContrato, alterarSituacaoContrato } from '../../contratos/services/contratoService.js'
 import { situacoesContrato } from '../../contratos/constants/contratoConstants.js'
 import { criarLancamento } from '../../financeiro/services/financeiroService.js'
 import { registrarBaixa, calcularSaldoPendente } from '../../financeiro/services/baixaService.js'
@@ -145,6 +145,15 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
     onChanged()
   }
 
+  const handleEncerrarContrato = () => {
+    if (!contrato) return
+    if (!window.confirm('Encerrar este contrato? A unidade ficará disponível e o histórico é mantido.')) return
+    const r = alterarSituacaoContrato(contrato.id, 'Encerrado')
+    if (r?.error) { setMensagem({ type: 'error', text: r.error }); return }
+    onChanged()
+    onClose()
+  }
+
   const handleLancarPagamento = ({ ignorarDivergencia = false } = {}) => {
     if (!unidade) return
     const valorNumero = Number(novoPagamentoValor)
@@ -263,9 +272,16 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
               )}
             </div>
           ) : (
-            <button type="button" className="button button-secondary" onClick={() => setNovoPagamentoAberto(true)}>
-              Lançar pagamento
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {contrato && lancamentos.length === 0 && valorEsperadoDeposito ? (
+                <button type="button" className="button button-primary" onClick={() => handleLancarPagamento({ ignorarDivergencia: true })}>
+                  Recebi {formatarMoeda(valorEsperadoDeposito)}
+                </button>
+              ) : null}
+              <button type="button" className="button button-secondary" onClick={() => setNovoPagamentoAberto(true)}>
+                Lançar outro valor
+              </button>
+            </div>
           )}
         </div>
 
@@ -395,6 +411,9 @@ export default function PainelUnidadeModal({ selecionado, mesRef, formatarMesRef
           <Link className="button button-secondary" to={`/unidades/${unidade.id}`}>Ver unidade completa</Link>
           {contrato ? (
             <Link className="button button-secondary" to={`/contratos/${contrato.id}`}>Ver contrato completo</Link>
+          ) : null}
+          {contrato && contrato.situacao === 'Ativo' ? (
+            <button type="button" className="button button-danger" onClick={handleEncerrarContrato}>Encerrar contrato</button>
           ) : null}
         </div>
       </div>

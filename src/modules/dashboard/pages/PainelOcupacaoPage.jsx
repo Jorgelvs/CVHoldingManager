@@ -7,7 +7,8 @@ import { contratoAtivoPorUnidade, listarContratos } from '../../contratos/servic
 import { buscarImobiliariaPorId } from '../../imobiliarias/services/imobiliariaService.js'
 import { buscarUnidadePorId } from '../../unidades/services/unidadeService.js'
 import { buscarLocatarioPorId } from '../../locatarios/services/locatarioService.js'
-import { listarLancamentos } from '../../financeiro/services/financeiroService.js'
+import { listarLancamentos, criarLancamento } from '../../financeiro/services/financeiroService.js'
+import { obterParametrosFinanceiros } from '../../configuracoes/services/configuracaoService.js'
 import { getStatusEfetivo, calcularAtrasados, formatarMoeda } from '../../financeiro/utils/financeiroUtils.js'
 import PainelUnidadeModal from '../components/PainelUnidadeModal.jsx'
 
@@ -199,6 +200,40 @@ export default function PainelOcupacaoPage() {
     })
   }, [mesRef, reloadTick])
 
+  // Unidades com contrato ativo que ainda não têm aluguel lançado no mês.
+  const semAluguel = useMemo(() => {
+    const todos = listarLancamentos().filter((l) => l.tipo === 'receita' && l.status !== 'cancelado' && competenciaMes(l) === mesRef)
+    return dados.flatMap(({ unidades }) => unidades)
+      .filter(({ unidade, contrato }) => contrato?.situacao === 'Ativo'
+        && Number(contrato.valorAluguel || 0) > 0
+        && !todos.some((l) => l.unidadeId === unidade.id))
+  }, [dados, mesRef])
+
+  const gerarAlugueis = () => {
+    if (!window.confirm(`Gerar ${semAluguel.length} aluguel(is) pendente(s) de ${formatarMesReferencia(mesRef)}?`)) return
+    const conta = obterParametrosFinanceiros()?.contaFinanceiraPadraoId || ''
+    semAluguel.forEach(({ unidade, contrato }) => {
+      const [ano, mes] = mesRef.split('-').map(Number)
+      const dia = Math.min(Number(contrato.diaVencimento) || 1, new Date(ano, mes, 0).getDate())
+      criarLancamento({
+        tipo: 'receita',
+        categoria: 'Aluguel',
+        descricao: `Aluguel ${formatarMesReferencia(mesRef)} - ${unidade.nome}`,
+        valor: Number(contrato.valorAluguel || 0) + Number(contrato.valorCondominio || 0),
+        dataCompetencia: mesRef,
+        dataVencimento: `${mesRef}-${String(dia).padStart(2, '0')}`,
+        dataPagamento: null,
+        status: 'pendente',
+        patrimonioId: unidade.patrimonioId,
+        unidadeId: unidade.id,
+        contratoId: contrato.id,
+        locatarioId: contrato.locatarioId || null,
+        contaFinanceiraId: conta,
+      })
+    })
+    setReloadTick((t) => t + 1)
+  }
+
   const comissaoPorImobiliaria = useMemo(() => {
     const mapa = new Map()
     dados.forEach(({ unidades }) => unidades.forEach(({ imobiliaria, comissao }) => {
@@ -250,6 +285,11 @@ export default function PainelOcupacaoPage() {
         <Link className="button button-primary" to="/patrimonios/novo">Novo imóvel</Link>
         <Link className="button button-primary" to="/unidades/nova">Nova unidade</Link>
         <Link className="button button-secondary" to="/contratos/novo">Novo contrato / inquilino</Link>
+        {semAluguel.length > 0 ? (
+          <button type="button" className="button button-secondary" onClick={gerarAlugueis}>
+            Gerar aluguéis de {formatarMesReferencia(mesRef)} ({semAluguel.length})
+          </button>
+        ) : null}
       </div>
 
       {alertasContrato.length > 0 ? (

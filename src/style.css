@@ -2906,3 +2906,4 @@ button.button-danger {
 .painel-alerta-vencimento ul { margin: 6px 0 0; padding-left: 18px; }
 .painel-resumo-comissao { background: #efe6fb; color: #3d2a66; }
 @media (max-width: 600px) { .painel-resumo-row { grid-template-columns: repeat(2, 1fr); } }
+.lancamento-avancado > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }

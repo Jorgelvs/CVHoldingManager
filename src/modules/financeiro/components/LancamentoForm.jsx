@@ -543,24 +543,6 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             </div>
           ) : null}
           <div className="form-field">
-            <label>Locatário</label>
-            <SearchableSelect
-              value={data.locatarioId || ''}
-              onChange={handleLocatarioChange}
-              options={locatarios.map((item) => ({
-                id: item.id,
-                label: item.nomeCompleto,
-                sublabel: item.cpf || item.telefone || '',
-              }))}
-              placeholder="Digite o nome do locatário"
-              emptyMessage="Nenhum locatário encontrado"
-              disabled={isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM}
-            />
-            <small className="field-help">
-              Pode preencher por unidade ou por locatário — o outro campo é preenchido automaticamente pelo contrato ativo.
-            </small>
-          </div>
-          <div className="form-field">
             <label className="required-label">Categoria</label>
             <select value={data.categoria || ''} onChange={(event) => handleCategoriaChange(event.target.value)}>
               <option value="">Selecione a categoria</option>
@@ -605,17 +587,6 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             onSave={handleAdicionarSubcategoria}
             onCancel={() => setShowSubcategoriaDialog(false)}
           />
-          <div className="form-field">
-            <label>Conta financeira</label>
-            <select value={data.contaFinanceiraId || ''} onChange={(event) => handleFieldChange('contaFinanceiraId', event.target.value)}>
-              <option value="">Sem conta</option>
-              {contas.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nome}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className="form-field form-field-full">
             <label>Descrição</label>
             <input
@@ -637,14 +608,6 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
             />
           </div>
           <div className="form-field">
-            <label>Data de vencimento</label>
-            <input
-              type="date"
-              value={data.dataVencimento || ''}
-              onChange={(event) => handleFieldChange('dataVencimento', event.target.value)}
-            />
-          </div>
-          <div className="form-field">
             <label>Data de pagamento</label>
             <input
               type="date"
@@ -660,6 +623,46 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
               ))}
             </select>
           </div>
+          <details className="form-field-full lancamento-avancado">
+            <summary>Mais opções (locatário, conta, vencimento, observações)</summary>
+            <div className="form-grid" style={{ marginTop: 12 }}>
+          <div className="form-field">
+            <label>Locatário</label>
+            <SearchableSelect
+              value={data.locatarioId || ''}
+              onChange={handleLocatarioChange}
+              options={locatarios.map((item) => ({
+                id: item.id,
+                label: item.nomeCompleto,
+                sublabel: item.cpf || item.telefone || '',
+              }))}
+              placeholder="Digite o nome do locatário"
+              emptyMessage="Nenhum locatário encontrado"
+              disabled={isMaintenanceExpense && data.tipoManutencao === TIPO_MANUTENCAO_AREA_COMUM}
+            />
+            <small className="field-help">
+              Pode preencher por unidade ou por locatário — o outro campo é preenchido automaticamente pelo contrato ativo.
+            </small>
+          </div>
+          <div className="form-field">
+            <label>Conta financeira</label>
+            <select value={data.contaFinanceiraId || ''} onChange={(event) => handleFieldChange('contaFinanceiraId', event.target.value)}>
+              <option value="">Sem conta</option>
+              {contas.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-field">
+            <label>Data de vencimento</label>
+            <input
+              type="date"
+              value={data.dataVencimento || ''}
+              onChange={(event) => handleFieldChange('dataVencimento', event.target.value)}
+            />
+          </div>
           <div className="form-field form-field-full">
             <label>Observações</label>
             <textarea
@@ -667,6 +670,8 @@ export default function LancamentoForm({ initialData = null, onSave, submitLabel
               onChange={(event) => handleFieldChange('observacoes', event.target.value)}
             />
           </div>
+            </div>
+          </details>
         </div>
       </div>
 

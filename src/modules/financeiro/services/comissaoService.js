@@ -17,6 +17,7 @@
 // valor calculado aqui como referência.
 
 import { listarLancamentos } from './financeiroService.js'
+import { contratoAtivoPorUnidade } from '../../contratos/services/contratoService.js'
 import { buscarContratoPorId } from '../../contratos/services/contratoService.js'
 import { buscarImobiliariaPorId, listarImobiliarias } from '../../imobiliarias/services/imobiliariaService.js'
 import { getDataConsiderada } from '../utils/financeiroUtils.js'
@@ -38,7 +39,7 @@ export function listarComissoesDetalhadas({ periodoInicio = '', periodoFim = '',
     item.tipo === 'receita'
     && item.status !== 'cancelado'
     && CATEGORIAS_BASE_COMISSAO.includes(item.categoria)
-    && item.contratoId
+    && (item.contratoId || item.unidadeId)
   ))
 
   const resultado = []
@@ -47,7 +48,10 @@ export function listarComissoesDetalhadas({ periodoInicio = '', periodoFim = '',
     const dataReferencia = getDataConsiderada(lancamento)
     if (!dentroDoPeriodo(dataReferencia, periodoInicio, periodoFim)) continue
 
-    const contrato = buscarContratoPorId(lancamento.contratoId)
+    // Lançamento sem contrato vinculado: usa o contrato ativo da unidade.
+    const contrato = lancamento.contratoId
+      ? buscarContratoPorId(lancamento.contratoId)
+      : contratoAtivoPorUnidade(lancamento.unidadeId)
     if (!contrato || !contrato.imobiliariaId) continue
     if (imobiliariaId && contrato.imobiliariaId !== imobiliariaId) continue
 

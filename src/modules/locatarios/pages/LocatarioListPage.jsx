@@ -106,6 +106,20 @@ export default function LocatarioListPage() {
           <h1>Locatários</h1>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            className="button button-danger"
+            onClick={() => {
+              const semNome = listarLocatarios().filter((l) => !String(l.nomeCompleto || '').trim() || /^sem nome$/i.test(String(l.nomeCompleto).trim()))
+              const removiveis = semNome.filter((l) => !locatarioTemContratos(l.id))
+              if (semNome.length === 0) { window.alert('Não há cadastros sem nome.'); return }
+              if (!window.confirm(`Remover ${removiveis.length} cadastro(s) sem nome e sem contrato? ${semNome.length - removiveis.length} com contrato vinculado serão mantidos.`)) return
+              removiveis.forEach((l) => excluirLocatario(l.id))
+              atualizarLista()
+            }}
+          >
+            Remover cadastros sem nome
+          </button>
           <ExportButtons
             title="Locatários"
             filename="locatarios"

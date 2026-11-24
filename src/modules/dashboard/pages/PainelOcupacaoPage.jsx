@@ -249,7 +249,7 @@ export default function PainelOcupacaoPage() {
     return listarContratos()
       .filter((c) => c.situacao === 'Ativo' && c.dataFim)
       .map((c) => ({ c, dias: Math.ceil((new Date(`${c.dataFim}T00:00:00`) - hoje) / 86400000) }))
-      .filter(({ dias }) => dias <= DIAS_ALERTA_FIM_CONTRATO)
+      .filter(({ dias }) => dias >= 0 && dias <= DIAS_ALERTA_FIM_CONTRATO)
       .sort((a, b) => a.dias - b.dias)
       .map(({ c, dias }) => ({
         id: c.id,
